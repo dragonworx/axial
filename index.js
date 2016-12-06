@@ -1,92 +1,92 @@
-import React from 'react'
-
-let instance = null;
-let stateId = 0;
-const storeComponentHelperMethods = ['set', 'get', 'add', 'remove', 'clear', 'count', 'at', 'indexOf', 'contains', 'first', 'last', 'has', 'call'];
-
-function isObject(o) {
-  return typeof o === 'object' && o !== null && !Array.isArray(o);
-}
-
-function getObjectPaths(obj) {
-  let keys = [];
-  let ref = null;
-  let path = null;
-  let walk = function (o, p) {
-    for (let k in o) {
-      if (o.hasOwnProperty(k)) {
-        ref = o[k];
-        path = p ? p + '.' + k : k;
-        keys.push(path);
-        if (isObject(ref)) {
-          walk(ref, path);
-        }
-      }
-    }
-  };
-  walk(obj);
-  return keys;
-}
-
-function getObjectAtPath(obj, path, shouldThrow) {
-  let steps = path.split('.');
-  let l = steps.length;
-  let ref = obj;
-  for (let i = 0; i < l; i++) {
-    if (typeof ref === 'undefined' && shouldThrow === true) {
-      throw new Error(`Cannot find value for path "${path}"`);
-    }
-    ref = ref[steps[i]];
-  }
-  return ref;
-}
-
-function setObjectAtPath(obj, path, value) {
-  let ref = obj;
-  let steps = path.split('.');
-  let l = steps.length - 1;
-  let k = null;
-  for (let i = 0; i < l; i++) {
-    k = steps[i];
-    if (!ref.hasOwnProperty(k)) {
-      ref[k] = {};
-    }
-    ref = ref[k];
-  }
-  ref[steps[l]] = value;
-}
-
-function multiSetObjectAtPath(obj, pathOrObject, value) {
-  let modifiedPaths = null;
-  if (isObject(pathOrObject)) {
-    obj = Object.assign(obj, pathOrObject);
-    modifiedPaths = getObjectPaths(pathOrObject);
-  } else if (typeof pathOrObject === 'string') {
-    setObjectAtPath(obj, pathOrObject, value);
-    modifiedPaths = [pathOrObject];
-  }
-  return [obj, modifiedPaths];
-}
-
 function assert(path, type) {
   if (typeof path !== type) {
     throw new Error(`Path must be ${type}, given "${typeof path}"`);
   }
 }
 
-class Store {
-  constructor() {
-    if (instance) {
-      throw new Error('Store is a Singleton, an instance already exists.');
-    }
-    instance = this;
-    this._state = {};
-    this._listeners = new Map;
-    this._actions = new Map;
-  }
+class AxialPathNotFound extends Error {}
+class AxialUndefinedAction extends Error {}
+class AxialArrayPathExpected extends Error {}
+class AxialArrayItemNotFound extends Error {}
+class AxialIterablePathExpected extends Error {}
+class AxialIterablePathIndexNotFound extends Error {}
 
-  set(pathOrObject, value) {
-    const out = multiSetObjectAtPath(this._state, pathOrObject, value);
+const Axial = {
+  _state: {},
+  _listeners: new Map,
+  _actions: new Map,
+
+  isObject (o) {
+    return typeof o === 'object' && o !== null && !Array.isArray(o);
+  },
+
+  getObjectPaths (obj) {
+    let keys = [];
+    let ref = null;
+    let path = null;
+    let walk = (o, p) => {
+      for (let k in o) {
+        if (o.hasOwnProperty(k)) {
+          ref = o[k];
+          path = p ? p + '.' + k : k;
+          keys.push(path);
+          if (this.isObject(ref)) {
+            walk(ref, path);
+          }
+        }
+      }
+    };
+    walk(obj);
+    return keys;
+  },
+
+  getObjectAtPath (obj, path, shouldThrow) {
+    let steps = path.split('.');
+    let l = steps.length;
+    let ref = obj;
+    let k = null;
+    for (let i = 0; i < l; i++) {
+      k = steps[i];
+      ref = ref[k];
+      if (ref === null || typeof ref === 'undefined') {
+        if (shouldThrow === true) {
+          throw new AxialPathNotFound(`Undefined value at path "${path}"`);
+        }
+        return ref;
+      }
+    }
+    return ref;
+  },
+
+  setObjectAtPath (obj, path, value) {
+    let ref = obj;
+    let steps = path.split('.');
+    let l = steps.length - 1;
+    let k = null;
+    for (let i = 0; i < l; i++) {
+      k = steps[i];
+      if (!ref.hasOwnProperty(k)) {
+        ref[k] = {};
+      }
+      ref = ref[k];
+    }
+    ref[steps[l]] = value;
+  },
+
+  multiSetObjectAtPath (obj, pathOrObject, value) {
+    let modifiedPaths = null;
+    if (this.isObject(pathOrObject)) {
+      obj = Object.assign(obj, pathOrObject);
+      modifiedPaths = this.getObjectPaths(pathOrObject);
+    } else if (typeof pathOrObject === 'string') {
+      this.setObjectAtPath(obj, pathOrObject, value);
+      modifiedPaths = [pathOrObject];
+    }
+    return [obj, modifiedPaths];
+  },
+
+  set (pathOrObject, value) {
+    const out = this.multiSetObjectAtPath(this._state, pathOrObject, value);
     this._state = out[0];
     const modifiedPaths = out[1];
     let modifiedPath = null;
@@ -96,22 +96,22 @@ class Store {
       this.dispatch(modifiedPath);
     }
     return this;
-  }
+  },
 
-  get(path) {
-    return getObjectAtPath(this._state, path);
-  }
+  get (path, shouldThrow) {
+    return this.getObjectAtPath(this._state, path, shouldThrow);
+  },
 
-  on(path, fn) {
+  on (path, fn) {
     const listeners = this._listeners;
     if (!listeners.has(path)) {
       listeners.set(path, []);
     }
     listeners.get(path).push(fn);
     return this;
-  }
+  },
 
-  dispatch(modifiedPath) {
+  dispatch (modifiedPath) {
     for (let [path, array] of this._listeners.entries()) {
       if (path === '*' || modifiedPath.indexOf(path) === 0) {
         for (let j = 0; j < array.length; j++) {
@@ -124,49 +124,49 @@ class Store {
       }
     }
     return this;
-  }
+  },
 
-  define(pathOrObject, value) {
-    const out = multiSetObjectAtPath(this._actions, pathOrObject, value);
+  define (pathOrObject, value) {
+    const out = this.multiSetObjectAtPath(this._actions, pathOrObject, value);
     this._actions = out[0];
     return this;
-  }
+  },
 
-  call(path, ...args) {
-    const fn = getObjectAtPath(this._actions, path, true);
+  call (path, ...args) {
+    const fn = this.getObjectAtPath(this._actions, path, true);
     if (!fn) {
-      throw new Error(`Undefined action "${path}"`);
+      throw new AxialUndefinedAction(`Undefined action "${path}"`);
     }
     return fn.apply(this, args);
-  }
+  },
 
-  add(arrayPath, item) {
+  add (arrayPath, item) {
     assert(arrayPath, 'string');
     const array = this.get(arrayPath);
     if (!Array.isArray(array)) {
-      throw new Error(`Path "${arrayPath}" must be an Array, found ${typeof array}`);
+      throw new AxialArrayPathExpected(`Path "${arrayPath}" must be an Array, found ${typeof array}`);
     }
     array.push(item);
     this.dispatch(arrayPath);
     return this;
-  }
+  },
 
-  remove(arrayPath, item) {
+  remove (arrayPath, item) {
     assert(arrayPath, 'string');
     let array = this.get(arrayPath);
     if (!Array.isArray(array)) {
-      throw new Error(`Path "${arrayPath}" must be an Array, found ${typeof array}`);
+      throw new AxialArrayPathExpected(`Path "${arrayPath}" must be an Array, found ${typeof array}`);
     }
     let index = array.indexOf(item);
     if (index === -1) {
-      throw new Error(`Item not found in Array path "${arrayPath}"`);
+      throw new AxialArrayItemNotFound(`Item not found in Array path "${arrayPath}"`);
     }
     array.splice(index, 1);
     this.dispatch(arrayPath);
     return this;
-  }
+  },
 
-  clear(path) {
+  clear (path) {
     assert(path, 'string');
     let value = this.get(path);
     if (Array.isArray(value)) {
@@ -176,151 +176,68 @@ class Store {
     }
     this.dispatch(path);
     return this;
-  }
+  },
 
-  count(iterablePath) {
+  count (iterablePath) {
     assert(iterablePath, 'string');
     const value = this.get(iterablePath);
     if (Array.isArray(value)) {
       return value.length;
-    } else if (isObject(value)) {
+    } else if (this.isObject(value)) {
       return Object.keys(value).length;
     }
-    throw new Error(`Non-iterable path "${iterablePath}"`);
-  }
+    throw new AxialIterablePathExpected(`Non-iterable path "${iterablePath}"`);
+  },
 
-  at(iterablePath, index) {
+  at (iterablePath, index) {
     assert(iterablePath, 'string');
     const value = this.get(iterablePath);
     if (Array.isArray(value)) {
       return value[index];
-    } else if (isObject(value)) {
+    } else if (this.isObject(value)) {
       const keys = Object.keys(value);
       return value[keys[index]];
     }
-    throw new Error(`Non-iterable path "${iterablePath}"`);
-  }
+    throw new AxialIterablePathExpected(`Non-iterable path "${iterablePath}"`);
+  },
 
-  indexOf(iterablePath, item) {
+  indexOf (iterablePath, item) {
     assert(iterablePath, 'string');
     const value = this.get(iterablePath);
     if (Array.isArray(value)) {
       return value.indexOf(item);
     }
-    throw new Error(`Cannot find index in non-array value at path "${iterablePath}"`);
-  }
+    throw new AxialIterablePathIndexNotFound(`Cannot find index in non-array value at path "${iterablePath}"`);
+  },
 
-  contains(iterablePath, item) {
+  contains (iterablePath, item) {
     assert(iterablePath, 'string');
     return this.indexOf(iterablePath, item) > -1;
-  }
+  },
 
-  first(iterablePath) {
+  first (iterablePath) {
     assert(iterablePath, 'string');
     const value = this.get(iterablePath);
     let keys = Object.keys(value);
     return value[keys[0]];
-  }
+  },
 
-  last(iterablePath) {
+  last (iterablePath) {
     assert(iterablePath, 'string');
     let value = this.get(iterablePath);
     let keys = Object.keys(value);
     return value[keys[keys.length - 1]];
-  }
+  },
 
-  has(path) {
+  has (path) {
     assert(path, 'string');
     let value = this.get(path);
     return value !== null || typeof value !== 'undefined';
-  }
+  },
 
-  toString() {
+  toString () {
     return JSON.stringify(this._state, null, 4);
   }
+};
 
-  static instance() {
-    return instance;
-  }
-}
-
-class StoreComponent extends React.Component {
-  constructor(props) {
-    super(props);
-    this._isMounted = true;
-    this.state = {
-      id: stateId++
-    };
-    if (this.constructor.store) {
-      if (typeof this.constructor.store !== 'string' && !Array.isArray(this.constructor.store)) {
-        throw new Error('Store bindings must be either a String or Array');
-      }
-      let bindings = typeof this.constructor.store === 'string' ? [this.constructor.store] : this.constructor.store;
-      bindings.forEach(binding => {
-        let path, alias;
-        if (typeof binding === 'string') {
-          path = binding;
-          alias = binding.split('.').pop();
-        } else if (isObject(binding) && binding.path && binding.alias) {
-          path = binding.path;
-          alias = binding.alias;
-        } else {
-          throw new Error('Invalid argument for store bind, String or Array required.');
-        }
-        instance.on(path, () => {
-          if (this._isMounted) {
-            this.setState({
-              id: stateId++
-            });
-          }
-        });
-        Object.defineProperty(this, alias, {
-          get: function () {
-            return instance.get(path);
-          },
-          set: function (value) {
-            return instance.set(path, value);
-          }
-        });
-      });
-    }
-  }
-
-  componentDidMount() {
-    this._isMounted = true;
-  }
-
-  componentWillUnmount() {
-    this._isMounted = false;
-  }
-
-  deferSet(path, value) {
-    return () => this.set(path, value);
-  }
-
-  action(path, ...args) {
-    return () => {
-      this.call.call(this, path, ...args)
-    };
-  }
-
-  ref(name) {
-    return this.refs[name].value;
-  }
-
-  refNum(name) {
-    return parseFloat(this.ref(name));
-  }
-}
-
-storeComponentHelperMethods.forEach(methodName => {
-  StoreComponent.prototype[methodName] = function () {
-    return instance[methodName].apply(instance, arguments);
-  }
-});
-
-Store.Component = StoreComponent;
-
-new Store;
-
-export default Store;
+export default Axial;
