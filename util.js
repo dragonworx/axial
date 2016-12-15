@@ -28,9 +28,10 @@ export default {
         if (o.hasOwnProperty(k)) {
           ref = o[k];
           path = p ? p + '.' + k : k;
-          keys.push(path);
           if (this.isObject(ref)) {
             walk(ref, path);
+          } else {
+            keys.push(path);
           }
         }
       }
@@ -75,12 +76,36 @@ export default {
   multiSetObjectAtPath (obj, pathOrObject, value) {
     let modifiedPaths = null;
     if (this.isObject(pathOrObject)) {
-      obj = Object.assign(obj, pathOrObject);
+      this.merge(obj, pathOrObject);
       modifiedPaths = this.getObjectPaths(pathOrObject);
     } else if (typeof pathOrObject === 'string') {
       this.setObjectAtPath(obj, pathOrObject, value);
       modifiedPaths = [pathOrObject];
     }
-    return [obj, modifiedPaths];
+    return modifiedPaths;
   },
+
+  merge(source, target) {
+    let copy = (_source, _target) => {
+      for (let key in _target) {
+        if (_target.hasOwnProperty(key)) {
+          let sourceValue = _source[key];
+          let targetValue = _target[key];
+          if (this.isObject(targetValue)) {
+            if (this.isObject(sourceValue)) {
+              copy(sourceValue, targetValue);
+            } else {
+              let obj = {};
+              _source[key] = obj;
+              copy(obj, targetValue);
+            }
+          } else {
+            _source[key] = targetValue;
+          }
+        }
+      }
+    };
+    copy(source, target);
+    return source;
+  }
 };

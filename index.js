@@ -18,9 +18,7 @@ let _actions = new Map;
 
 const Axial = {
   set (pathOrObject, value) {
-    const out = util.multiSetObjectAtPath(_state, pathOrObject, value);
-    _state = out[0];
-    const modifiedPaths = out[1];
+    const modifiedPaths = util.multiSetObjectAtPath(_state, pathOrObject, value);
     let modifiedPath = null;
     const l = modifiedPaths.length;
     for (let i = 0; i < l; i++) {
@@ -35,6 +33,9 @@ const Axial = {
   },
 
   on (path, fn) {
+    if (!path) {
+      debugger;
+    }
     const listeners = _listeners;
     if (!listeners.has(path)) {
       listeners.set(path, []);
@@ -60,13 +61,12 @@ const Axial = {
   },
 
   define (pathOrObject, value) {
-    const out = util.multiSetObjectAtPath(_actions, pathOrObject, value);
-    _actions = out[0];
+    util.multiSetObjectAtPath(_actions, pathOrObject, value);
     return this;
   },
 
   call (path, ...args) {
-    const fn = util.getObjectAtPath(_actions, path, true);
+    const fn = util.getObjectAtPath(_actions, path);
     if (!fn) {
       throw new AxialUndefinedAction(`Undefined action "${path}"`);
     }
@@ -172,7 +172,13 @@ const Axial = {
 
   toString () {
     return JSON.stringify(_state, null, 4);
+  },
+
+  listeners() {
+    return _listeners;
   }
 };
+
+Axial.util = util;
 
 export default Axial;
