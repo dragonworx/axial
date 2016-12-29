@@ -6,7 +6,6 @@ function assert(path, type) {
   }
 }
 
-class AxialUndefinedAction extends Error {}
 class AxialArrayPathExpected extends Error {}
 class AxialArrayItemNotFound extends Error {}
 class AxialIterablePathExpected extends Error {}
@@ -14,11 +13,13 @@ class AxialIterablePathIndexNotFound extends Error {}
 
 let _state = {};
 let _listeners = new Map;
+let _loggers = [];
 let _actions = new Map;
+let _locked = true;
 
-const Axial = {
+let Axial = {
   set (pathOrObject, value) {
-    const modifiedPaths = util.multiSetObjectAtPath(_state, pathOrObject, value);
+    const modifiedPaths = util.multiSetObjectAtPath(_state, pathOrObject, value, _locked);
     let modifiedPath = null;
     const l = modifiedPaths.length;
     for (let i = 0; i < l; i++) {
@@ -44,16 +45,26 @@ const Axial = {
     return this;
   },
 
-  dispatch (type, modifiedPath) {
+  log (fn) {
+    _loggers.push(fn);
+  },
+
+  dispatch (type, modifiedPath, args) {
+    let l = _loggers.length;
+    const event = {
+      type: type,
+      path: modifiedPath,
+      value: args ? undefined : this.get(modifiedPath),
+      args: args
+    };
+    for (let i = 0; i < l; i++) {
+      _loggers[i](event);
+    }
     for (let [path, array] of _listeners.entries()) {
-      if (path === '*' || modifiedPath.indexOf(path) === 0) {
-        for (let j = 0; j < array.length; j++) {
-          let fn = array[j];
-          fn({
-            type: type,
-            path: modifiedPath,
-            value: this.get(modifiedPath)
-          });
+      if (modifiedPath.indexOf(path) === 0) {
+        l = array.length;
+        for (let j = 0; j < l; j++) {
+          array[j](event);
         }
       }
     }
@@ -61,18 +72,25 @@ const Axial = {
   },
 
   define (pathOrObject, value) {
-    util.multiSetObjectAtPath(_actions, pathOrObject, value);
-    return this;
-  },
-
-  call (path, ...args) {
-    const fn = util.getObjectAtPath(_actions, path);
-    if (!fn) {
-      throw new AxialUndefinedAction(`Undefined action "${path}"`);
+    const action = (path, fn) => {
+      return (...args) => {
+        this.dispatch('call', path, args);
+        return fn.apply(this, args);
+      }
+    };
+    let paths = [];
+    if (typeof pathOrObject === 'string') {
+      paths.push({path:pathOrObject, value:value});
+    } else if (util.isObject(pathOrObject)) {
+      paths = util.getObjectPathValues(pathOrObject);
     }
-    let out = fn.apply(this, args);
-    this.dispatch('call', path);
-    return out;
+    const l = paths.length;
+    for (let i = 0; i < l; i++) {
+      const pathInfo = paths[i];
+      const path = pathInfo.path;
+      util.setObjectAtPath(_actions, path, action(path, pathInfo.value));
+    }
+    return this;
   },
 
   add (arrayPath, item) {
@@ -172,13 +190,10 @@ const Axial = {
 
   toString () {
     return JSON.stringify(_state, null, 4);
-  },
-
-  listeners() {
-    return _listeners;
   }
 };
 
 Axial.util = util;
+Axial.call = Axial.fn = _actions;
 
 export default Axial;
