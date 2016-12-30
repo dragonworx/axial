@@ -1,6 +1,18 @@
+// http://stackoverflow.com/questions/33870684/why-doesnt-instanceof-work-on-instances-of-error-subclasses-under-babel-node
+function ExtendableBuiltin (cls){
+  function ExtendableBuiltin() {
+    cls.apply(this, arguments);
+  }
+
+  ExtendableBuiltin.prototype = Object.create(cls.prototype);
+  Object.setPrototypeOf(ExtendableBuiltin, cls);
+
+  return ExtendableBuiltin;
+}
+
 const ERROR = {
-  AxialPathNotFound: class AxialPathNotFound extends Error {},
-  AxialArrayExpected: class AxialArrayExpected extends Error {}
+  AxialPathNotFound: class AxialPathNotFound extends ExtendableBuiltin(Error) {},
+  AxialArrayExpected: class AxialArrayExpected extends ExtendableBuiltin(Error) {}
 };
 
 const TYPE = {
@@ -205,6 +217,11 @@ let util = {
     return Array.prototype.slice.call(arguments);
   }
 };
+
+util.ExtendableBuiltin = ExtendableBuiltin;
+
+util.log = util.log.bind(util);
+util.error = util.error.bind(util);
 
 util.TYPE = TYPE;
 util.ERROR = ERROR;
