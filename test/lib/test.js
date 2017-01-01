@@ -48,10 +48,12 @@
 	
 	var util = __webpack_require__(1);
 	var Axial = __webpack_require__(2);
-	var expect = __webpack_require__(4);
+	var expect = __webpack_require__(5);
 	
-	describe('Util', function () {
-	  it('should determine correct type', function () {
+	// Util...
+	describe('1. Util (Types, Object Manipulation)', function () {
+	  it('1.1 should determine correct type', function () {
+	    // Axial supports these well known types
 	    expect(util.typeOf('abc')).toBe(Axial.STRING);
 	    expect(util.typeOf(-3.5)).toBe(Axial.NUMBER);
 	    expect(util.typeOf(false)).toBe(Axial.BOOLEAN);
@@ -64,22 +66,55 @@
 	    expect(util.typeOf(new Date())).toBe(Axial.DATE);
 	    expect(util.typeOf(function () {})).toBe(Axial.FUNCTION);
 	    expect(util.typeOf(undefined)).toBe(Axial.UNDEFINED);
+	    expect(util.typeOf(null)).toBe(Axial.NULL);
 	  });
 	
-	  it('should determine correct array types', function () {
+	  it('1.2 should detect Axial type', function () {
+	    expect(util.isType([Axial.ANY, Axial.STRING])).toBe(true);
+	    expect(util.isType([3, Axial.STRING])).toBe(false);
+	    expect(util.isType(3)).toBe(false);
+	    expect(util.isType({})).toBe(false);
+	    expect(util.isType(Axial.ANY)).toBe(true);
+	    expect(util.isType(Axial.STRING)).toBe(true);
+	    expect(util.isType(Axial.NUMBER)).toBe(true);
+	    expect(util.isType(Axial.BOOLEAN)).toBe(true);
+	    expect(util.isType(Axial.OBJECT)).toBe(true);
+	    expect(util.isType(Axial.REGEX)).toBe(true);
+	    expect(util.isType(Axial.DATE)).toBe(true);
+	    expect(util.isType(Axial.FUNCTION)).toBe(true);
+	    expect(util.isType(Axial.NULL)).toBe(true);
+	    expect(util.isType(Axial.UNDEFINED)).toBe(true);
+	    expect(util.isType(Axial.UNKNOWN)).toBe(true);
+	    expect(util.isType(Axial.BRANCH)).toBe(true);
+	    expect(util.isType(Axial.ARRAY(Axial.ANY))).toBe(true);
+	    expect(util.isType(Axial.ARRAY(Axial.STRING))).toBe(true);
+	    expect(util.isType(Axial.ARRAY(Axial.NUMBER))).toBe(true);
+	    expect(util.isType(Axial.ARRAY(Axial.BOOLEAN))).toBe(true);
+	    expect(util.isType(Axial.ARRAY(Axial.OBJECT))).toBe(true);
+	    expect(util.isType(Axial.ARRAY(Axial.REGEX))).toBe(true);
+	    expect(util.isType(Axial.ARRAY(Axial.DATE))).toBe(true);
+	    expect(util.isType(Axial.ARRAY(Axial.FUNCTION))).toBe(true);
+	    expect(util.isType(Axial.ARRAY(Axial.NULL))).toBe(true);
+	    expect(util.isType(Axial.ARRAY(Axial.UNDEFINED))).toBe(true);
+	    expect(util.isType(Axial.ARRAY(Axial.UNKNOWN))).toBe(true);
+	    expect(util.isType(Axial.ARRAY(Axial.BRANCH))).toBe(true);
+	  });
+	
+	  it('1.3 should determine correct array types', function () {
+	    // working with strongly typed arrays
 	    expect(util.isArray(Axial.ARRAY())).toBe(true);
 	    expect(util.isArray(Axial.ARRAY(Axial.STRING))).toBe(true);
 	    expect(util.isTypedArray(Axial.ARRAY())).toBe(false);
 	    expect(util.isTypedArray(Axial.ARRAY(Axial.STRING))).toBe(true);
 	    expect(util.getArrayType(Axial.ARRAY(Axial.STRING))).toBe(Axial.STRING);
+	    expect(util.getArrayType(Axial.ARRAY(Axial.NUMBER))).toBe(Axial.NUMBER);
 	  });
 	});
 	
-	describe('Define Schema', function () {
-	  it('should be able to define a schema using pathOrObject', function () {
-	    /**
-	     * you can define a schema using an object map to types:
-	     */
+	// Define schema...
+	describe('2. Defining the Schema', function () {
+	  it('2.1 should be able to define a schema using path or object', function () {
+	    // you can define a schema using an object of key values to describe types
 	    Axial.define({
 	      a: {
 	        b: {
@@ -88,69 +123,199 @@
 	        d: Axial.NUMBER
 	      },
 	      x: {
-	        y: 1
+	        y: Axial.DATE
 	      }
 	    });
-	    /**
-	     * or you can define a single path key type value pair.
-	     */
+	
+	    // or you can define a single path key (lazy initialises object branches) with it's type
 	    Axial.define('z', Axial.ARRAY(Axial.STRING));
 	
-	    expect(Axial.paths()).toEqual(['a.b.c', 'a.d', 'x.y', 'z']);
+	    expect(Axial.paths()).toEqual(['a', 'a.b', 'a.b.c', 'a.d', 'x', 'x.y', 'z']);
 	  });
 	
-	  it('should obliterate paths with new definitions', function () {
+	  it('2.2 should throw "AxialPathExists" if defining existing path', function () {
+	    expect(function () {
+	      // you cant wipe over existing paths
+	      Axial.define('x', Axial.STRING);
+	    }).toThrow();
+	
+	    expect(function () {
+	      // there is already an "a.b.c" path
+	      Axial.define('a.b', Axial.STRING);
+	    }).toThrow();
+	  });
+	
+	  it('2.3 should be able to undefine and redefine', function () {
+	    // remove "x" path from the schema
+	    Axial.undefine('x');
+	    expect(Axial.paths()).toEqual(['a', 'a.b', 'a.b.c', 'a.d', 'z']);
+	
+	    // redefine it again
 	    Axial.define('x', Axial.NUMBER);
-	    expect(Axial.paths()).toEqual(['a.b.c', 'a.d', 'z', 'x']);
+	    expect(Axial.paths()).toEqual(['a', 'a.b', 'a.b.c', 'a.d', 'x', 'z']);
+	  });
+	
+	  it('2.4 should be able to lock paths so they cant be undefined', function () {
+	    // locking is a one-way operation (per application session)
+	    Axial.lock('a.d');
+	    expect(function () {
+	      // now we can't undefine it...
+	      Axial.undefine('a.d');
+	      // this allows a provider to create a schema that consumers cannot change
+	    }).toThrow();
+	  });
+	
+	  it('2.5 should be able to define multiple types', function () {
+	    Axial.define('i', [Axial.STRING, Axial.ARRAY(Axial.NUMBER)]);
+	    expect(function () {
+	      Axial.set('i', {});
+	    }).toThrow();
+	
+	    expect(function () {
+	      Axial.set('i', [2, 'foo']);
+	    }).toThrow();
+	
+	    expect(function () {
+	      Axial.set('i', 'foo');
+	      Axial.set('i', [2, 3]);
+	    }).toNotThrow();
 	  });
 	});
 	
-	describe('Set Values', function () {
-	  it('should be able to set pathOrObject value', function () {
+	describe('3. Defining Custom Schema Types', function () {
+	  it('3.1 should be able to define a custom type from definition object', function () {
+	    Axial.defineType('a', {
+	      x: {
+	        y: {
+	          z: Axial.STRING
+	        },
+	        w: Axial.NUMBER
+	      }
+	    });
+	    expect(Axial.A).toBe('<a>');
+	  });
+	
+	  it('3.2 should be able to define a custom type from an enum type', function () {
+	    Axial.defineType('b', Axial.NUMBER);
+	    expect(Axial.B).toBe('<b>');
+	  });
+	
+	  it('3.3 should validate custom type', function () {
+	    expect(util.isCustomType(Axial.A)).toBe(true);
+	    expect(util.isCustomType(Axial.B)).toBe(true);
+	    expect(util.getCustomTypeKey(Axial.A)).toBe('A');
+	    expect(util.getCustomTypeKey(Axial.B)).toBe('B');
+	  });
+	
+	  it('3.4 should be able to define custom types', function () {
+	    expect(function () {
+	      Axial.define({
+	        custom: {
+	          a: Axial.A,
+	          b: Axial.B
+	        }
+	      });
+	    }).toNotThrow();
+	  });
+	
+	  it('3.5 should be able to lazy-set sub properties of custom types', function () {
+	    Axial.set('custom.a.x.y.z', 'foo');
+	    expect(Axial.get('custom.a.x.y.z')).toBe('foo');
+	  });
+	
+	  it('3.6 should be able to set custom types', function () {
+	    Axial.set({
+	      custom: {
+	        a: {
+	          x: {
+	            y: {
+	              z: 'barz'
+	            }
+	          }
+	        }
+	      }
+	    });
+	    Axial.set('custom.a.x.w', 3);
+	    expect(Axial.get('custom.a.x.y.z')).toBe('barz');
+	    expect(Axial.get('custom.a.x.w')).toBe(3);
+	  });
+	
+	  it('3.7 should be able to define arrays of custom types', function () {
+	    Axial.define('custom.array', Axial.ARRAY(Axial.A));
+	    Axial.set('custom.array', [{ x: { y: { z: 'foo' } } }]);
+	    expect(Array.isArray(Axial.get('custom.array'))).toBe(true);
+	  });
+	});
+	
+	// Set Values...
+	describe('4. Setting Values', function () {
+	  it('4.1 should return "null" for path without value', function () {
+	    // null is used for empty / initial / unset state
+	    expect(Axial.get('z')).toBe(null);
+	  });
+	
+	  it('4.2 should be able to set path or object value', function () {
+	    // as long as its the correct type, you can set a value by path and value
 	    Axial.set('z', ['abc']);
 	    Axial.set('x', 6);
 	    expect(Axial.get('x')).toBe(6);
-	    Axial.set({ 'a.b.c': 'foo', 'x': 7 });
+	    // or you can update a bunch of paths at once using a deep object
+	    Axial.set({
+	      a: {
+	        b: {
+	          c: 'foo'
+	        }
+	      },
+	      'x': 7
+	    });
 	    expect(Axial.get('a.b.c')).toBe('foo');
 	    expect(Axial.get('x')).toBe(7);
 	  });
 	
-	  it('should throw "AxialUndefinedPath" if setting non-existent path', function () {
+	  it('4.3 should throw "AxialUndefinedPath" if setting non-existent path', function () {
 	    expect(function () {
 	      Axial.set('does.not.exist', true);
-	    }).toThrow(Axial.ERROR.AxialUndefinedPath);
+	    }).toThrow();
 	  });
 	
-	  it('should throw "AxialInvalidType" if setting invalid primitive type', function () {
+	  it('4.4 should throw "AxialInvalidType" if setting invalid primitive type', function () {
 	    expect(function () {
 	      Axial.set('x', 'not a number');
-	    }).toThrow(Axial.ERROR.AxialInvalidType);
+	    }).toThrow();
 	    expect(function () {
 	      Axial.set('a.d', {});
-	    }).toThrow(Axial.ERROR.AxialInvalidType);
+	    }).toThrow();
 	  });
 	
-	  it('should throw "AxialInvalidType" if setting invalid array type', function () {
+	  it('4.5 should throw "AxialInvalidType" if setting invalid array type', function () {
 	    expect(function () {
 	      Axial.set('x', 'not a number');
-	    }).toThrow(Axial.ERROR.AxialInvalidType);
+	    }).toThrow();
 	    expect(function () {
 	      Axial.set('z', [true]);
-	    }).toThrow(Axial.ERROR.AxialInvalidType);
+	    }).toThrow();
 	  });
 	
-	  it('should be able to set any type for array defined without type', function () {
+	  it('4.6 should be able to add any type for array defined without type', function () {
 	    Axial.define('w', Axial.ARRAY());
 	    Axial.set('w', []);
 	    Axial.set('w', [1]);
 	    Axial.set('w', [2]);
 	    Axial.set('w', ['1']);
 	  });
+	
+	  it('4.7 should be able to set any value for "Axial.ANY" type', function () {
+	    Axial.define('j', Axial.ANY);
+	    expect(function () {
+	      Axial.set('j', 'foo');
+	      Axial.set('j', 2);
+	      Axial.set('j', function () {});
+	    }).toNotThrow();
+	  });
 	});
 	
 	after(function () {
 	  Axial.dump();
-	  Axial.dump(true);
 	});
 
 /***/ },
@@ -161,56 +326,18 @@
 	
 	var _typeof = typeof Symbol === "function" && typeof Symbol.iterator === "symbol" ? function (obj) { return typeof obj; } : function (obj) { return obj && typeof Symbol === "function" && obj.constructor === Symbol && obj !== Symbol.prototype ? "symbol" : typeof obj; };
 	
-	function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
-	
-	function _possibleConstructorReturn(self, call) { if (!self) { throw new ReferenceError("this hasn't been initialised - super() hasn't been called"); } return call && (typeof call === "object" || typeof call === "function") ? call : self; }
-	
-	function _inherits(subClass, superClass) { if (typeof superClass !== "function" && superClass !== null) { throw new TypeError("Super expression must either be null or a function, not " + typeof superClass); } subClass.prototype = Object.create(superClass && superClass.prototype, { constructor: { value: subClass, enumerable: false, writable: true, configurable: true } }); if (superClass) Object.setPrototypeOf ? Object.setPrototypeOf(subClass, superClass) : subClass.__proto__ = superClass; }
-	
-	// http://stackoverflow.com/questions/33870684/why-doesnt-instanceof-work-on-instances-of-error-subclasses-under-babel-node
-	function ExtendableBuiltin(cls) {
-	  function ExtendableBuiltin() {
-	    cls.apply(this, arguments);
-	  }
-	
-	  ExtendableBuiltin.prototype = Object.create(cls.prototype);
-	  Object.setPrototypeOf(ExtendableBuiltin, cls);
-	
-	  return ExtendableBuiltin;
-	}
-	
 	var ERROR = {
-	  AxialPathNotFound: function (_ExtendableBuiltin) {
-	    _inherits(AxialPathNotFound, _ExtendableBuiltin);
-	
-	    function AxialPathNotFound() {
-	      _classCallCheck(this, AxialPathNotFound);
-	
-	      return _possibleConstructorReturn(this, (AxialPathNotFound.__proto__ || Object.getPrototypeOf(AxialPathNotFound)).apply(this, arguments));
-	    }
-	
-	    return AxialPathNotFound;
-	  }(ExtendableBuiltin(Error)),
-	  AxialArrayExpected: function (_ExtendableBuiltin2) {
-	    _inherits(AxialArrayExpected, _ExtendableBuiltin2);
-	
-	    function AxialArrayExpected() {
-	      _classCallCheck(this, AxialArrayExpected);
-	
-	      return _possibleConstructorReturn(this, (AxialArrayExpected.__proto__ || Object.getPrototypeOf(AxialArrayExpected)).apply(this, arguments));
-	    }
-	
-	    return AxialArrayExpected;
-	  }(ExtendableBuiltin(Error))
+	  AxialPathNotFound: 'AxialPathNotFound',
+	  AxialArrayExpected: 'AxialArrayExpected'
 	};
 	
 	var TYPE = {
-	  '*': '<any>',
+	  ANY: '<any>',
 	  STRING: '<string>',
 	  NUMBER: '<number>',
 	  BOOLEAN: '<boolean>',
 	  ARRAY: function ARRAY(type) {
-	    return '<array>[' + (type || '*') + ']';
+	    return '<array>[' + (type || '<any>') + ']';
 	  },
 	  OBJECT: '<object>',
 	  REGEX: '<regex>',
@@ -218,11 +345,19 @@
 	  FUNCTION: '<function>',
 	  NULL: '<null>',
 	  UNDEFINED: '<undefined>',
-	  UNKNOWN: '<unknown>'
+	  UNKNOWN: '<unknown>',
+	  BRANCH: '<branch>'
 	};
+	
+	var TYPES = {};
+	
+	function err(type, message) {
+	  return type + ': ' + message;
+	}
 	
 	var util = {
 	  logEnabled: false,
+	
 	  log: function log() {
 	    if (this.logEnabled) {
 	      console.log.apply(console, arguments);
@@ -244,8 +379,54 @@
 	      return Object.getPrototypeOf(o) === t;
 	    }();
 	  },
+	  isType: function isType(t) {
+	    var types = Array.isArray(t) ? t : [t];
+	    var count = 0;
+	    for (var i = 0; i < types.length; i++) {
+	      var type = types[i];
+	      if (typeof type !== 'string') {
+	        return false;
+	      }
+	      if (type === TYPE.ARRAY()) {
+	        return true;
+	      }
+	      for (var typeName in TYPE) {
+	        if (TYPE.hasOwnProperty(typeName)) {
+	          if (type === TYPE[typeName]) {
+	            count++;
+	          }
+	          if (typeName !== 'ARRAY') {
+	            var arrayType = TYPE.ARRAY(TYPE[typeName]);
+	            if (type === arrayType) {
+	              count++;
+	            }
+	          }
+	        }
+	      }
+	    }
+	    return count === types.length;
+	  },
+	  isCustomType: function isCustomType(t) {
+	    return typeof this.getCustomType(t) !== 'undefined';
+	  },
+	  getCustomTypeKey: function getCustomTypeKey(t) {
+	    return t.replace(/^<|>$/g, '').toUpperCase();
+	  },
+	  getCustomType: function getCustomType(t) {
+	    var a = Array.isArray(t) ? t : [t];
+	    for (var i = 0, l = a.length; i < l; i++) {
+	      var tk = a[i];
+	      var T = void 0;
+	      try {
+	        T = TYPES[this.getCustomTypeKey(this.isArray(tk) ? this.getArrayType(tk) : tk)];
+	      } catch (e) {}
+	      if (typeof T !== 'undefined') {
+	        return T;
+	      }
+	    }
+	  },
 	  getObjectPaths: function getObjectPaths(obj, includeBranchPaths) {
-	    var _this3 = this;
+	    var _this = this;
 	
 	    var keys = [];
 	    var ref = null;
@@ -255,7 +436,7 @@
 	        if (o.hasOwnProperty(k)) {
 	          ref = o[k];
 	          path = p ? p + '.' + k : k;
-	          if (_this3.isObject(ref)) {
+	          if (_this.isObject(ref)) {
 	            if (includeBranchPaths === true) {
 	              keys.push(path);
 	            }
@@ -270,7 +451,7 @@
 	    return keys;
 	  },
 	  getObjectPathValues: function getObjectPathValues(obj, includeBranchPaths) {
-	    var _this4 = this;
+	    var _this2 = this;
 	
 	    var keyValues = [];
 	    var ref = null;
@@ -280,7 +461,7 @@
 	        if (o.hasOwnProperty(k)) {
 	          ref = o[k];
 	          path = p ? p + '.' + k : k;
-	          if (_this4.isObject(ref)) {
+	          if (_this2.isObject(ref)) {
 	            if (includeBranchPaths === true) {
 	              keyValues.push({ path: path, value: ref, isBranch: true });
 	            }
@@ -302,28 +483,53 @@
 	    for (var i = 0; i < l; i++) {
 	      k = steps[i];
 	      ref = ref[k];
-	      if (ref === null || typeof ref === 'undefined') {
+	      if (typeof ref === 'undefined') {
 	        if (shouldThrowIfNotFound === true) {
-	          throw new ERROR.AxialPathNotFound('Undefined value at path "' + path + '"');
+	          throw new Error(err(ERROR.AxialPathNotFound, 'Undefined value at path "' + path + '"'));
 	        }
 	        return ref;
 	      }
 	    }
 	    return ref;
 	  },
-	  setObjectAtPath: function setObjectAtPath(obj, path, value) {
+	
+	
+	  /**
+	   *
+	   * @param obj
+	   * @param path
+	   * @param value
+	   * @param banchFactory - use this factory function to return a branche that do not exist for new and deeper paths
+	   * @returns {Map}
+	   */
+	  setObjectAtPath: function setObjectAtPath(obj, path, value, banchFactory) {
 	    var ref = obj;
 	    var steps = path.split('.');
 	    var l = steps.length - 1;
 	    var k = null;
+	    var branches = new Map();
 	    for (var i = 0; i < l; i++) {
 	      k = steps[i];
 	      if (!ref.hasOwnProperty(k)) {
-	        ref[k] = {};
+	        var branchPath = steps.slice(0, i + 1).join('.');
+	        var branch = typeof banchFactory === 'function' ? banchFactory(branchPath) : {};
+	        ref[k] = branch;
+	        branches.set(branchPath, branch);
 	      }
 	      ref = ref[k];
 	    }
 	    ref[steps[l]] = value;
+	    return branches;
+	  },
+	  deleteAtPath: function deleteAtPath(obj, path) {
+	    var parts = path.split('.');
+	    if (parts.length === 1) {
+	      delete obj[path];
+	    } else {
+	      var parentPath = parts.slice(0, parts.length - 1).join('.');
+	      var parentObj = this.getObjectAtPath(obj, parentPath);
+	      delete parentObj[path.split('.').pop()];
+	    }
 	  },
 	  multiSetObjectAtPath: function multiSetObjectAtPath(obj, pathOrObject, value, shouldThrowIfNotFound) {
 	    var modifiedPaths = null;
@@ -337,15 +543,15 @@
 	    return modifiedPaths;
 	  },
 	  merge: function merge(source, target) {
-	    var _this5 = this;
+	    var _this3 = this;
 	
 	    var copy = function copy(_source, _target) {
 	      for (var key in _target) {
 	        if (_target.hasOwnProperty(key)) {
 	          var sourceValue = _source[key];
 	          var targetValue = _target[key];
-	          if (_this5.isObject(targetValue)) {
-	            if (_this5.isObject(sourceValue)) {
+	          if (_this3.isObject(targetValue)) {
+	            if (_this3.isObject(sourceValue)) {
 	              copy(sourceValue, targetValue);
 	            } else {
 	              var obj = {};
@@ -362,13 +568,13 @@
 	    return source;
 	  },
 	  isArray: function isArray(type) {
-	    return type.indexOf('<array>') === 0;
+	    return ('' + type).indexOf('<array>') === 0;
 	  },
 	  isTypedArray: function isTypedArray(type) {
 	    return this.isArray(type) && type !== TYPE.ARRAY();
 	  },
 	  getArrayType: function getArrayType(type) {
-	    return type.match(/.*\[(.+)\]/)[1];
+	    return type.replace(/^<array>/, '').replace(/^\[/, '').replace(/\]$/, '');
 	  },
 	  typeOf: function typeOf(value) {
 	    if (value === null) {
@@ -387,7 +593,8 @@
 	      return TYPE.REGEX;
 	    } else if (value instanceof Date) {
 	      return TYPE.DATE;
-	    }if (Array.isArray(value)) {
+	    }
+	    if (Array.isArray(value)) {
 	      return TYPE.ARRAY(value.length ? this.typeOf(value[0]) : TYPE.ANY);
 	    } else if (typeof value === 'function') {
 	      return TYPE.FUNCTION;
@@ -399,12 +606,12 @@
 	  }
 	};
 	
-	util.ExtendableBuiltin = ExtendableBuiltin;
-	
 	util.log = util.log.bind(util);
 	util.error = util.error.bind(util);
+	util.err = err;
 	
 	util.TYPE = TYPE;
+	util.TYPES = TYPES;
 	util.ERROR = ERROR;
 	
 	module.exports = util;
@@ -415,187 +622,444 @@
 
 	/* WEBPACK VAR INJECTION */(function(module) {'use strict';
 	
+	var _slicedToArray = function () { function sliceIterator(arr, i) { var _arr = []; var _n = true; var _d = false; var _e = undefined; try { for (var _i = arr[Symbol.iterator](), _s; !(_n = (_s = _i.next()).done); _n = true) { _arr.push(_s.value); if (i && _arr.length === i) break; } } catch (err) { _d = true; _e = err; } finally { try { if (!_n && _i["return"]) _i["return"](); } finally { if (_d) throw _e; } } return _arr; } return function (arr, i) { if (Array.isArray(arr)) { return arr; } else if (Symbol.iterator in Object(arr)) { return sliceIterator(arr, i); } else { throw new TypeError("Invalid attempt to destructure non-iterable instance"); } }; }();
+	
 	var _typeof = typeof Symbol === "function" && typeof Symbol.iterator === "symbol" ? function (obj) { return typeof obj; } : function (obj) { return obj && typeof Symbol === "function" && obj.constructor === Symbol && obj !== Symbol.prototype ? "symbol" : typeof obj; };
 	
 	var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
-	
-	function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
 	
 	function _possibleConstructorReturn(self, call) { if (!self) { throw new ReferenceError("this hasn't been initialised - super() hasn't been called"); } return call && (typeof call === "object" || typeof call === "function") ? call : self; }
 	
 	function _inherits(subClass, superClass) { if (typeof superClass !== "function" && superClass !== null) { throw new TypeError("Super expression must either be null or a function, not " + typeof superClass); } subClass.prototype = Object.create(superClass && superClass.prototype, { constructor: { value: subClass, enumerable: false, writable: true, configurable: true } }); if (superClass) Object.setPrototypeOf ? Object.setPrototypeOf(subClass, superClass) : subClass.__proto__ = superClass; }
 	
+	function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
+	
+	var escapeStringRegexp = __webpack_require__(4);
 	var util = __webpack_require__(1);
 	var ERROR = util.ERROR;
 	var TYPE = util.TYPE;
+	var TYPES = util.TYPES;
 	var log = util.log;
+	
 	var _schema = {};
+	var _paths = new Map();
 	
 	// Errors...
-	ERROR.AxialSchemaExists = function (_util$ExtendableBuilt) {
-	  _inherits(AxialSchemaExists, _util$ExtendableBuilt);
-	
-	  function AxialSchemaExists() {
-	    _classCallCheck(this, AxialSchemaExists);
-	
-	    return _possibleConstructorReturn(this, (AxialSchemaExists.__proto__ || Object.getPrototypeOf(AxialSchemaExists)).apply(this, arguments));
-	  }
-	
-	  return AxialSchemaExists;
-	}(util.ExtendableBuiltin(Error));
-	ERROR.AxialUndefinedPath = function (_util$ExtendableBuilt2) {
-	  _inherits(AxialUndefinedPath, _util$ExtendableBuilt2);
-	
-	  function AxialUndefinedPath() {
-	    _classCallCheck(this, AxialUndefinedPath);
-	
-	    return _possibleConstructorReturn(this, (AxialUndefinedPath.__proto__ || Object.getPrototypeOf(AxialUndefinedPath)).apply(this, arguments));
-	  }
-	
-	  return AxialUndefinedPath;
-	}(util.ExtendableBuiltin(Error));
-	ERROR.AxialInvalidType = function (_util$ExtendableBuilt3) {
-	  _inherits(AxialInvalidType, _util$ExtendableBuilt3);
-	
-	  function AxialInvalidType() {
-	    _classCallCheck(this, AxialInvalidType);
-	
-	    return _possibleConstructorReturn(this, (AxialInvalidType.__proto__ || Object.getPrototypeOf(AxialInvalidType)).apply(this, arguments));
-	  }
-	
-	  return AxialInvalidType;
-	}(util.ExtendableBuiltin(Error));
-	
-	// Schema Property...
-	
-	var AxialSchemaProperty = function () {
-	  function AxialSchemaProperty(path, type) {
-	    var isLocked = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : false;
-	
-	    _classCallCheck(this, AxialSchemaProperty);
-	
-	    this.path = path;
-	    this.type = type;
-	    this.isLocked = isLocked;
-	    this.values = [];
-	    this.validator = this.validate;
-	  }
-	
-	  _createClass(AxialSchemaProperty, [{
-	    key: 'validate',
-	    value: function validate(value) {
-	      var type = util.typeOf(value);
-	      if (util.isArray(type) && this.type === TYPE.ARRAY()) {
-	        return;
-	      }
-	      if (type !== this.type) {
-	        throw new ERROR.AxialInvalidType('Invalid type for path "' + this.path + '" - ' + this.type + ' expected, ' + util.typeOf(value) + ' given.?');
-	      }
-	    }
-	  }, {
-	    key: 'value',
-	    value: function value(_value) {
-	      if (arguments.length === 0) {
-	        return this.values[this.values.length - 1];
-	      }
-	      this.validator(_value);
-	      this.values.push(_value);
-	    }
-	  }, {
-	    key: 'remove',
-	    value: function remove() {
-	      delete _schema[this.path];
-	      log('%c#undefine(' + this.toString() + ')', 'color:brown');
-	    }
-	  }, {
-	    key: 'toString',
-	    value: function toString() {
-	      return '"' + this.path + '":' + this.type + (this.isLocked ? '<LOCKED>' : '');
-	    }
-	  }]);
-	
-	  return AxialSchemaProperty;
-	}();
+	ERROR.AxialPathExists = 'AxialPathExists';
+	ERROR.AxialSchemaLocked = 'AxialSchemaLocked';
+	ERROR.AxialUndefinedPath = 'AxialUndefinedPath';
+	ERROR.AxialInvalidType = 'AxialInvalidType';
+	ERROR.AxialUndefinedType = 'AxialUndefinedType';
+	ERROR.AxialArrayExpected = 'AxialArrayExpected';
+	ERROR.AxialTypeExists = 'AxialTypeExists';
 	
 	// helpers...
-	
-	
 	function _getPathsFromArgs(args) {
 	  var paths = [];
 	  var pathOrObject = args[0];
 	  if (util.typeOf(pathOrObject) === TYPE.STRING) {
 	    paths.push({ path: pathOrObject, value: args[1] });
 	  } else if (util.typeOf(pathOrObject) === TYPE.OBJECT) {
-	    paths = util.getObjectPathValues(pathOrObject);
+	    paths = util.getObjectPathValues(pathOrObject, true);
 	  }
 	  return paths;
 	}
 	
 	function _validatePathExists(path) {
-	  if (!_schema.hasOwnProperty(path)) {
-	    throw new ERROR.AxialUndefinedPath('Path not found "' + path + '"?');
+	  if (!_paths.has(path)) {
+	    throw new Error(util.err(ERROR.AxialUndefinedPath, 'Path not found "' + path + '"'));
 	  }
 	}
 	
+	// Schema Property...
+	
+	var AxialSchemaProperty = function () {
+	  function AxialSchemaProperty(path, type) {
+	    _classCallCheck(this, AxialSchemaProperty);
+	
+	    this._path = path;
+	    this._type = Array.isArray(type) ? type : [type];
+	    this._values = [];
+	    this._validator = this.validate;
+	    this._isLocked = false;
+	    this._type.forEach(function (type) {
+	      if (!util.isType(type)) {
+	        throw new Error(util.err(ERROR.AxialUndefinedType, 'Undefined type "' + type + '"'));
+	      }
+	    });
+	  }
+	
+	  _createClass(AxialSchemaProperty, [{
+	    key: 'types',
+	    value: function types(fn) {
+	      var types = this._type;
+	      for (var i = 0, l = this._type.length; i < l; i++) {
+	        fn(types[i]);
+	      }
+	    }
+	  }, {
+	    key: 'validate',
+	    value: function validate(value) {
+	      var valueType = util.typeOf(value);
+	      for (var i = 0; i < this._type.length; i++) {
+	        // for each type to validate...
+	        var thisType = this._type[i];
+	        var arrayType = util.getArrayType(thisType);
+	        if (thisType === TYPE.ANY || util.isArray(valueType) && thisType === TYPE.ARRAY()) {
+	          // allow any type or array of any type
+	          return;
+	        } else if (util.isArray(thisType) && Array.isArray(value)) {
+	          var isCustomType = util.isCustomType(arrayType);
+	          for (var j = 0; j < value.length; j++) {
+	            var val = value[j];
+	            if (isCustomType) {
+	              util.getCustomType(arrayType).validate(val, this);
+	            } else if (util.typeOf(val) !== arrayType) {
+	              throw new Error(util.err(ERROR.AxialInvalidType, 'Invalid type for ' + thisType + '[' + j + '] at path "' + this._path + '" - ' + arrayType + ' expected, ' + util.typeOf(value[j]) + ' given.'));
+	            }
+	          }
+	          return;
+	        } else if (util.isCustomType(thisType)) {
+	          var type = util.getCustomType(thisType);
+	          type.validate(value, this);
+	        } else if (valueType === thisType) {
+	          return;
+	        }
+	      }
+	      throw new Error(util.err(ERROR.AxialInvalidType, 'Invalid type for path "' + this._path + '" - ' + (Array.isArray(this._type) ? this._type.join('|') : this._type) + ' expected, ' + util.typeOf(value) + ' given.'));
+	    }
+	  }, {
+	    key: 'value',
+	    value: function value(_value) {
+	      if (arguments.length === 0) {
+	        return this._values.length ? this._values[this._values.length - 1] : null;
+	      }
+	      this._validator.call(this, _value);
+	      this._values.push(_value);
+	    }
+	  }, {
+	    key: 'metaValue',
+	    value: function metaValue() {
+	      return this._type;
+	    }
+	  }, {
+	    key: 'remove',
+	    value: function remove() {
+	      _paths.delete(this._path);
+	      util.deleteAtPath(_schema, this._path);
+	    }
+	  }, {
+	    key: 'subPaths',
+	    value: function subPaths() {
+	      var paths = [];
+	      for (var i = 0; i < this._type.length; i++) {
+	        // for each type to validate...
+	        var thisType = this._type[i];
+	
+	        var isArray = util.isArray(thisType);
+	        var arrayType = util.getArrayType(thisType);
+	        var T = TYPES[util.getCustomTypeKey(isArray ? arrayType : thisType)];
+	
+	        paths.push.apply(paths, T.subPaths());
+	      }
+	      return paths;
+	    }
+	  }, {
+	    key: 'toString',
+	    value: function toString() {
+	      return '"' + this._path + '":[' + this._type.join('|') + ']';
+	    }
+	  }]);
+	
+	  return AxialSchemaProperty;
+	}();
+	
+	// AxialSchemaBranch...
+	
+	
+	var AxialSchemaBranch = function (_AxialSchemaProperty) {
+	  _inherits(AxialSchemaBranch, _AxialSchemaProperty);
+	
+	  function AxialSchemaBranch(path) {
+	    _classCallCheck(this, AxialSchemaBranch);
+	
+	    return _possibleConstructorReturn(this, (AxialSchemaBranch.__proto__ || Object.getPrototypeOf(AxialSchemaBranch)).call(this, path, TYPE.BRANCH));
+	  }
+	
+	  _createClass(AxialSchemaBranch, [{
+	    key: 'value',
+	    value: function value() {
+	      if (!this._value) {
+	        this._value = {};
+	      }
+	      return this._value;
+	    }
+	  }, {
+	    key: 'metaValue',
+	    value: function metaValue() {
+	      if (!this._metavalue) {
+	        this._metavalue = {};
+	      }
+	      return this._metavalue;
+	    }
+	  }]);
+	
+	  return AxialSchemaBranch;
+	}(AxialSchemaProperty);
+	
+	// AxialType...
+	
+	
+	var AxialType = function () {
+	  function AxialType(typeValue, typeOrObject) {
+	    _classCallCheck(this, AxialType);
+	
+	    this._typeValue = typeValue;
+	    if (typeof typeOrObject === 'string') {
+	      this._typeDefition = typeOrObject;
+	    } else if (typeof typeOrObject === 'undefined' ? 'undefined' : _typeof(typeOrObject)) {
+	      this._definition = typeOrObject;
+	      this._paths = util.getObjectPaths(typeOrObject);
+	    }
+	  }
+	
+	  _createClass(AxialType, [{
+	    key: 'subPaths',
+	    value: function subPaths() {
+	      if (this._typeDefition) {
+	        return [];
+	      }if (this._definition) {
+	        return util.getObjectPathValues(this._definition);
+	      }
+	    }
+	  }, {
+	    key: 'validate',
+	    value: function validate(value, prop) {
+	      if (this._typeDefition) {
+	        if (util.typeOf(value) === this._typeValue) {
+	          throw new Error(util.err(ERROR.AxialInvalidType, 'Invalid type for path "' + prop._path + '" - ' + this._typeValue + ' expected, ' + util.typeOf(value) + ' given.'));
+	        }
+	      } else if (this._definition) {
+	        var paths = this._paths;
+	        for (var i = 0, l = paths.length; i < l; i++) {
+	          var path = paths[i];
+	          var absPath = prop._path + '.' + path;
+	          try {
+	            var val = util.getObjectAtPath(value, path, true);
+	            _paths.get(absPath).validate(val, prop);
+	          } catch (e) {}
+	        }
+	      }
+	    }
+	  }, {
+	    key: 'toString',
+	    value: function toString() {
+	      var typeInfo = this._typeDefition ? this._typeDefition : JSON.stringify(this._definition, null, 4);
+	      return '[' + util.getCustomTypeKey(this._typeValue) + ']: ' + typeInfo;
+	    }
+	  }]);
+	
+	  return AxialType;
+	}();
+	
 	// Axial Singleton...
+	
+	
 	var Axial = {
 	  paths: function paths() {
-	    return Object.keys(_schema);
+	    var a = [];
+	    var _iteratorNormalCompletion = true;
+	    var _didIteratorError = false;
+	    var _iteratorError = undefined;
+	
+	    try {
+	      for (var _iterator = _paths.keys()[Symbol.iterator](), _step; !(_iteratorNormalCompletion = (_step = _iterator.next()).done); _iteratorNormalCompletion = true) {
+	        var path = _step.value;
+	
+	        a[a.length] = path;
+	      }
+	    } catch (err) {
+	      _didIteratorError = true;
+	      _iteratorError = err;
+	    } finally {
+	      try {
+	        if (!_iteratorNormalCompletion && _iterator.return) {
+	          _iterator.return();
+	        }
+	      } finally {
+	        if (_didIteratorError) {
+	          throw _iteratorError;
+	        }
+	      }
+	    }
+	
+	    a.sort();
+	    return a;
 	  },
 	  has: function has(pathPattern) {
 	    return !!this.match(pathPattern, true).length;
 	  },
-	  match: function match(pathPattern, firstOnly) {
+	  match: function match(pathPattern, oneOnly) {
 	    var matches = [];
-	    for (var key in _schema) {
-	      if (_schema.hasOwnProperty(key)) {
-	        var regex = new RegExp(typeof pathPattern === 'string' ? '^' + pathPattern : pathPattern);
-	        if (key.match(regex)) {
-	          matches.push(_schema[key]);
-	          if (firstOnly) {
-	            return matches;
-	          }
+	    var regex = new RegExp(typeof pathPattern === 'string' ? '^' + escapeStringRegexp(pathPattern) : pathPattern);
+	    var paths = this.paths();
+	    var l = paths.length;
+	    for (var i = 0; i < l; i++) {
+	      var path = paths[i];
+	      if (path.match(regex)) {
+	        matches.push(_paths.get(path));
+	        if (oneOnly) {
+	          return matches;
 	        }
 	      }
 	    }
 	    return matches;
 	  },
+	  lock: function lock(pathOrObject) {
+	    var paths = [];
+	    if (arguments.length) {
+	      _getPathsFromArgs(arguments).forEach(function (info) {
+	        _validatePathExists(info.path);
+	        paths.push(info.path);
+	      });
+	      paths.sort();
+	    } else {
+	      paths = this.paths();
+	    }
+	    paths.forEach(function (path) {
+	      _paths.get(path)._isLocked = true;
+	    });
+	  },
 	  define: function define(pathOrObject, type) {
+	    var _this2 = this;
+	
+	    _getPathsFromArgs(arguments).forEach(function (info) {
+	      var path = info.path;
+	      var type = info.value;
+	      if (_this2.has(path)) {
+	        // path exists
+	        throw new Error(err(ERROR.AxialPathExists, 'Cannot define new path "' + path + '", path already exists'));
+	      }
+	      if (Array.isArray(type)) {
+	        // handle mult-types (via array definition)
+	        for (var i = 0; i < type.length; i++) {
+	          var t = type[i];
+	          if (!util.isType(t)) {
+	            throw new Error(util.err(ERROR.AxialUndefinedType, 'Undefined type "' + t + '"'));
+	          }
+	        }
+	      }
+	      var node = void 0;
+	      if (util.isObject(type) || _paths.get(path) instanceof AxialSchemaBranch) {
+	        node = new AxialSchemaBranch(path);
+	      } else if (util.isType(type)) {
+	        // Custom type...
+	        node = new AxialSchemaProperty(path, type);
+	        if (util.isCustomType(type)) {
+	          node.subPaths().forEach(function (subPath) {
+	            if (!subPath.isBranch) {
+	              // extend sub path for custom type (leaf nodes only)
+	              _this2.define(path + '.' + subPath.path, subPath.value);
+	            }
+	          });
+	        }
+	      } else if (!Array.isArray(type)) {
+	        debugger;
+	        throw new Error(util.err(ERROR.AxialUndefinedType, 'Undefined type "' + type + '"'));
+	      }
+	      _paths.set(path, node);
+	      var branches = util.setObjectAtPath(_schema, path, node, function (p) {
+	        return new AxialSchemaBranch(p);
+	      });
+	      var _iteratorNormalCompletion2 = true;
+	      var _didIteratorError2 = false;
+	      var _iteratorError2 = undefined;
+	
+	      try {
+	        for (var _iterator2 = branches.entries()[Symbol.iterator](), _step2; !(_iteratorNormalCompletion2 = (_step2 = _iterator2.next()).done); _iteratorNormalCompletion2 = true) {
+	          var _step2$value = _slicedToArray(_step2.value, 2),
+	              pth = _step2$value[0],
+	              branch = _step2$value[1];
+	
+	          _paths.set(pth, branch);
+	        }
+	      } catch (err) {
+	        _didIteratorError2 = true;
+	        _iteratorError2 = err;
+	      } finally {
+	        try {
+	          if (!_iteratorNormalCompletion2 && _iterator2.return) {
+	            _iterator2.return();
+	          }
+	        } finally {
+	          if (_didIteratorError2) {
+	            throw _iteratorError2;
+	          }
+	        }
+	      }
+	
+	      log('%c#define(' + _paths.get(path).toString() + ')', 'color:blue');
+	    });
+	    return this;
+	  },
+	  undefine: function undefine(pathOrObject) {
+	    var _this3 = this;
+	
+	    _getPathsFromArgs(arguments).forEach(function (info) {
+	      var path = info.path;
+	      _validatePathExists(path);
+	      var matches = _this3.match(path);
+	      matches.reverse();
+	      matches.forEach(function (node) {
+	        if (node._isLocked) {
+	          throw new Error(util.err(ERROR.AxialSchemaLocked, 'Cannot undefine path "' + node._path + '", path is locked'));
+	        }
+	        log('%c#undefine(' + _paths.get(path).toString() + ')', 'color:brown');
+	        node.remove();
+	      });
+	    });
+	    return this;
+	  },
+	  defineType: function defineType(typeName, typeOrObject) {
+	    var typeKey = typeName.replace(/^<+|>+$/g, '').toUpperCase();
+	    var typeValue = '<' + typeName.toLowerCase() + '>';
+	    if (TYPE.hasOwnProperty(typeKey) || Axial.hasOwnProperty(typeKey)) {
+	      throw new Error(util.err(ERROR.AxialTypeExists, 'Cannot define type, already exists "' + typeKey + '"'));
+	    }
+	    TYPE[typeKey] = typeValue;
+	    this[typeKey] = typeValue;
+	
+	    var type = new AxialType(typeValue, typeOrObject);
+	    TYPES[typeKey] = type;
+	
+	    return type;
+	  },
+	  set: function set(pathOrObject, value) {
 	    var _this4 = this;
 	
 	    _getPathsFromArgs(arguments).forEach(function (info) {
-	      if (_this4.has(info.path) && _schema.hasOwnProperty(info.path) && _schema[info.path].isLocked) {
-	        throw new ERROR.AxialSchemaExists('Cannot define path "' + info.path + '", path already exists and is locked.');
-	      }
-	      _this4.match(info.path).forEach(function (match) {
-	        return match.remove();
-	      });
-	      _schema[info.path] = new AxialSchemaProperty(info.path, info.value);
-	      log('%c#define(' + _schema[info.path].toString() + ')', 'color:blue');
-	    });
-	    return this;
-	  },
-	  lock: function lock() {
-	    _getPathsFromArgs(arguments).forEach(function (info) {
 	      var path = info.path;
+	      var val = info.value;
 	      _validatePathExists(path);
-	      if (!_schema.hasOwnProperty(path)) {
-	        _schema[path] = new AxialSchemaProperty(path, TYPE.UNSET, true);
+	      var prop = _paths.get(path);
+	      var isCustomType = util.isCustomType(prop._type);
+	      if (!isCustomType) {
+	        prop.value(val);
 	      } else {
-	        _schema[path].isLocked = true;
+	        if (Array.isArray(val)) {
+	          prop.value(val);
+	        } else {
+	          if (util.isObject(val)) {
+	            var paths = util.getObjectPathValues(val);
+	            for (var i = 0, l = paths.length; i < l; i++) {
+	              var pv = paths[i];
+	              _this4.set(path + '.' + pv.path, pv.value);
+	            }
+	          } else {
+	            prop.value(val);
+	          }
+	        }
 	      }
-	    });
-	    return this;
-	  },
-	  typeOf: function typeOf(path) {
-	    _validatePathExists(path);
-	    return _schema[path].type;
-	  },
-	  set: function set(pathOrObject, value) {
-	    _getPathsFromArgs(arguments).forEach(function (info) {
-	      var path = info.path;
-	      _validatePathExists(path);
-	      _schema[path].value(info.value);
 	    });
 	    return this;
 	  },
@@ -603,7 +1067,7 @@
 	    _validatePathExists(path);
 	    var prop = _schema[path];
 	    if (!util.isArray(prop.type)) {
-	      throw new AxialArrayExpected('Expected an array for path "' + path + '", ' + prop.type + ' found');
+	      throw new Error(util.err(ERROR.AxialArrayExpected, 'Expected an array for path "' + path + '", ' + prop.type + ' found'));
 	    }
 	    if (util.isTypedArray(prop.type)) {}
 	    var array = prop.value();
@@ -612,29 +1076,67 @@
 	  },
 	  get: function get(path) {
 	    _validatePathExists(path);
-	    return _schema[path].value();
+	    return _paths.get(path).value();
+	  },
+	  getNullPaths: function getNullPaths() {
+	    var nullPaths = [];
+	    var _iteratorNormalCompletion3 = true;
+	    var _didIteratorError3 = false;
+	    var _iteratorError3 = undefined;
+	
+	    try {
+	      for (var _iterator3 = _paths[Symbol.iterator](), _step3; !(_iteratorNormalCompletion3 = (_step3 = _iterator3.next()).done); _iteratorNormalCompletion3 = true) {
+	        var _step3$value = _slicedToArray(_step3.value, 2),
+	            path = _step3$value[0],
+	            node = _step3$value[1];
+	
+	        if (node.value() === null) {
+	          nullPaths.push(path);
+	        }
+	      }
+	    } catch (err) {
+	      _didIteratorError3 = true;
+	      _iteratorError3 = err;
+	    } finally {
+	      try {
+	        if (!_iteratorNormalCompletion3 && _iterator3.return) {
+	          _iterator3.return();
+	        }
+	      } finally {
+	        if (_didIteratorError3) {
+	          throw _iteratorError3;
+	        }
+	      }
+	    }
+	
+	    return nullPaths;
 	  },
 	
-	  dump: function dump(toJSON) {
-	    log('----+< ' + (toJSON === true ? 'JSON' : 'Schema') + ' >+----');
-	    if (toJSON === true) {
-	      log('%c' + JSON.stringify(this.toJSON(), null, 4), 'color:darkBlue');
-	    } else {
-	      for (var path in _schema) {
-	        if (_schema.hasOwnProperty(path)) {
-	          log('%c' + _schema[path].toString() + '=' + JSON.stringify(this.get(path)), 'color:darkBlue');
-	        }
+	
+	  dump: function dump() {
+	    log('----+< State >+----');
+	    var json = {};
+	    this.paths().forEach(function (path) {
+	      var node = _paths.get(path);
+	      if (!(node instanceof AxialSchemaBranch)) {
+	        util.setObjectAtPath(json, path + ':' + node._type, node.value());
+	      }
+	    });
+	    log('%c' + JSON.stringify(json, null, 4), 'color:darkBlue');
+	    log('----+< Types >+----');
+	    for (var typeKey in TYPES) {
+	      if (TYPES.hasOwnProperty(typeKey)) {
+	        log('%c' + TYPES[typeKey].toString(), 'color:darkBlue');
 	      }
 	    }
 	    return this;
 	  },
+	
 	  toJSON: function toJSON() {
 	    var json = {};
-	    for (var path in _schema) {
-	      if (_schema.hasOwnProperty(path)) {
-	        util.setObjectAtPath(json, path, _schema[path].value());
-	      }
-	    }
+	    this.paths().forEach(function (path) {
+	      util.setObjectAtPath(json, path, _paths.get(path).value());
+	    });
 	    return json;
 	  }
 	};
@@ -646,7 +1148,13 @@
 	Axial.schema = _schema;
 	Axial.log = util.log;
 	Axial.error = util.error;
+	Axial.type = TYPE;
+	Axial.types = TYPES;
 	Axial.util = util;
+	Axial.prop = function (path) {
+	  return _paths.get(path);
+	};
+	Axial.isValidType = util.isType;
 	
 	// export window...
 	if (typeof window !== 'undefined') {
@@ -677,21 +1185,38 @@
 
 /***/ },
 /* 4 */
+/***/ function(module, exports) {
+
+	'use strict';
+	
+	var matchOperatorsRe = /[|\\{}()[\]^$+*?.]/g;
+	
+	module.exports = function (str) {
+		if (typeof str !== 'string') {
+			throw new TypeError('Expected a string');
+		}
+	
+		return str.replace(matchOperatorsRe, '\\$&');
+	};
+
+
+/***/ },
+/* 5 */
 /***/ function(module, exports, __webpack_require__) {
 
 	'use strict';
 	
-	var _Expectation = __webpack_require__(5);
+	var _Expectation = __webpack_require__(6);
 	
 	var _Expectation2 = _interopRequireDefault(_Expectation);
 	
-	var _SpyUtils = __webpack_require__(17);
+	var _SpyUtils = __webpack_require__(18);
 	
-	var _assert = __webpack_require__(15);
+	var _assert = __webpack_require__(16);
 	
 	var _assert2 = _interopRequireDefault(_assert);
 	
-	var _extend = __webpack_require__(35);
+	var _extend = __webpack_require__(36);
 	
 	var _extend2 = _interopRequireDefault(_extend);
 	
@@ -711,7 +1236,7 @@
 	module.exports = expect;
 
 /***/ },
-/* 5 */
+/* 6 */
 /***/ function(module, exports, __webpack_require__) {
 
 	'use strict';
@@ -724,21 +1249,21 @@
 	
 	var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
 	
-	var _has = __webpack_require__(6);
+	var _has = __webpack_require__(7);
 	
 	var _has2 = _interopRequireDefault(_has);
 	
-	var _tmatch = __webpack_require__(9);
+	var _tmatch = __webpack_require__(10);
 	
 	var _tmatch2 = _interopRequireDefault(_tmatch);
 	
-	var _assert = __webpack_require__(15);
+	var _assert = __webpack_require__(16);
 	
 	var _assert2 = _interopRequireDefault(_assert);
 	
-	var _SpyUtils = __webpack_require__(17);
+	var _SpyUtils = __webpack_require__(18);
 	
-	var _TestUtils = __webpack_require__(22);
+	var _TestUtils = __webpack_require__(23);
 	
 	function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 	
@@ -1126,25 +1651,25 @@
 	}exports.default = Expectation;
 
 /***/ },
-/* 6 */
+/* 7 */
 /***/ function(module, exports, __webpack_require__) {
 
-	var bind = __webpack_require__(7);
+	var bind = __webpack_require__(8);
 	
 	module.exports = bind.call(Function.call, Object.prototype.hasOwnProperty);
 
 
 /***/ },
-/* 7 */
+/* 8 */
 /***/ function(module, exports, __webpack_require__) {
 
-	var implementation = __webpack_require__(8);
+	var implementation = __webpack_require__(9);
 	
 	module.exports = Function.prototype.bind || implementation;
 
 
 /***/ },
-/* 8 */
+/* 9 */
 /***/ function(module, exports) {
 
 	var ERROR_MESSAGE = 'Function.prototype.bind called on incompatible ';
@@ -1198,7 +1723,7 @@
 
 
 /***/ },
-/* 9 */
+/* 10 */
 /***/ function(module, exports, __webpack_require__) {
 
 	/* WEBPACK VAR INJECTION */(function(process, Buffer) {'use strict'
@@ -1356,10 +1881,10 @@
 	  throw new Error('impossible to reach this point')
 	}
 	
-	/* WEBPACK VAR INJECTION */}.call(exports, __webpack_require__(10), __webpack_require__(11).Buffer))
+	/* WEBPACK VAR INJECTION */}.call(exports, __webpack_require__(11), __webpack_require__(12).Buffer))
 
 /***/ },
-/* 10 */
+/* 11 */
 /***/ function(module, exports) {
 
 	// shim for using process in browser
@@ -1545,7 +2070,7 @@
 
 
 /***/ },
-/* 11 */
+/* 12 */
 /***/ function(module, exports, __webpack_require__) {
 
 	/* WEBPACK VAR INJECTION */(function(global) {/*!
@@ -1558,9 +2083,9 @@
 	
 	'use strict'
 	
-	var base64 = __webpack_require__(12)
-	var ieee754 = __webpack_require__(13)
-	var isArray = __webpack_require__(14)
+	var base64 = __webpack_require__(13)
+	var ieee754 = __webpack_require__(14)
+	var isArray = __webpack_require__(15)
 	
 	exports.Buffer = Buffer
 	exports.SlowBuffer = SlowBuffer
@@ -3341,7 +3866,7 @@
 	/* WEBPACK VAR INJECTION */}.call(exports, (function() { return this; }())))
 
 /***/ },
-/* 12 */
+/* 13 */
 /***/ function(module, exports) {
 
 	'use strict'
@@ -3461,7 +3986,7 @@
 
 
 /***/ },
-/* 13 */
+/* 14 */
 /***/ function(module, exports) {
 
 	exports.read = function (buffer, offset, isLE, mLen, nBytes) {
@@ -3551,7 +4076,7 @@
 
 
 /***/ },
-/* 14 */
+/* 15 */
 /***/ function(module, exports) {
 
 	var toString = {}.toString;
@@ -3562,7 +4087,7 @@
 
 
 /***/ },
-/* 15 */
+/* 16 */
 /***/ function(module, exports, __webpack_require__) {
 
 	'use strict';
@@ -3571,7 +4096,7 @@
 	  value: true
 	});
 	
-	var _objectInspect = __webpack_require__(16);
+	var _objectInspect = __webpack_require__(17);
 	
 	var _objectInspect2 = _interopRequireDefault(_objectInspect);
 	
@@ -3599,7 +4124,7 @@
 	exports.default = assert;
 
 /***/ },
-/* 16 */
+/* 17 */
 /***/ function(module, exports) {
 
 	var hasMap = typeof Map === 'function' && Map.prototype;
@@ -3812,7 +4337,7 @@
 
 
 /***/ },
-/* 17 */
+/* 18 */
 /***/ function(module, exports, __webpack_require__) {
 
 	'use strict';
@@ -3822,13 +4347,13 @@
 	});
 	exports.spyOn = exports.createSpy = exports.restoreSpies = exports.isSpy = undefined;
 	
-	var _defineProperties = __webpack_require__(18);
+	var _defineProperties = __webpack_require__(19);
 	
-	var _assert = __webpack_require__(15);
+	var _assert = __webpack_require__(16);
 	
 	var _assert2 = _interopRequireDefault(_assert);
 	
-	var _TestUtils = __webpack_require__(22);
+	var _TestUtils = __webpack_require__(23);
 	
 	function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 	
@@ -3938,13 +4463,13 @@
 	};
 
 /***/ },
-/* 18 */
+/* 19 */
 /***/ function(module, exports, __webpack_require__) {
 
 	'use strict';
 	
-	var keys = __webpack_require__(19);
-	var foreach = __webpack_require__(21);
+	var keys = __webpack_require__(20);
+	var foreach = __webpack_require__(22);
 	var hasSymbols = typeof Symbol === 'function' && typeof Symbol() === 'symbol';
 	
 	var toStr = Object.prototype.toString;
@@ -4000,7 +4525,7 @@
 
 
 /***/ },
-/* 19 */
+/* 20 */
 /***/ function(module, exports, __webpack_require__) {
 
 	'use strict';
@@ -4009,7 +4534,7 @@
 	var has = Object.prototype.hasOwnProperty;
 	var toStr = Object.prototype.toString;
 	var slice = Array.prototype.slice;
-	var isArgs = __webpack_require__(20);
+	var isArgs = __webpack_require__(21);
 	var isEnumerable = Object.prototype.propertyIsEnumerable;
 	var hasDontEnumBug = !isEnumerable.call({ toString: null }, 'toString');
 	var hasProtoEnumBug = isEnumerable.call(function () {}, 'prototype');
@@ -4146,7 +4671,7 @@
 
 
 /***/ },
-/* 20 */
+/* 21 */
 /***/ function(module, exports) {
 
 	'use strict';
@@ -4169,7 +4694,7 @@
 
 
 /***/ },
-/* 21 */
+/* 22 */
 /***/ function(module, exports) {
 
 	
@@ -4197,7 +4722,7 @@
 
 
 /***/ },
-/* 22 */
+/* 23 */
 /***/ function(module, exports, __webpack_require__) {
 
 	'use strict';
@@ -4209,15 +4734,15 @@
 	
 	var _typeof = typeof Symbol === "function" && typeof Symbol.iterator === "symbol" ? function (obj) { return typeof obj; } : function (obj) { return obj && typeof Symbol === "function" && obj.constructor === Symbol ? "symbol" : typeof obj; };
 	
-	var _isRegex = __webpack_require__(23);
+	var _isRegex = __webpack_require__(24);
 	
 	var _isRegex2 = _interopRequireDefault(_isRegex);
 	
-	var _why = __webpack_require__(24);
+	var _why = __webpack_require__(25);
 	
 	var _why2 = _interopRequireDefault(_why);
 	
-	var _objectKeys = __webpack_require__(19);
+	var _objectKeys = __webpack_require__(20);
 	
 	var _objectKeys2 = _interopRequireDefault(_objectKeys);
 	
@@ -4348,7 +4873,7 @@
 	};
 
 /***/ },
-/* 23 */
+/* 24 */
 /***/ function(module, exports) {
 
 	'use strict';
@@ -4373,7 +4898,7 @@
 
 
 /***/ },
-/* 24 */
+/* 25 */
 /***/ function(module, exports, __webpack_require__) {
 
 	'use strict';
@@ -4381,16 +4906,16 @@
 	var ObjectPrototype = Object.prototype;
 	var toStr = ObjectPrototype.toString;
 	var booleanValue = Boolean.prototype.valueOf;
-	var has = __webpack_require__(6);
-	var isArrowFunction = __webpack_require__(25);
-	var isBoolean = __webpack_require__(27);
-	var isDate = __webpack_require__(28);
-	var isGenerator = __webpack_require__(29);
-	var isNumber = __webpack_require__(30);
-	var isRegex = __webpack_require__(23);
-	var isString = __webpack_require__(31);
-	var isSymbol = __webpack_require__(32);
-	var isCallable = __webpack_require__(26);
+	var has = __webpack_require__(7);
+	var isArrowFunction = __webpack_require__(26);
+	var isBoolean = __webpack_require__(28);
+	var isDate = __webpack_require__(29);
+	var isGenerator = __webpack_require__(30);
+	var isNumber = __webpack_require__(31);
+	var isRegex = __webpack_require__(24);
+	var isString = __webpack_require__(32);
+	var isSymbol = __webpack_require__(33);
+	var isCallable = __webpack_require__(27);
 	
 	var isProto = Object.prototype.isPrototypeOf;
 	
@@ -4398,9 +4923,9 @@
 	var functionsHaveNames = foo.name === 'foo';
 	
 	var symbolValue = typeof Symbol === 'function' ? Symbol.prototype.valueOf : null;
-	var symbolIterator = __webpack_require__(33)();
+	var symbolIterator = __webpack_require__(34)();
 	
-	var collectionsForEach = __webpack_require__(34)();
+	var collectionsForEach = __webpack_require__(35)();
 	
 	var getPrototypeOf = Object.getPrototypeOf;
 	if (!getPrototypeOf) {
@@ -4673,12 +5198,12 @@
 
 
 /***/ },
-/* 25 */
+/* 26 */
 /***/ function(module, exports, __webpack_require__) {
 
 	'use strict';
 	
-	var isCallable = __webpack_require__(26);
+	var isCallable = __webpack_require__(27);
 	var fnToStr = Function.prototype.toString;
 	var isNonArrowFnRegex = /^\s*function/;
 	var isArrowFnWithParensRegex = /^\([^\)]*\) *=>/;
@@ -4694,7 +5219,7 @@
 
 
 /***/ },
-/* 26 */
+/* 27 */
 /***/ function(module, exports) {
 
 	'use strict';
@@ -4739,7 +5264,7 @@
 
 
 /***/ },
-/* 27 */
+/* 28 */
 /***/ function(module, exports) {
 
 	'use strict';
@@ -4766,7 +5291,7 @@
 
 
 /***/ },
-/* 28 */
+/* 29 */
 /***/ function(module, exports) {
 
 	'use strict';
@@ -4792,7 +5317,7 @@
 
 
 /***/ },
-/* 29 */
+/* 30 */
 /***/ function(module, exports) {
 
 	'use strict';
@@ -4830,7 +5355,7 @@
 
 
 /***/ },
-/* 30 */
+/* 31 */
 /***/ function(module, exports) {
 
 	'use strict';
@@ -4856,7 +5381,7 @@
 
 
 /***/ },
-/* 31 */
+/* 32 */
 /***/ function(module, exports) {
 
 	'use strict';
@@ -4882,7 +5407,7 @@
 
 
 /***/ },
-/* 32 */
+/* 33 */
 /***/ function(module, exports) {
 
 	'use strict';
@@ -4915,12 +5440,12 @@
 
 
 /***/ },
-/* 33 */
+/* 34 */
 /***/ function(module, exports, __webpack_require__) {
 
 	'use strict';
 	
-	var isSymbol = __webpack_require__(32);
+	var isSymbol = __webpack_require__(33);
 	
 	module.exports = function getSymbolIterator() {
 		var symbolIterator = typeof Symbol === 'function' && isSymbol(Symbol.iterator) ? Symbol.iterator : null;
@@ -4938,7 +5463,7 @@
 
 
 /***/ },
-/* 34 */
+/* 35 */
 /***/ function(module, exports) {
 
 	'use strict';
@@ -4969,7 +5494,7 @@
 
 
 /***/ },
-/* 35 */
+/* 36 */
 /***/ function(module, exports, __webpack_require__) {
 
 	'use strict';
@@ -4978,7 +5503,7 @@
 	  value: true
 	});
 	
-	var _Expectation = __webpack_require__(5);
+	var _Expectation = __webpack_require__(6);
 	
 	var _Expectation2 = _interopRequireDefault(_Expectation);
 	

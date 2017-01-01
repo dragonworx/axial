@@ -1,27 +1,15 @@
-// http://stackoverflow.com/questions/33870684/why-doesnt-instanceof-work-on-instances-of-error-subclasses-under-babel-node
-function ExtendableBuiltin (cls){
-  function ExtendableBuiltin() {
-    cls.apply(this, arguments);
-  }
-
-  ExtendableBuiltin.prototype = Object.create(cls.prototype);
-  Object.setPrototypeOf(ExtendableBuiltin, cls);
-
-  return ExtendableBuiltin;
-}
-
 const ERROR = {
-  AxialPathNotFound: class AxialPathNotFound extends ExtendableBuiltin(Error) {},
-  AxialArrayExpected: class AxialArrayExpected extends ExtendableBuiltin(Error) {}
+  AxialPathNotFound: 'AxialPathNotFound',
+  AxialArrayExpected: 'AxialArrayExpected'
 };
 
 const TYPE = {
-  '*': '<any>',
+  ANY: '<any>',
   STRING: '<string>',
   NUMBER: '<number>',
   BOOLEAN: '<boolean>',
   ARRAY: function (type) {
-    return `<array>[${type || '*'}]`;
+    return `<array>[${type || '<any>'}]`;
   },
   OBJECT: '<object>',
   REGEX: '<regex>',
@@ -29,11 +17,19 @@ const TYPE = {
   FUNCTION: '<function>',
   NULL: '<null>',
   UNDEFINED: '<undefined>',
-  UNKNOWN: '<unknown>'
+  UNKNOWN: '<unknown>',
+  BRANCH: '<branch>'
 };
+
+const TYPES = {};
+
+function err (type, message) {
+  return `${type}: ${message}`;
+}
 
 let util = {
   logEnabled: false,
+
   log () {
     if (this.logEnabled) {
       console.log.apply(console, arguments);
@@ -58,6 +54,57 @@ let util = {
         }
         return Object.getPrototypeOf(o) === t;
       })();
+  },
+
+  isType (t) {
+    const types = Array.isArray(t) ? t : [t];
+    let count = 0;
+    for (let i = 0; i < types.length; i++) {
+      const type = types[i];
+      if (typeof type !== 'string') {
+        return false;
+      }
+      if (type === TYPE.ARRAY()) {
+        return true;
+      }
+      for (let typeName in TYPE) {
+        if (TYPE.hasOwnProperty(typeName)) {
+          if (type === TYPE[typeName]) {
+            count++;
+          }
+          if (typeName !== 'ARRAY') {
+            const arrayType = TYPE.ARRAY(TYPE[typeName]);
+            if (type === arrayType) {
+              count++;
+            }
+          }
+        }
+      }
+    }
+    return count === types.length;
+  },
+
+  isCustomType (t) {
+    return typeof this.getCustomType(t) !== 'undefined';
+  },
+
+  getCustomTypeKey (t) {
+    return t.replace(/^<|>$/g, '').toUpperCase();
+  },
+
+  getCustomType (t) {
+    const a = Array.isArray(t) ? t : [t];
+    for (let i = 0, l = a.length; i < l; i++) {
+      const tk = a[i];
+      let T;
+      try {
+        T = TYPES[this.getCustomTypeKey(this.isArray(tk) ? this.getArrayType(tk) : tk)];
+      } catch (e) {
+      }
+      if (typeof T !== 'undefined') {
+        return T;
+      }
+    }
   },
 
   getObjectPaths (obj, includeBranchPaths) {
@@ -95,11 +142,11 @@ let util = {
           path = p ? p + '.' + k : k;
           if (this.isObject(ref)) {
             if (includeBranchPaths === true) {
-              keyValues.push({path:path, value:ref, isBranch:true});
+              keyValues.push({path: path, value: ref, isBranch: true});
             }
             walk(ref, path);
           } else {
-            keyValues.push({path:path, value:ref, isBranch:false});
+            keyValues.push({path: path, value: ref, isBranch: false});
           }
         }
       }
@@ -116,9 +163,9 @@ let util = {
     for (let i = 0; i < l; i++) {
       k = steps[i];
       ref = ref[k];
-      if (ref === null || typeof ref === 'undefined') {
+      if (typeof ref === 'undefined') {
         if (shouldThrowIfNotFound === true) {
-          throw new ERROR.AxialPathNotFound(`Undefined value at path "${path}"`);
+          throw new Error(err(ERROR.AxialPathNotFound, `Undefined value at path "${path}"`));
         }
         return ref;
       }
@@ -126,19 +173,43 @@ let util = {
     return ref;
   },
 
-  setObjectAtPath (obj, path, value) {
+  /**
+   *
+   * @param obj
+   * @param path
+   * @param value
+   * @param banchFactory - use this factory function to return a branche that do not exist for new and deeper paths
+   * @returns {Map}
+   */
+  setObjectAtPath (obj, path, value, banchFactory) {
     let ref = obj;
     let steps = path.split('.');
     let l = steps.length - 1;
     let k = null;
+    let branches = new Map();
     for (let i = 0; i < l; i++) {
       k = steps[i];
       if (!ref.hasOwnProperty(k)) {
-        ref[k] = {};
+        let branchPath = steps.slice(0, i + 1).join('.');
+        let branch = typeof banchFactory === 'function' ? banchFactory(branchPath) : {};
+        ref[k] = branch;
+        branches.set(branchPath, branch);
       }
       ref = ref[k];
     }
     ref[steps[l]] = value;
+    return branches;
+  },
+
+  deleteAtPath (obj, path) {
+    const parts = path.split('.');
+    if (parts.length === 1) {
+      delete obj[path];
+    } else {
+      const parentPath = parts.slice(0, parts.length - 1).join('.');
+      let parentObj = this.getObjectAtPath(obj, parentPath);
+      delete parentObj[path.split('.').pop()];
+    }
   },
 
   multiSetObjectAtPath (obj, pathOrObject, value, shouldThrowIfNotFound) {
@@ -178,7 +249,7 @@ let util = {
   },
 
   isArray (type) {
-    return type.indexOf('<array>') === 0;
+    return ('' + type).indexOf('<array>') === 0;
   },
 
   isTypedArray (type) {
@@ -186,7 +257,7 @@ let util = {
   },
 
   getArrayType (type) {
-    return type.match(/.*\[(.+)\]/)[1];
+    return type.replace(/^<array>/, '').replace(/^\[/, '').replace(/\]$/, '');
   },
 
   typeOf (value) {
@@ -206,24 +277,26 @@ let util = {
       return TYPE.REGEX;
     } else if (value instanceof Date) {
       return TYPE.DATE;
-    } if (Array.isArray(value)) {
+    }
+    if (Array.isArray(value)) {
       return TYPE.ARRAY(value.length ? this.typeOf(value[0]) : TYPE.ANY);
     } else if (typeof value === 'function') {
       return TYPE.FUNCTION;
     }
     return TYPE.UNKNOWN;
   },
+
   args (args) {
     return Array.prototype.slice.call(arguments);
   }
 };
 
-util.ExtendableBuiltin = ExtendableBuiltin;
-
 util.log = util.log.bind(util);
 util.error = util.error.bind(util);
+util.err = err;
 
 util.TYPE = TYPE;
+util.TYPES = TYPES;
 util.ERROR = ERROR;
 
 module.exports = util;
