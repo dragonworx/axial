@@ -48,9 +48,10 @@ class AxialSchemaProperty {
         throw new Error(util.err(ERROR.AxialUndefinedType, `Undefined type "${type}"`));
       }
     });
+    this._isCustomType = util.isCustomType(this._type);
   }
 
-  types (fn) {
+  forEachType (fn) {
     const types = this._type;
     for (let i = 0, l = this._type.length; i < l; i++) {
       fn(types[i]);
@@ -243,12 +244,14 @@ let Axial = {
     _getPathsFromArgs(arguments).forEach(info => {
       const path = info.path;
       const type = info.value;
-      if (this.has(path)) {
-        // path exists
-        throw new Error(err(ERROR.AxialPathExists, `Cannot define new path "${path}", path already exists`));
-      }
+//      if (_paths.has(path)/*this.has(path)*/) {
+//        // path exists
+//        debugger;
+//        return;
+//        throw new Error(util.err(ERROR.AxialPathExists, `Cannot define new path "${path}", path already exists`));
+//      }
       if (Array.isArray(type)) {
-        // handle mult-types (via array definition)
+        // handle multi-types (via array definition)
         for (let i = 0; i < type.length; i++) {
           const t = type[i];
           if (!util.isType(t)) {
@@ -271,7 +274,6 @@ let Axial = {
           });
         }
       } else if (!Array.isArray(type)) {
-        debugger;
         throw new Error(util.err(ERROR.AxialUndefinedType, `Undefined type "${type}"`));
       }
       _paths.set(path, node);
@@ -304,7 +306,7 @@ let Axial = {
   defineType (typeName, typeOrObject) {
     const typeKey = typeName.replace(/^<+|>+$/g, '').toUpperCase();
     const typeValue = `<${typeName.toLowerCase()}>`;
-    if (TYPE.hasOwnProperty(typeKey) || Axial.hasOwnProperty(typeKey)) {
+    if (TYPE.hasOwnProperty(typeKey) || this.hasOwnProperty(typeKey)) {
       throw new Error(util.err(ERROR.AxialTypeExists, `Cannot define type, already exists "${typeKey}"`));
     }
     TYPE[typeKey] = typeValue;
@@ -374,16 +376,16 @@ let Axial = {
   },
 
   dump: function () {
-    log(`----+< State >+----`);
-    const json = {};
-    this.paths().forEach(path => {
-      const node = _paths.get(path);
-      if (!(node instanceof AxialSchemaBranch)) {
-        util.setObjectAtPath(json, `${path}:${node._type}`, node.value());
-      }
-    });
+    return;
+    log(`----+< toJSON >+----`);
+    const json = this.toJSON();
+    const queue = this.paths().filter(p => _paths.get(p)._type[0] !== Axial.BRANCH);
+    while (queue.length) {
+
+    }
+    paths.forEach(p => util.renameAtPath(json, p, p));
     log(`%c${JSON.stringify(json, null, 4)}`, 'color:darkBlue');
-    log(`----+< Types >+----`);
+    log(`----+< Custom Types >+----`);
     for (let typeKey in TYPES) {
       if (TYPES.hasOwnProperty(typeKey)) {
         log(`%c${TYPES[typeKey].toString()}`, 'color:darkBlue');
@@ -393,10 +395,23 @@ let Axial = {
   },
 
   toJSON: function () {
-    const json = {};
-    this.paths().forEach(path => {
-      util.setObjectAtPath(json, path, _paths.get(path).value());
-    });
+    let json = {};
+    let paths = this.paths();
+    let usedPaths = [];
+    while (paths.length) {
+      const path = paths.splice(0, 1)[0];
+      const node = _paths.get(path);
+      if (node instanceof AxialSchemaProperty) {
+        if (node._isCustomType && node.value() === null) {
+          util.setObjectAtPath(json, path, null);
+          const key = path + '.';
+          paths = paths.filter(p => p.indexOf(key) === -1);
+        } else {
+          util.setObjectAtPath(json, path, node.value());
+        }
+        usedPaths.push({path:path, node:node});
+      }
+    }
     return json;
   }
 };

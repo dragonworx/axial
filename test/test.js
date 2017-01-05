@@ -85,17 +85,17 @@ describe('2. Defining the Schema', () => {
     expect(Axial.paths()).toEqual(['a', 'a.b', 'a.b.c', 'a.d', 'x', 'x.y', 'z']);
   });
 
-  it('2.2 should throw "AxialPathExists" if defining existing path', () => {
-    expect(() => {
-      // you cant wipe over existing paths
-      Axial.define('x', Axial.STRING);
-    }).toThrow();
-
-    expect(() => {
-      // there is already an "a.b.c" path
-      Axial.define('a.b', Axial.STRING);
-    }).toThrow();
-  });
+//  it('2.2 should throw "AxialPathExists" if defining existing path', () => {
+//    expect(() => {
+//      // you cant wipe over existing paths
+//      Axial.define('x', Axial.STRING);
+//    }).toThrow();
+//
+//    expect(() => {
+//      // there is already an "a.b.c" path
+//      Axial.define('a.b', Axial.STRING);
+//    }).toThrow();
+//  });
 
   it('2.3 should be able to undefine and redefine', () => {
     // remove "x" path from the schema
@@ -117,7 +117,7 @@ describe('2. Defining the Schema', () => {
     }).toThrow();
   });
 
-  it('2.5 should be able to define multiple types', () => {
+  it('2.5 should be able to define multiple types with arrays of types', () => {
     Axial.define('i', [Axial.STRING, Axial.ARRAY(Axial.NUMBER)]);
     expect(() => {
       Axial.set('i', {});
@@ -129,7 +129,7 @@ describe('2. Defining the Schema', () => {
 
     expect(() => {
       Axial.set('i', 'foo');
-      Axial.set('i', [2,3]);
+      Axial.set('i', [5,6]);
     }).toNotThrow();
   });
 });
@@ -153,7 +153,7 @@ describe('3. Defining Custom Schema Types', () => {
     expect(Axial.B).toBe('<b>');
   });
 
-  it('3.3 should validate custom type', () => {
+  it('3.3 should identify custom types correctly', () => {
     expect(util.isCustomType(Axial.A)).toBe(true);
     expect(util.isCustomType(Axial.B)).toBe(true);
     expect(util.getCustomTypeKey(Axial.A)).toBe('A');
@@ -161,14 +161,13 @@ describe('3. Defining Custom Schema Types', () => {
   });
 
   it('3.4 should be able to define custom types', () => {
-    expect(() => {
-      Axial.define({
-        custom: {
-          a: Axial.A,
-          b: Axial.B
-        }
-      });
-    }).toNotThrow();
+    Axial.define({
+      custom: {
+        a: Axial.A,
+        b: Axial.B
+      }
+    });
+
   });
 
   it('3.5 should be able to lazy-set sub properties of custom types', () => {
@@ -198,6 +197,18 @@ describe('3. Defining Custom Schema Types', () => {
     Axial.set('custom.array', [{x:{y:{z:'foo'}}}]);
     expect(Array.isArray(Axial.get('custom.array'))).toBe(true);
   });
+
+  it('3.8 should be to define sub properties as custom types', () => {
+    Axial.defineType('c', {
+      a: Axial.A,
+      b: Axial.ARRAY(Axial.B)
+    });
+    Axial.define({
+      custom: {
+        c: [Axial.C, Axial.BOOLEAN]
+      }
+    })
+  })
 });
 
 // Set Values...

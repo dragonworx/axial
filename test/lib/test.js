@@ -133,17 +133,17 @@
 	    expect(Axial.paths()).toEqual(['a', 'a.b', 'a.b.c', 'a.d', 'x', 'x.y', 'z']);
 	  });
 	
-	  it('2.2 should throw "AxialPathExists" if defining existing path', function () {
-	    expect(function () {
-	      // you cant wipe over existing paths
-	      Axial.define('x', Axial.STRING);
-	    }).toThrow();
-	
-	    expect(function () {
-	      // there is already an "a.b.c" path
-	      Axial.define('a.b', Axial.STRING);
-	    }).toThrow();
-	  });
+	  //  it('2.2 should throw "AxialPathExists" if defining existing path', () => {
+	  //    expect(() => {
+	  //      // you cant wipe over existing paths
+	  //      Axial.define('x', Axial.STRING);
+	  //    }).toThrow();
+	  //
+	  //    expect(() => {
+	  //      // there is already an "a.b.c" path
+	  //      Axial.define('a.b', Axial.STRING);
+	  //    }).toThrow();
+	  //  });
 	
 	  it('2.3 should be able to undefine and redefine', function () {
 	    // remove "x" path from the schema
@@ -165,7 +165,7 @@
 	    }).toThrow();
 	  });
 	
-	  it('2.5 should be able to define multiple types', function () {
+	  it('2.5 should be able to define multiple types with arrays of types', function () {
 	    Axial.define('i', [Axial.STRING, Axial.ARRAY(Axial.NUMBER)]);
 	    expect(function () {
 	      Axial.set('i', {});
@@ -177,7 +177,7 @@
 	
 	    expect(function () {
 	      Axial.set('i', 'foo');
-	      Axial.set('i', [2, 3]);
+	      Axial.set('i', [5, 6]);
 	    }).toNotThrow();
 	  });
 	});
@@ -200,7 +200,7 @@
 	    expect(Axial.B).toBe('<b>');
 	  });
 	
-	  it('3.3 should validate custom type', function () {
+	  it('3.3 should identify custom types correctly', function () {
 	    expect(util.isCustomType(Axial.A)).toBe(true);
 	    expect(util.isCustomType(Axial.B)).toBe(true);
 	    expect(util.getCustomTypeKey(Axial.A)).toBe('A');
@@ -208,14 +208,12 @@
 	  });
 	
 	  it('3.4 should be able to define custom types', function () {
-	    expect(function () {
-	      Axial.define({
-	        custom: {
-	          a: Axial.A,
-	          b: Axial.B
-	        }
-	      });
-	    }).toNotThrow();
+	    Axial.define({
+	      custom: {
+	        a: Axial.A,
+	        b: Axial.B
+	      }
+	    });
 	  });
 	
 	  it('3.5 should be able to lazy-set sub properties of custom types', function () {
@@ -244,6 +242,18 @@
 	    Axial.define('custom.array', Axial.ARRAY(Axial.A));
 	    Axial.set('custom.array', [{ x: { y: { z: 'foo' } } }]);
 	    expect(Array.isArray(Axial.get('custom.array'))).toBe(true);
+	  });
+	
+	  it('3.8 should be to define sub properties as custom types', function () {
+	    Axial.defineType('c', {
+	      a: Axial.A,
+	      b: Axial.ARRAY(Axial.B)
+	    });
+	    Axial.define({
+	      custom: {
+	        c: [Axial.C, Axial.BOOLEAN]
+	      }
+	    });
 	  });
 	});
 	
@@ -492,6 +502,23 @@
 	    }
 	    return ref;
 	  },
+	  renameAtPath: function renameAtPath(obj, path, key) {
+	    var steps = path.split('.');
+	    var l = steps.length - 1;
+	    var ref = obj;
+	    var k = null;
+	    for (var i = 0; i < l; i++) {
+	      k = steps[i];
+	      ref = ref[k];
+	      if (typeof ref === 'undefined') {
+	        throw new Error(err(ERROR.AxialPathNotFound, 'Undefined value at path "' + path + '"'));
+	      }
+	    }
+	    var lastSubKey = steps[steps.length - 1];
+	    ref[key] = ref[lastSubKey];
+	    delete ref[lastSubKey];
+	    return obj;
+	  },
 	
 	
 	  /**
@@ -499,10 +526,10 @@
 	   * @param obj
 	   * @param path
 	   * @param value
-	   * @param banchFactory - use this factory function to return a branche that do not exist for new and deeper paths
+	   * @param branchFactory - use this factory function to return a branch that does not exist for sub paths
 	   * @returns {Map}
 	   */
-	  setObjectAtPath: function setObjectAtPath(obj, path, value, banchFactory) {
+	  setObjectAtPath: function setObjectAtPath(obj, path, value, branchFactory) {
 	    var ref = obj;
 	    var steps = path.split('.');
 	    var l = steps.length - 1;
@@ -512,7 +539,7 @@
 	      k = steps[i];
 	      if (!ref.hasOwnProperty(k)) {
 	        var branchPath = steps.slice(0, i + 1).join('.');
-	        var branch = typeof banchFactory === 'function' ? banchFactory(branchPath) : {};
+	        var branch = typeof branchFactory === 'function' ? branchFactory(branchPath) : {};
 	        ref[k] = branch;
 	        branches.set(branchPath, branch);
 	      }
@@ -687,11 +714,12 @@
 	        throw new Error(util.err(ERROR.AxialUndefinedType, 'Undefined type "' + type + '"'));
 	      }
 	    });
+	    this._isCustomType = util.isCustomType(this._type);
 	  }
 	
 	  _createClass(AxialSchemaProperty, [{
-	    key: 'types',
-	    value: function types(fn) {
+	    key: 'forEachType',
+	    value: function forEachType(fn) {
 	      var types = this._type;
 	      for (var i = 0, l = this._type.length; i < l; i++) {
 	        fn(types[i]);
@@ -840,9 +868,9 @@
 	          throw new Error(util.err(ERROR.AxialInvalidType, 'Invalid type for path "' + prop._path + '" - ' + this._typeValue + ' expected, ' + util.typeOf(value) + ' given.'));
 	        }
 	      } else if (this._definition) {
-	        var paths = this._paths;
-	        for (var i = 0, l = paths.length; i < l; i++) {
-	          var path = paths[i];
+	        var _paths2 = this._paths;
+	        for (var i = 0, l = _paths2.length; i < l; i++) {
+	          var path = _paths2[i];
 	          var absPath = prop._path + '.' + path;
 	          try {
 	            var val = util.getObjectAtPath(value, path, true);
@@ -936,12 +964,14 @@
 	    _getPathsFromArgs(arguments).forEach(function (info) {
 	      var path = info.path;
 	      var type = info.value;
-	      if (_this2.has(path)) {
-	        // path exists
-	        throw new Error(err(ERROR.AxialPathExists, 'Cannot define new path "' + path + '", path already exists'));
-	      }
+	      //      if (_paths.has(path)/*this.has(path)*/) {
+	      //        // path exists
+	      //        debugger;
+	      //        return;
+	      //        throw new Error(util.err(ERROR.AxialPathExists, `Cannot define new path "${path}", path already exists`));
+	      //      }
 	      if (Array.isArray(type)) {
-	        // handle mult-types (via array definition)
+	        // handle multi-types (via array definition)
 	        for (var i = 0; i < type.length; i++) {
 	          var t = type[i];
 	          if (!util.isType(t)) {
@@ -964,7 +994,6 @@
 	          });
 	        }
 	      } else if (!Array.isArray(type)) {
-	        debugger;
 	        throw new Error(util.err(ERROR.AxialUndefinedType, 'Undefined type "' + type + '"'));
 	      }
 	      _paths.set(path, node);
@@ -1023,7 +1052,7 @@
 	  defineType: function defineType(typeName, typeOrObject) {
 	    var typeKey = typeName.replace(/^<+|>+$/g, '').toUpperCase();
 	    var typeValue = '<' + typeName.toLowerCase() + '>';
-	    if (TYPE.hasOwnProperty(typeKey) || Axial.hasOwnProperty(typeKey)) {
+	    if (TYPE.hasOwnProperty(typeKey) || this.hasOwnProperty(typeKey)) {
 	      throw new Error(util.err(ERROR.AxialTypeExists, 'Cannot define type, already exists "' + typeKey + '"'));
 	    }
 	    TYPE[typeKey] = typeValue;
@@ -1050,9 +1079,9 @@
 	          prop.value(val);
 	        } else {
 	          if (util.isObject(val)) {
-	            var paths = util.getObjectPathValues(val);
-	            for (var i = 0, l = paths.length; i < l; i++) {
-	              var pv = paths[i];
+	            var _paths3 = util.getObjectPathValues(val);
+	            for (var i = 0, l = _paths3.length; i < l; i++) {
+	              var pv = _paths3[i];
 	              _this4.set(path + '.' + pv.path, pv.value);
 	            }
 	          } else {
@@ -1114,16 +1143,18 @@
 	
 	
 	  dump: function dump() {
-	    log('----+< State >+----');
-	    var json = {};
-	    this.paths().forEach(function (path) {
-	      var node = _paths.get(path);
-	      if (!(node instanceof AxialSchemaBranch)) {
-	        util.setObjectAtPath(json, path + ':' + node._type, node.value());
-	      }
+	    return;
+	    log('----+< toJSON >+----');
+	    var json = this.toJSON();
+	    var queue = this.paths().filter(function (p) {
+	      return _paths.get(p)._type[0] !== Axial.BRANCH;
+	    });
+	    while (queue.length) {}
+	    paths.forEach(function (p) {
+	      return util.renameAtPath(json, p, p);
 	    });
 	    log('%c' + JSON.stringify(json, null, 4), 'color:darkBlue');
-	    log('----+< Types >+----');
+	    log('----+< Custom Types >+----');
 	    for (var typeKey in TYPES) {
 	      if (TYPES.hasOwnProperty(typeKey)) {
 	        log('%c' + TYPES[typeKey].toString(), 'color:darkBlue');
@@ -1134,9 +1165,26 @@
 	
 	  toJSON: function toJSON() {
 	    var json = {};
-	    this.paths().forEach(function (path) {
-	      util.setObjectAtPath(json, path, _paths.get(path).value());
-	    });
+	    var paths = this.paths();
+	    var usedPaths = [];
+	    while (paths.length) {
+	      var path = paths.splice(0, 1)[0];
+	      var node = _paths.get(path);
+	      if (node instanceof AxialSchemaProperty) {
+	        if (node._isCustomType && node.value() === null) {
+	          (function () {
+	            util.setObjectAtPath(json, path, null);
+	            var key = path + '.';
+	            paths = paths.filter(function (p) {
+	              return p.indexOf(key) === -1;
+	            });
+	          })();
+	        } else {
+	          util.setObjectAtPath(json, path, node.value());
+	        }
+	        usedPaths.push({ path: path, node: node });
+	      }
+	    }
 	    return json;
 	  }
 	};

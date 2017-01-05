@@ -173,15 +173,33 @@ let util = {
     return ref;
   },
 
+  renameAtPath (obj, path, key) {
+    let steps = path.split('.');
+    let l = steps.length - 1;
+    let ref = obj;
+    let k = null;
+    for (let i = 0; i < l; i++) {
+      k = steps[i];
+      ref = ref[k];
+      if (typeof ref === 'undefined') {
+        throw new Error(err(ERROR.AxialPathNotFound, `Undefined value at path "${path}"`));
+      }
+    }
+    let lastSubKey = steps[steps.length - 1];
+    ref[key] = ref[lastSubKey];
+    delete ref[lastSubKey];
+    return obj;
+  },
+
   /**
    *
    * @param obj
    * @param path
    * @param value
-   * @param banchFactory - use this factory function to return a branche that do not exist for new and deeper paths
+   * @param branchFactory - use this factory function to return a branch that does not exist for sub paths
    * @returns {Map}
    */
-  setObjectAtPath (obj, path, value, banchFactory) {
+  setObjectAtPath (obj, path, value, branchFactory) {
     let ref = obj;
     let steps = path.split('.');
     let l = steps.length - 1;
@@ -191,7 +209,7 @@ let util = {
       k = steps[i];
       if (!ref.hasOwnProperty(k)) {
         let branchPath = steps.slice(0, i + 1).join('.');
-        let branch = typeof banchFactory === 'function' ? banchFactory(branchPath) : {};
+        let branch = typeof branchFactory === 'function' ? branchFactory(branchPath) : {};
         ref[k] = branch;
         branches.set(branchPath, branch);
       }
