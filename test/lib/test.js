@@ -46,286 +46,332 @@
 
 	'use strict';
 	
-	var util = __webpack_require__(1);
-	var Axial = __webpack_require__(2);
-	var expect = __webpack_require__(5);
+	var Axial = __webpack_require__(1);
+	var util = Axial.util;
+	var expect = __webpack_require__(2);
 	
-	// Util...
-	describe('1. Util (Types, Object Manipulation)', function () {
-	  it('1.1 should determine correct type', function () {
-	    // Axial supports these well known types
-	    expect(util.typeOf('abc')).toBe(Axial.STRING);
-	    expect(util.typeOf(-3.5)).toBe(Axial.NUMBER);
-	    expect(util.typeOf(false)).toBe(Axial.BOOLEAN);
-	    expect(util.typeOf([])).toBe(Axial.ARRAY());
-	    expect(util.typeOf(['abc'])).toBe(Axial.ARRAY(Axial.STRING));
-	    expect(util.typeOf([3])).toBe(Axial.ARRAY(Axial.NUMBER));
-	    expect(util.typeOf([true])).toBe(Axial.ARRAY(Axial.BOOLEAN));
-	    expect(util.typeOf({ x: 1 })).toBe(Axial.OBJECT);
-	    expect(util.typeOf(/abc/)).toBe(Axial.REGEX);
-	    expect(util.typeOf(new Date())).toBe(Axial.DATE);
-	    expect(util.typeOf(function () {})).toBe(Axial.FUNCTION);
-	    expect(util.typeOf(undefined)).toBe(Axial.UNDEFINED);
-	    expect(util.typeOf(null)).toBe(Axial.NULL);
-	  });
-	
-	  it('1.2 should detect Axial type', function () {
-	    expect(util.isType([Axial.ANY, Axial.STRING])).toBe(true);
-	    expect(util.isType([3, Axial.STRING])).toBe(false);
-	    expect(util.isType(3)).toBe(false);
-	    expect(util.isType({})).toBe(false);
-	    expect(util.isType(Axial.ANY)).toBe(true);
-	    expect(util.isType(Axial.STRING)).toBe(true);
-	    expect(util.isType(Axial.NUMBER)).toBe(true);
-	    expect(util.isType(Axial.BOOLEAN)).toBe(true);
-	    expect(util.isType(Axial.OBJECT)).toBe(true);
-	    expect(util.isType(Axial.REGEX)).toBe(true);
-	    expect(util.isType(Axial.DATE)).toBe(true);
-	    expect(util.isType(Axial.FUNCTION)).toBe(true);
-	    expect(util.isType(Axial.NULL)).toBe(true);
-	    expect(util.isType(Axial.UNDEFINED)).toBe(true);
-	    expect(util.isType(Axial.UNKNOWN)).toBe(true);
-	    expect(util.isType(Axial.BRANCH)).toBe(true);
-	    expect(util.isType(Axial.ARRAY(Axial.ANY))).toBe(true);
-	    expect(util.isType(Axial.ARRAY(Axial.STRING))).toBe(true);
-	    expect(util.isType(Axial.ARRAY(Axial.NUMBER))).toBe(true);
-	    expect(util.isType(Axial.ARRAY(Axial.BOOLEAN))).toBe(true);
-	    expect(util.isType(Axial.ARRAY(Axial.OBJECT))).toBe(true);
-	    expect(util.isType(Axial.ARRAY(Axial.REGEX))).toBe(true);
-	    expect(util.isType(Axial.ARRAY(Axial.DATE))).toBe(true);
-	    expect(util.isType(Axial.ARRAY(Axial.FUNCTION))).toBe(true);
-	    expect(util.isType(Axial.ARRAY(Axial.NULL))).toBe(true);
-	    expect(util.isType(Axial.ARRAY(Axial.UNDEFINED))).toBe(true);
-	    expect(util.isType(Axial.ARRAY(Axial.UNKNOWN))).toBe(true);
-	    expect(util.isType(Axial.ARRAY(Axial.BRANCH))).toBe(true);
-	  });
-	
-	  it('1.3 should determine correct array types', function () {
-	    // working with strongly typed arrays
-	    expect(util.isArray(Axial.ARRAY())).toBe(true);
-	    expect(util.isArray(Axial.ARRAY(Axial.STRING))).toBe(true);
-	    expect(util.isTypedArray(Axial.ARRAY())).toBe(false);
-	    expect(util.isTypedArray(Axial.ARRAY(Axial.STRING))).toBe(true);
-	    expect(util.getArrayType(Axial.ARRAY(Axial.STRING))).toBe(Axial.STRING);
-	    expect(util.getArrayType(Axial.ARRAY(Axial.NUMBER))).toBe(Axial.NUMBER);
+	describe('1. Types', function () {
+	  it('1.1 should determine correct types', function () {
+	    expect(util.typeOf(null)).toBe(Axial.Null);
+	    expect(util.typeOf(undefined)).toBe(Axial.Undefined);
+	    expect(util.typeOf('abc')).toBe(Axial.String);
+	    expect(util.typeOf(123)).toBe(Axial.Number);
+	    expect(util.typeOf(true)).toBe(Axial.Boolean);
+	    expect(util.typeOf(false)).toBe(Axial.Boolean);
+	    expect(util.typeOf(new Date())).toBe(Axial.Date);
+	    expect(util.typeOf(/abc/)).toBe(Axial.Regex);
+	    expect(util.typeOf(function () {})).toBe(Axial.Function);
+	    expect(util.typeOf([])).toBe(Axial.Array());
+	    expect(util.typeOf(['abc'])).toBe(Axial.Array(Axial.String));
+	    expect(util.typeOf([123])).toBe(Axial.Array(Axial.Number));
+	    expect(util.typeOf({})).toBe(Axial.Object);
 	  });
 	});
 	
-	// Define schema...
-	describe('2. Defining the Schema', function () {
-	  it('2.1 should be able to define a schema using path or object', function () {
-	    // you can define a schema using an object of key values to describe types
-	    Axial.define({
-	      a: {
-	        b: {
-	          c: Axial.STRING
-	        },
-	        d: Axial.NUMBER
-	      },
-	      x: {
-	        y: Axial.DATE
-	      }
-	    });
+	describe('2. Defining Schemas', function () {
+	  var schema = null;
+	  var a = null;
 	
-	    // or you can define a single path key (lazy initialises object branches) with it's type
-	    Axial.define('z', Axial.ARRAY(Axial.STRING));
-	
-	    expect(Axial.paths()).toEqual(['a', 'a.b', 'a.b.c', 'a.d', 'x', 'x.y', 'z']);
-	  });
-	
-	  //  it('2.2 should throw "AxialPathExists" if defining existing path', () => {
-	  //    expect(() => {
-	  //      // you cant wipe over existing paths
-	  //      Axial.define('x', Axial.STRING);
-	  //    }).toThrow();
-	  //
-	  //    expect(() => {
-	  //      // there is already an "a.b.c" path
-	  //      Axial.define('a.b', Axial.STRING);
-	  //    }).toThrow();
-	  //  });
-	
-	  it('2.3 should be able to undefine and redefine', function () {
-	    // remove "x" path from the schema
-	    Axial.undefine('x');
-	    expect(Axial.paths()).toEqual(['a', 'a.b', 'a.b.c', 'a.d', 'z']);
-	
-	    // redefine it again
-	    Axial.define('x', Axial.NUMBER);
-	    expect(Axial.paths()).toEqual(['a', 'a.b', 'a.b.c', 'a.d', 'x', 'z']);
-	  });
-	
-	  it('2.4 should be able to lock paths so they cant be undefined', function () {
-	    // locking is a one-way operation (per application session)
-	    Axial.lock('a.d');
-	    expect(function () {
-	      // now we can't undefine it...
-	      Axial.undefine('a.d');
-	      // this allows a provider to create a schema that consumers cannot change
-	    }).toThrow();
-	  });
-	
-	  it('2.5 should be able to define multiple types with arrays of types', function () {
-	    Axial.define('i', [Axial.STRING, Axial.ARRAY(Axial.NUMBER)]);
-	    expect(function () {
-	      Axial.set('i', {});
-	    }).toThrow();
-	
-	    expect(function () {
-	      Axial.set('i', [2, 'foo']);
-	    }).toThrow();
-	
-	    expect(function () {
-	      Axial.set('i', 'foo');
-	      Axial.set('i', [5, 6]);
-	    }).toNotThrow();
-	  });
-	});
-	
-	describe('3. Defining Custom Schema Types', function () {
-	  it('3.1 should be able to define a custom type from definition object', function () {
-	    Axial.defineType('a', {
+	  it('2.1 should be able to define a schema without an id', function () {
+	    schema = Axial.define({
 	      x: {
 	        y: {
-	          z: Axial.STRING
-	        },
-	        w: Axial.NUMBER
+	          z: [Axial.Number, Axial.Boolean]
+	        }
 	      }
 	    });
-	    expect(Axial.A).toBe('<a>');
+	    expect(schema).toBeA(Axial.Schema.constructor);
 	  });
 	
-	  it('3.2 should be able to define a custom type from an enum type', function () {
-	    Axial.defineType('b', Axial.NUMBER);
-	    expect(Axial.B).toBe('<b>');
+	  it('2.2 should be able to define a schema with an id', function () {
+	    schema = Axial.define('schema', {
+	      x: {
+	        y: {
+	          z: [Axial.Number, Axial.Boolean]
+	        }
+	      },
+	      v: Axial.Array(),
+	      w: Axial.Array(Axial.String)
+	    });
+	    expect(schema.prop('schema.x.y.z').schema.name).toBe('schema.x.y');
 	  });
 	
-	  it('3.3 should identify custom types correctly', function () {
-	    expect(util.isCustomType(Axial.A)).toBe(true);
-	    expect(util.isCustomType(Axial.B)).toBe(true);
-	    expect(util.getCustomTypeKey(Axial.A)).toBe('A');
-	    expect(util.getCustomTypeKey(Axial.B)).toBe('B');
+	  it('2.3 should be able to access schema properties by path', function () {
+	    expect(schema.prop('schema.x').is(Axial.Schema)).toBe(true);
+	    expect(schema.prop('schema.x').is(Axial.String)).toBe(false);
+	    expect(schema.prop('schema.x.y.z').is(Axial.Number)).toBe(true);
+	    expect(schema.prop('schema.x.y.z').is(Axial.Boolean)).toBe(true);
+	    expect(schema.prop('schema.v').is(Axial.Array())).toBe(true);
+	    expect(schema.prop('schema.v').is(Axial.Array(Axial.String))).toBe(false);
+	    expect(schema.prop('schema.w').is(Axial.Array(Axial.String))).toBe(true);
+	    expect(schema.prop('schema.w').is(Axial.Array(Axial.Number))).toBe(false);
+	  });
+	});
+	
+	describe('3. Creating Instances', function () {
+	  var schema = Axial.define('schema', {
+	    x: {
+	      y: {
+	        z: [Axial.Number, Axial.Boolean, Axial.Undefined]
+	      }
+	    }
+	  });
+	  var a = null;
+	
+	  it('3.1.a should be able to create instances of schemas', function () {
+	    a = schema.new();
+	    expect(a).toBeA(Axial.Instance.constructor);
 	  });
 	
-	  it('3.4 should be able to define custom types', function () {
-	    Axial.define({
-	      custom: {
-	        a: Axial.A,
-	        b: Axial.B
+	  it('3.1.b should be able to create instances of schemas from default values', function () {
+	    a = schema.new({
+	      x: {
+	        y: {
+	          z: 1
+	        }
 	      }
 	    });
+	    expect(a.x).toBeA(Axial.Instance.constructor);
+	    expect(a.x.y).toBeA(Axial.Instance.constructor);
+	    expect(a.x.y.z).toBe(1);
 	  });
 	
-	  it('3.5 should be able to lazy-set sub properties of custom types', function () {
-	    Axial.set('custom.a.x.y.z', 'foo');
-	    expect(Axial.get('custom.a.x.y.z')).toBe('foo');
+	  it('3.1.c should be able to create instances of schemas from partial set of default values', function () {
+	    a = schema.new({
+	      x: {}
+	    });
+	    expect(a.x.y).toBeA(Axial.Instance.constructor);
+	    a.x.y = { z: 5 };
+	    expect(a.x.y.z).toBe(5);
 	  });
 	
-	  it('3.6 should be able to set custom types', function () {
-	    Axial.set({
-	      custom: {
+	  it('3.2.a should NOT be allowed to create instance with non-schema property', function () {
+	    expect(function () {
+	      schema.new({
+	        a: 1
+	      });
+	    }).toThrow(Axial.UnknownSchemaKey);
+	  });
+	
+	  it('3.2.b should NOT be allowed to create instance with invalid type', function () {
+	    expect(function () {
+	      schema.new({
+	        x: {
+	          y: false
+	        }
+	      });
+	    }).toThrow(Axial.InvalidType);
+	    expect(function () {
+	      schema.new({
+	        x: {
+	          y: {
+	            z: 'foo'
+	          }
+	        }
+	      });
+	    }).toThrow(Axial.InvalidType);
+	  });
+	
+	  it('3.3 should be able to set multiple types', function () {
+	    expect(function () {
+	      a.x.y.z = 5;
+	      a.x.y.z = false;
+	    }).toNotThrow();
+	    expect(function () {
+	      a.x.y.z = {};
+	    }).toThrow(Axial.InvalidType);
+	  });
+	
+	  it('3.4 should be able to use arrays', function () {
+	    schema = Axial.define('schema', {
+	      a: Axial.Array(),
+	      b: Axial.Array(Axial.String),
+	      c: Axial.Array(Axial.Object),
+	      d: Axial.Array(Axial.Array(Axial.String))
+	    });
+	    a = schema.new();
+	    a.a = [];
+	    a.b = [];
+	    a.b = ['abc'];
+	    a.c = [];
+	    a.c = [{ x: 1 }];
+	    a.d = [];
+	    a.d = [['abc'], ['efg']];
+	    expect(function () {
+	      return a.a = false;
+	    }).toThrow(Axial.InvalidType);
+	    expect(function () {
+	      return a.b = [123];
+	    }).toThrow(Axial.InvalidType);
+	    expect(function () {
+	      return a.c = [[]];
+	    }).toThrow(Axial.InvalidType);
+	    expect(function () {
+	      return a.c = [[123]];
+	    }).toThrow(Axial.InvalidType);
+	  });
+	
+	  it('3.5 should be able to use objects', function () {
+	    schema = Axial.define('schema', {
+	      a: Axial.Object
+	    });
+	    a = schema.new();
+	    a.a = { x: 1 };
+	    expect(function () {
+	      return a.a = false;
+	    }).toThrow(Axial.InvalidType);
+	    expect(function () {
+	      return a.a = [123];
+	    }).toThrow(Axial.InvalidType);
+	  });
+	});
+	
+	describe('4. Configuring Schema Property Types', function () {
+	  var schema = void 0;
+	
+	  it('4.1 should be able to set default property', function () {
+	    schema = Axial.define({
+	      x: Axial.Number.define({
+	        defaultValue: 5
+	      })
+	    });
+	    expect(schema.new().x).toBe(5);
+	  });
+	});
+	
+	describe('5. Listening to instance changes', function () {
+	  var schema = Axial.define('schema', {
+	    a: Axial.Object
+	  });
+	  var a = schema.new();
+	
+	  it('5.1 should be able to listen to set property changes of instances (global/local)', function () {
+	    var handlerCount = 0;
+	    var fn = function fn(eventData) {
+	      expect(eventData.method).toBe('set');
+	      expect(eventData.value.y).toBe(5);
+	      handlerCount++;
+	    };
+	    Axial.bind(fn);
+	    a._bind('a', fn);
+	    a.a = { y: 5 };
+	    a._unbind();
+	    Axial.unbind();
+	    expect(handlerCount).toBe(2);
+	  });
+	
+	  it('5.2 should be able to listen to get property changes of instances (global/local)', function () {
+	    var handlerCount = 0;
+	    var fn = function fn(eventData) {
+	      expect(eventData.method).toBe('get');
+	      expect(eventData.value.y).toBe(5);
+	      handlerCount++;
+	    };
+	    Axial.bind(fn);
+	    a._bind('a', fn);
+	    var test = a.a;
+	    a._unbind();
+	    Axial.unbind();
+	    expect(handlerCount).toBe(2);
+	  });
+	});
+	
+	describe('6. Composite schemas', function () {
+	  it('6.1 should be able to compose schemas from other schemas', function () {
+	    var schemaA = Axial.define('schemaA', {
+	      x: [Axial.String, Axial.Undefined],
+	      y: {
+	        z: [Axial.Number, Axial.Undefined]
+	      }
+	    });
+	    var schemaB = Axial.define('schemaB', {
+	      a: schemaA,
+	      b: {
+	        c: [Axial.Number, schemaA]
+	      }
+	    });
+	    var a = schemaB.new();
+	    expect(function () {
+	      schemaB.new({
 	        a: {
-	          x: {
+	          x: 'a',
+	          y: {
+	            z: 3
+	          }
+	        },
+	        b: {
+	          c: 2
+	        }
+	      });
+	    }).toNotThrow();
+	    expect(function () {
+	      schemaB.new({
+	        a: {
+	          x: 'a',
+	          y: {
+	            z: 'abc' // <- error
+	          }
+	        },
+	        b: {
+	          c: 2
+	        }
+	      });
+	    }).toThrow();
+	    expect(function () {
+	      schemaB.new({
+	        a: {
+	          x: 'a',
+	          y: {
+	            z: 3
+	          }
+	        },
+	        b: {
+	          c: {
+	            x: 'a',
 	            y: {
-	              z: 'barz'
+	              z: 3
 	            }
 	          }
 	        }
-	      }
-	    });
-	    Axial.set('custom.a.x.w', 3);
-	    expect(Axial.get('custom.a.x.y.z')).toBe('barz');
-	    expect(Axial.get('custom.a.x.w')).toBe(3);
-	  });
-	
-	  it('3.7 should be able to define arrays of custom types', function () {
-	    Axial.define('custom.array', Axial.ARRAY(Axial.A));
-	    Axial.set('custom.array', [{ x: { y: { z: 'foo' } } }]);
-	    expect(Array.isArray(Axial.get('custom.array'))).toBe(true);
-	  });
-	
-	  it('3.8 should be to define sub properties as custom types', function () {
-	    Axial.defineType('c', {
-	      a: Axial.A,
-	      b: Axial.ARRAY(Axial.B)
-	    });
-	    Axial.define({
-	      custom: {
-	        c: [Axial.C, Axial.BOOLEAN]
-	      }
-	    });
-	  });
-	});
-	
-	// Set Values...
-	describe('4. Setting Values', function () {
-	  it('4.1 should return "null" for path without value', function () {
-	    // null is used for empty / initial / unset state
-	    expect(Axial.get('z')).toBe(null);
-	  });
-	
-	  it('4.2 should be able to set path or object value', function () {
-	    // as long as its the correct type, you can set a value by path and value
-	    Axial.set('z', ['abc']);
-	    Axial.set('x', 6);
-	    expect(Axial.get('x')).toBe(6);
-	    // or you can update a bunch of paths at once using a deep object
-	    Axial.set({
-	      a: {
-	        b: {
-	          c: 'foo'
-	        }
-	      },
-	      'x': 7
-	    });
-	    expect(Axial.get('a.b.c')).toBe('foo');
-	    expect(Axial.get('x')).toBe(7);
-	  });
-	
-	  it('4.3 should throw "AxialUndefinedPath" if setting non-existent path', function () {
-	    expect(function () {
-	      Axial.set('does.not.exist', true);
-	    }).toThrow();
-	  });
-	
-	  it('4.4 should throw "AxialInvalidType" if setting invalid primitive type', function () {
-	    expect(function () {
-	      Axial.set('x', 'not a number');
-	    }).toThrow();
-	    expect(function () {
-	      Axial.set('a.d', {});
-	    }).toThrow();
-	  });
-	
-	  it('4.5 should throw "AxialInvalidType" if setting invalid array type', function () {
-	    expect(function () {
-	      Axial.set('x', 'not a number');
-	    }).toThrow();
-	    expect(function () {
-	      Axial.set('z', [true]);
-	    }).toThrow();
-	  });
-	
-	  it('4.6 should be able to add any type for array defined without type', function () {
-	    Axial.define('w', Axial.ARRAY());
-	    Axial.set('w', []);
-	    Axial.set('w', [1]);
-	    Axial.set('w', [2]);
-	    Axial.set('w', ['1']);
-	  });
-	
-	  it('4.7 should be able to set any value for "Axial.ANY" type', function () {
-	    Axial.define('j', Axial.ANY);
-	    expect(function () {
-	      Axial.set('j', 'foo');
-	      Axial.set('j', 2);
-	      Axial.set('j', function () {});
+	      });
 	    }).toNotThrow();
+	    expect(function () {
+	      schemaB.new({
+	        a: {
+	          x: 'a',
+	          y: {
+	            z: 3
+	          }
+	        },
+	        b: {
+	          c: {
+	            x: 'a',
+	            y: {
+	              z: 3
+	            }
+	          }
+	        }
+	      });
+	    }).toNotThrow();
+	    expect(function () {
+	      schemaB.new({
+	        a: {
+	          x: 'a',
+	          y: {
+	            z: 3
+	          }
+	        },
+	        b: {
+	          c: {
+	            x: 'a',
+	            y: {
+	              z: 'a' // <- error
+	            }
+	          }
+	        }
+	      });
+	    }).toThrow();
 	  });
-	});
-	
-	after(function () {
-	  Axial.dump();
 	});
 
 /***/ },
@@ -334,54 +380,946 @@
 
 	'use strict';
 	
+	var _slicedToArray = function () { function sliceIterator(arr, i) { var _arr = []; var _n = true; var _d = false; var _e = undefined; try { for (var _i = arr[Symbol.iterator](), _s; !(_n = (_s = _i.next()).done); _n = true) { _arr.push(_s.value); if (i && _arr.length === i) break; } } catch (err) { _d = true; _e = err; } finally { try { if (!_n && _i["return"]) _i["return"](); } finally { if (_d) throw _e; } } return _arr; } return function (arr, i) { if (Array.isArray(arr)) { return arr; } else if (Symbol.iterator in Object(arr)) { return sliceIterator(arr, i); } else { throw new TypeError("Invalid attempt to destructure non-iterable instance"); } }; }();
+	
+	var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
+	
 	var _typeof = typeof Symbol === "function" && typeof Symbol.iterator === "symbol" ? function (obj) { return typeof obj; } : function (obj) { return obj && typeof Symbol === "function" && obj.constructor === Symbol && obj !== Symbol.prototype ? "symbol" : typeof obj; };
 	
-	var ERROR = {
-	  AxialPathNotFound: 'AxialPathNotFound',
-	  AxialArrayExpected: 'AxialArrayExpected'
+	function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
+	
+	function _possibleConstructorReturn(self, call) { if (!self) { throw new ReferenceError("this hasn't been initialised - super() hasn't been called"); } return call && (typeof call === "object" || typeof call === "function") ? call : self; }
+	
+	function _inherits(subClass, superClass) { if (typeof superClass !== "function" && superClass !== null) { throw new TypeError("Super expression must either be null or a function, not " + typeof superClass); } subClass.prototype = Object.create(superClass && superClass.prototype, { constructor: { value: subClass, enumerable: false, writable: true, configurable: true } }); if (superClass) Object.setPrototypeOf ? Object.setPrototypeOf(subClass, superClass) : subClass.__proto__ = superClass; }
+	
+	var util = void 0;
+	var T = null;
+	var _arrayTypes = {};
+	var _listeners = [];
+	var _allSchemas = {};
+	
+	/* --------------------------------------------------------------------------------------  Errors ---------- */
+	var Exception = function ExtendableBuiltin(cls) {
+	  function ExtendableBuiltin() {
+	    cls.apply(this, arguments);
+	  }
+	  ExtendableBuiltin.prototype = Object.create(cls.prototype);
+	  Object.setPrototypeOf(ExtendableBuiltin, cls);
+	  return ExtendableBuiltin;
+	}(Error);
+	
+	var AxialUnsupportedType = function (_Exception) {
+	  _inherits(AxialUnsupportedType, _Exception);
+	
+	  function AxialUnsupportedType(value) {
+	    _classCallCheck(this, AxialUnsupportedType);
+	
+	    var message = 'Unsupported type "' + ('' + (typeof value === 'undefined' ? 'undefined' : _typeof(value))) + '"';
+	
+	    var _this = _possibleConstructorReturn(this, (AxialUnsupportedType.__proto__ || Object.getPrototypeOf(AxialUnsupportedType)).call(this, message));
+	
+	    _this.value = value;
+	    _this.message = message;
+	    return _this;
+	  }
+	
+	  return AxialUnsupportedType;
+	}(Exception);
+	
+	var AxialInvalidType = function (_Exception2) {
+	  _inherits(AxialInvalidType, _Exception2);
+	
+	  function AxialInvalidType(given, expected, key, schema) {
+	    _classCallCheck(this, AxialInvalidType);
+	
+	    var message = 'Invalid type' + (key ? ' for property "' + key + '"' : '') + ' - "' + given + '" given, "' + expected + '" expected';
+	
+	    var _this2 = _possibleConstructorReturn(this, (AxialInvalidType.__proto__ || Object.getPrototypeOf(AxialInvalidType)).call(this, message));
+	
+	    _this2.given = given;
+	    _this2.expected = expected;
+	    _this2.key = key;
+	    _this2.schema = schema;
+	    _this2.message = message;
+	    return _this2;
+	  }
+	
+	  return AxialInvalidType;
+	}(Exception);
+	
+	var AxialMissingProperty = function (_Exception3) {
+	  _inherits(AxialMissingProperty, _Exception3);
+	
+	  function AxialMissingProperty(key, schema) {
+	    _classCallCheck(this, AxialMissingProperty);
+	
+	    var message = 'Missing schema ' + key + ' from given object';
+	
+	    var _this3 = _possibleConstructorReturn(this, (AxialMissingProperty.__proto__ || Object.getPrototypeOf(AxialMissingProperty)).call(this, message));
+	
+	    _this3.key = key;
+	    _this3.schema = schema;
+	    _this3.message = message;
+	    return _this3;
+	  }
+	
+	  return AxialMissingProperty;
+	}(Exception);
+	
+	var AxialIllegalProperty = function (_Exception4) {
+	  _inherits(AxialIllegalProperty, _Exception4);
+	
+	  function AxialIllegalProperty(key, schema) {
+	    _classCallCheck(this, AxialIllegalProperty);
+	
+	    var message = 'Illegal key ' + key + ' given from object, not declared in schema';
+	
+	    var _this4 = _possibleConstructorReturn(this, (AxialIllegalProperty.__proto__ || Object.getPrototypeOf(AxialIllegalProperty)).call(this, message));
+	
+	    _this4.key = key;
+	    _this4.schema = schema;
+	    _this4.message = message;
+	    return _this4;
+	  }
+	
+	  return AxialIllegalProperty;
+	}(Exception);
+	
+	var Errors = {
+	  UnsupportedType: AxialUnsupportedType,
+	  InvalidType: AxialInvalidType,
+	  MissingProperty: AxialMissingProperty,
+	  IllegalProperty: AxialIllegalProperty
 	};
 	
-	var TYPE = {
-	  ANY: '<any>',
-	  STRING: '<string>',
-	  NUMBER: '<number>',
-	  BOOLEAN: '<boolean>',
-	  ARRAY: function ARRAY(type) {
-	    return '<array>[' + (type || '<any>') + ']';
-	  },
-	  OBJECT: '<object>',
-	  REGEX: '<regex>',
-	  DATE: '<date>',
-	  FUNCTION: '<function>',
-	  NULL: '<null>',
-	  UNDEFINED: '<undefined>',
-	  UNKNOWN: '<unknown>',
-	  BRANCH: '<branch>'
-	};
+	/* --------------------------------------------------------------------------------------  Types ---------- */
 	
-	var TYPES = {};
+	var AxialType = function () {
+	  function AxialType() {
+	    _classCallCheck(this, AxialType);
 	
-	function err(type, message) {
-	  return type + ': ' + message;
-	}
+	    this._defaultValue = undefined;
+	  }
 	
-	var util = {
-	  logEnabled: false,
-	
-	  log: function log() {
-	    if (this.logEnabled) {
-	      console.log.apply(console, arguments);
+	  _createClass(AxialType, [{
+	    key: 'validate',
+	    value: function validate(value) {
+	      if (!this.is(value)) {
+	        throw new AxialInvalidType(this.name, util.typeOf(value).name);
+	      }
 	    }
-	  },
-	  error: function error() {
-	    if (this.logEnabled) {
-	      console.error.apply(console, arguments);
+	  }, {
+	    key: 'is',
+	    value: function is(value) {
+	      return (typeof value === 'undefined' ? 'undefined' : _typeof(value)) === this.name;
 	    }
-	  },
-	  isObject: function isObject(o) {
+	  }, {
+	    key: 'toString',
+	    value: function toString() {
+	      return this.name;
+	    }
+	  }, {
+	    key: 'clone',
+	    value: function clone() {
+	      var copy = new this.constructor();
+	      for (var key in this) {
+	        if (this.hasOwnProperty(key)) {
+	          copy[key] = this[key];
+	        }
+	      }
+	      return copy;
+	    }
+	  }, {
+	    key: 'define',
+	    value: function define(options) {
+	      var copy = this.clone();
+	      for (var key in options) {
+	        if (options.hasOwnProperty(key)) {
+	          copy['_' + key] = options[key];
+	        }
+	      }
+	      return copy;
+	    }
+	  }, {
+	    key: 'name',
+	    get: function get() {
+	      return this._name || this.constructor.name;
+	    }
+	  }], [{
+	    key: 'name',
+	    get: function get() {
+	      return '?';
+	    }
+	  }]);
+	
+	  return AxialType;
+	}();
+	
+	var AxialNull = function (_AxialType) {
+	  _inherits(AxialNull, _AxialType);
+	
+	  function AxialNull() {
+	    _classCallCheck(this, AxialNull);
+	
+	    return _possibleConstructorReturn(this, (AxialNull.__proto__ || Object.getPrototypeOf(AxialNull)).apply(this, arguments));
+	  }
+	
+	  _createClass(AxialNull, [{
+	    key: 'is',
+	    value: function is(value) {
+	      return value === null;
+	    }
+	  }], [{
+	    key: 'name',
+	    get: function get() {
+	      return 'null';
+	    }
+	  }]);
+	
+	  return AxialNull;
+	}(AxialType);
+	
+	var AxialUndefined = function (_AxialType2) {
+	  _inherits(AxialUndefined, _AxialType2);
+	
+	  function AxialUndefined() {
+	    _classCallCheck(this, AxialUndefined);
+	
+	    return _possibleConstructorReturn(this, (AxialUndefined.__proto__ || Object.getPrototypeOf(AxialUndefined)).apply(this, arguments));
+	  }
+	
+	  _createClass(AxialUndefined, [{
+	    key: 'is',
+	    value: function is(value) {
+	      return typeof value === 'undefined';
+	    }
+	  }], [{
+	    key: 'name',
+	    get: function get() {
+	      return 'undefined';
+	    }
+	  }]);
+	
+	  return AxialUndefined;
+	}(AxialType);
+	
+	var AxialString = function (_AxialType3) {
+	  _inherits(AxialString, _AxialType3);
+	
+	  function AxialString() {
+	    _classCallCheck(this, AxialString);
+	
+	    return _possibleConstructorReturn(this, (AxialString.__proto__ || Object.getPrototypeOf(AxialString)).apply(this, arguments));
+	  }
+	
+	  _createClass(AxialString, null, [{
+	    key: 'name',
+	    get: function get() {
+	      return 'string';
+	    }
+	  }]);
+	
+	  return AxialString;
+	}(AxialType);
+	
+	var AxialNumber = function (_AxialType4) {
+	  _inherits(AxialNumber, _AxialType4);
+	
+	  function AxialNumber() {
+	    _classCallCheck(this, AxialNumber);
+	
+	    return _possibleConstructorReturn(this, (AxialNumber.__proto__ || Object.getPrototypeOf(AxialNumber)).apply(this, arguments));
+	  }
+	
+	  _createClass(AxialNumber, null, [{
+	    key: 'name',
+	    get: function get() {
+	      return 'number';
+	    }
+	  }]);
+	
+	  return AxialNumber;
+	}(AxialType);
+	
+	var AxialBoolean = function (_AxialType5) {
+	  _inherits(AxialBoolean, _AxialType5);
+	
+	  function AxialBoolean() {
+	    _classCallCheck(this, AxialBoolean);
+	
+	    return _possibleConstructorReturn(this, (AxialBoolean.__proto__ || Object.getPrototypeOf(AxialBoolean)).apply(this, arguments));
+	  }
+	
+	  _createClass(AxialBoolean, null, [{
+	    key: 'name',
+	    get: function get() {
+	      return 'boolean';
+	    }
+	  }]);
+	
+	  return AxialBoolean;
+	}(AxialType);
+	
+	var AxialDate = function (_AxialType6) {
+	  _inherits(AxialDate, _AxialType6);
+	
+	  function AxialDate() {
+	    _classCallCheck(this, AxialDate);
+	
+	    return _possibleConstructorReturn(this, (AxialDate.__proto__ || Object.getPrototypeOf(AxialDate)).apply(this, arguments));
+	  }
+	
+	  _createClass(AxialDate, [{
+	    key: 'is',
+	    value: function is(value) {
+	      return value instanceof Date;
+	    }
+	  }], [{
+	    key: 'name',
+	    get: function get() {
+	      return 'date';
+	    }
+	  }]);
+	
+	  return AxialDate;
+	}(AxialType);
+	
+	var AxialRegex = function (_AxialType7) {
+	  _inherits(AxialRegex, _AxialType7);
+	
+	  function AxialRegex() {
+	    _classCallCheck(this, AxialRegex);
+	
+	    return _possibleConstructorReturn(this, (AxialRegex.__proto__ || Object.getPrototypeOf(AxialRegex)).apply(this, arguments));
+	  }
+	
+	  _createClass(AxialRegex, [{
+	    key: 'is',
+	    value: function is(value) {
+	      return value instanceof RegExp;
+	    }
+	  }], [{
+	    key: 'name',
+	    get: function get() {
+	      return 'regex';
+	    }
+	  }]);
+	
+	  return AxialRegex;
+	}(AxialType);
+	
+	var AxialFunction = function (_AxialType8) {
+	  _inherits(AxialFunction, _AxialType8);
+	
+	  function AxialFunction() {
+	    _classCallCheck(this, AxialFunction);
+	
+	    return _possibleConstructorReturn(this, (AxialFunction.__proto__ || Object.getPrototypeOf(AxialFunction)).apply(this, arguments));
+	  }
+	
+	  _createClass(AxialFunction, [{
+	    key: 'is',
+	    value: function is(value) {
+	      return typeof value === 'function';
+	    }
+	  }], [{
+	    key: 'name',
+	    get: function get() {
+	      return 'function';
+	    }
+	  }]);
+	
+	  return AxialFunction;
+	}(AxialType);
+	
+	var AxialArray = function (_AxialType9) {
+	  _inherits(AxialArray, _AxialType9);
+	
+	  function AxialArray(type) {
+	    _classCallCheck(this, AxialArray);
+	
+	    var _this13 = _possibleConstructorReturn(this, (AxialArray.__proto__ || Object.getPrototypeOf(AxialArray)).call(this));
+	
+	    _this13._type = type;
+	    return _this13;
+	  }
+	
+	  _createClass(AxialArray, [{
+	    key: 'is',
+	    value: function is(value) {
+	      var isArray = Array.isArray(value);
+	      if (isArray) {
+	        if (this._type instanceof AxialType) {
+	          var l = value.length;
+	          for (var i = 0; i < l; i++) {
+	            if (!this._type.is(value[i])) {
+	              return false;
+	            }
+	          }
+	        }
+	        return true;
+	      } else {
+	        return false;
+	      }
+	    }
+	  }], [{
+	    key: 'name',
+	    get: function get() {
+	      return 'array';
+	    }
+	  }]);
+	
+	  return AxialArray;
+	}(AxialType);
+	
+	var AxialObject = function (_AxialType10) {
+	  _inherits(AxialObject, _AxialType10);
+	
+	  function AxialObject() {
+	    _classCallCheck(this, AxialObject);
+	
+	    return _possibleConstructorReturn(this, (AxialObject.__proto__ || Object.getPrototypeOf(AxialObject)).apply(this, arguments));
+	  }
+	
+	  _createClass(AxialObject, [{
+	    key: 'is',
+	    value: function is(value) {
+	      return util.isPlainObject(value) || (typeof value === 'undefined' ? 'undefined' : _typeof(value)) === 'object' && value !== null && !Array.isArray(value);
+	    }
+	  }], [{
+	    key: 'name',
+	    get: function get() {
+	      return 'object';
+	    }
+	  }]);
+	
+	  return AxialObject;
+	}(AxialType);
+	
+	/* ------------------------------------------------------------------------------ AxialSchema */
+	
+	
+	var AxialSchema = function (_AxialObject) {
+	  _inherits(AxialSchema, _AxialObject);
+	
+	  function AxialSchema(name, prototype, rootSchema) {
+	    _classCallCheck(this, AxialSchema);
+	
+	    var _this15 = _possibleConstructorReturn(this, (AxialSchema.__proto__ || Object.getPrototypeOf(AxialSchema)).call(this));
+	
+	    if (util.isPlainObject(name) && typeof prototype === 'undefined') {
+	      // handle case where just single object prototype argument given
+	      prototype = name;
+	      name = null;
+	    }
+	
+	    _this15._name = name;
+	    _this15._properties = new Map();
+	    _this15._allProps = new Map();
+	    _this15._rootSchema = rootSchema;
+	
+	    _this15.from(prototype);
+	
+	    if (_this15._name) {
+	      Axial.Schema[name.replace(/\./g, '_')] = _this15;
+	    }
+	    return _this15;
+	  }
+	
+	  _createClass(AxialSchema, [{
+	    key: 'validate',
+	    value: function validate(value) {
+	      // check value is object
+	      if (!AxialObject.prototype.is.call(this, value)) {
+	        throw new AxialInvalidType(util.typeOf(value).name);
+	      }
+	    }
+	  }, {
+	    key: 'is',
+	    value: function is(value) {
+	      // check value is object
+	      if (!AxialObject.prototype.is.call(this, value)) {
+	        return false;
+	      }
+	      for (var _ref in this._properties) {
+	        var _ref2 = _slicedToArray(_ref, 2);
+	
+	        var key = _ref2[0];
+	        var property = _ref2[1];
+	
+	        // for each property, check value has key
+	        if (!value.hasOwnProperty(key)) {
+	          throw new AxialMissingProperty(key, this);
+	        }
+	        // check if expected type recognises value for current key
+	        var val = value[key];
+	        var type = property.type;
+	        if (!type.is(val)) {
+	          throw new Error('Invalid type');
+	        }
+	      }
+	      return true;
+	    }
+	  }, {
+	    key: 'prop',
+	    value: function prop(name) {
+	      var path = name;
+	      if (this._name && path.indexOf(this._name) !== 0) {
+	        path = this._name + '.' + path;
+	      }
+	      return this.root._allProps.get(path);
+	    }
+	  }, {
+	    key: 'keys',
+	    value: function keys() {
+	      var keys = [];
+	      var _iteratorNormalCompletion = true;
+	      var _didIteratorError = false;
+	      var _iteratorError = undefined;
+	
+	      try {
+	        for (var _iterator = this.root._allProps[Symbol.iterator](), _step; !(_iteratorNormalCompletion = (_step = _iterator.next()).done); _iteratorNormalCompletion = true) {
+	          var _step$value = _slicedToArray(_step.value, 2),
+	              path = _step$value[0],
+	              property = _step$value[1];
+	
+	          keys.push(path);
+	        }
+	      } catch (err) {
+	        _didIteratorError = true;
+	        _iteratorError = err;
+	      } finally {
+	        try {
+	          if (!_iteratorNormalCompletion && _iterator.return) {
+	            _iterator.return();
+	          }
+	        } finally {
+	          if (_didIteratorError) {
+	            throw _iteratorError;
+	          }
+	        }
+	      }
+	
+	      return keys;
+	    }
+	  }, {
+	    key: 'from',
+	    value: function from(prototype) {
+	      for (var key in prototype) {
+	        if (prototype.hasOwnProperty(key)) {
+	          var type = prototype[key];
+	          var path = this._name ? this._name + '.' + key : key;
+	          if (util.isPlainObject(type)) {
+	            type = new AxialSchema(path, type, this.root);
+	          } else {
+	            if (!util.isType(type)) {
+	              throw new AxialUnsupportedType(type);
+	            }
+	          }
+	          this._properties.set(key, new AxialSchemaProperty(this, key, type, path));
+	        }
+	      }
+	    }
+	  }, {
+	    key: 'create',
+	    value: function create() {
+	      var _this16 = this;
+	
+	      var defaultValues = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : {};
+	
+	      // check undefined keys are not being passed
+	      for (var key in defaultValues) {
+	        if (defaultValues.hasOwnProperty(key) && key !== '$') {
+	          if (!this._properties.has(key)) {
+	            throw new AxialIllegalProperty(key, this);
+	          }
+	        }
+	      }
+	
+	      // create instance
+	      var instance = new AxialInstance(this);
+	
+	      this._properties.forEach(function (property, key) {
+	        // install getters and setters for each property in schema
+	        var value = defaultValues[key];
+	        var expectedType = property.type;
+	        var givenType = util.typeOf(value);
+	
+	        // expect property definition type to be valid AxialType
+	        if (defaultValues.hasOwnProperty(key) && !property.is(givenType)) {
+	          throw new AxialInvalidType(givenType.toString(), expectedType.join('|'), key, _this16);
+	        }
+	
+	        instance._defineAccessors(property);
+	
+	        if (property.is(Axial.Schema)) {
+	          value = property.primarySchemaType.create(value);
+	        } else if (!defaultValues.hasOwnProperty(key)) {
+	          value = property.defaultValue;
+	        }
+	
+	        if (typeof value !== 'undefined') {
+	          property.set(instance, value);
+	        }
+	      });
+	
+	      return instance;
+	    }
+	  }, {
+	    key: 'name',
+	    get: function get() {
+	      return this._name;
+	    }
+	  }, {
+	    key: 'root',
+	    get: function get() {
+	      return this._rootSchema ? this._rootSchema : this;
+	    }
+	  }, {
+	    key: 'isRootSchema',
+	    get: function get() {
+	      return this.root === this;
+	    }
+	  }, {
+	    key: 'isSubSchema',
+	    get: function get() {
+	      return !this.isRootSchema;
+	    }
+	  }]);
+	
+	  return AxialSchema;
+	}(AxialObject);
+	
+	/* ------------------------------------------------------------------------------ AxialInstance */
+	
+	
+	var AxialInstance = function () {
+	  function AxialInstance(schema) {
+	    _classCallCheck(this, AxialInstance);
+	
+	    this._state = {};
+	    this._schema = schema;
+	    this._listeners = {};
+	  }
+	
+	  _createClass(AxialInstance, [{
+	    key: '_defineAccessors',
+	    value: function _defineAccessors(property) {
+	      var key = property.key;
+	      if (this.hasOwnProperty(key)) {
+	        // TODO: user real error
+	        throw new Error('Illegal property key');
+	      }
+	      Object.defineProperty(this, key, {
+	        // create setter for instance
+	        set: function set(value) {
+	          // wrap property setter
+	          return property.set(this, value);
+	        },
+	        // create getter for instance
+	        get: function get() {
+	          // wrap property getter
+	          return property.get(this);
+	        }
+	      });
+	    }
+	  }, {
+	    key: '_bind',
+	    value: function _bind(key, fn) {
+	      this._listeners[key] = this._listeners[key] ? this._listeners[key] : [];
+	      this._listeners[key].push(fn);
+	    }
+	  }, {
+	    key: '_prop',
+	    value: function _prop(path) {
+	      return this._schema.prop(path);
+	    }
+	  }, {
+	    key: '_unbind',
+	    value: function _unbind(key, fn) {
+	      if (arguments.length === 0) {
+	        this._listeners = {};
+	      } else if (key && !fn) {
+	        this._listeners[key].length = 0;
+	      } else {
+	        var index = this._listeners[key].indexOf(fn);
+	        this._listeners[key].splice(index, 1);
+	      }
+	    }
+	  }, {
+	    key: '_dispatch',
+	    value: function _dispatch(key, eventData) {
+	      // dispatch globally too
+	      Axial.dispatch(eventData);
+	      var listeners = this._listeners[key];
+	      if (listeners) {
+	        var l = listeners.length;
+	        for (var i = 0; i < l; i++) {
+	          // dispatch for each event listener to schema keys
+	          listeners[i](eventData);
+	        }
+	      }
+	    }
+	  }, {
+	    key: '_set',
+	    value: function _set(key, value) {
+	      this._state[key] = value;
+	    }
+	  }, {
+	    key: '_get',
+	    value: function _get(key) {
+	      return this._state[key];
+	    }
+	  }]);
+	
+	  return AxialInstance;
+	}();
+	
+	/* ------------------------------------------------------------------------------ AxialSchemaProperty */
+	
+	
+	var AxialSchemaProperty = function () {
+	  function AxialSchemaProperty(schema, key, type, path) {
+	    _classCallCheck(this, AxialSchemaProperty);
+	
+	    this._schema = schema;
+	    this._key = key;
+	    this._type = Array.isArray(type) ? type : [type];
+	    this._path = path;
+	    schema.root._allProps.set(path, this);
+	  }
+	
+	  _createClass(AxialSchemaProperty, [{
+	    key: 'is',
+	    value: function is(type) {
+	      var t = this._type;
+	      var l = t.length;
+	      for (var i = 0; i < l; i++) {
+	        if (t[i] instanceof type.constructor) {
+	          if (t[i] instanceof AxialArray && t[i]._type !== type._type) {
+	            return false;
+	          }
+	          return true;
+	        }
+	      }
+	      return false;
+	    }
+	  }, {
+	    key: 'validate',
+	    value: function validate(value) {
+	      var t = this._type;
+	      var l = t.length;
+	      var hasValidated = false;
+	      for (var i = 0; i < l; i++) {
+	        var type = t[i];
+	        try {
+	          type.validate(value);
+	          hasValidated = true;
+	        } catch (e) {
+	          /* nothing... */
+	        }
+	        if (type.is(value)) {
+	          return;
+	        }
+	      }
+	      if (!hasValidated) {
+	        throw new AxialInvalidType(util.typeOf(value).name, t.join('|'), this._key, this._schema);
+	      }
+	    }
+	
+	    /**
+	     * setter
+	     * @param instance
+	     * @param value
+	     */
+	
+	  }, {
+	    key: 'set',
+	    value: function set(instance, value) {
+	      var oldValue = instance._get(this._key);
+	      var rawValue = value;
+	
+	      console.log('%cSET: ' + this._path + ':<' + this._type.join('|') + '> = ' + value, 'color:orange');
+	
+	      this.validate(value);
+	
+	      if (this.is(Axial.Schema) && util.isPlainObject(value)) {
+	        for (var i = 0; i < this._type.length; i++) {
+	          if (this._type[i] instanceof AxialSchema) {
+	            if (this._type[i].is(value)) {
+	              value = this._type[i].create(value);
+	              break;
+	            }
+	          }
+	        }
+	      }
+	
+	      // dispatch event
+	      instance._dispatch(this._key, {
+	        instance: instance,
+	        property: this,
+	        method: 'set',
+	        key: this._key,
+	        value: rawValue,
+	        newValue: rawValue,
+	        oldValue: oldValue
+	      });
+	
+	      // set state in obj
+	      instance._set(this._key, value);
+	    }
+	
+	    /**
+	     * getter
+	     * @param instance
+	     * @returns {*}
+	     */
+	
+	  }, {
+	    key: 'get',
+	    value: function get(instance) {
+	      var value = instance._get(this._key);
+	
+	      console.log('%cGET: ' + this._path + ':<' + this._type.join('|') + '> = ' + (T.Object.is(value) ? '{}' : value), 'color:#999');
+	
+	      // dispatch event
+	      instance._dispatch(this._key, {
+	        instance: instance,
+	        property: this,
+	        method: 'get',
+	        key: this._key,
+	        value: value
+	      });
+	
+	      return value;
+	    }
+	  }, {
+	    key: 'path',
+	    get: function get() {
+	      return this._path;
+	    }
+	  }, {
+	    key: 'schema',
+	    get: function get() {
+	      return this._schema;
+	    }
+	  }, {
+	    key: 'key',
+	    get: function get() {
+	      return this._key;
+	    }
+	  }, {
+	    key: 'type',
+	    get: function get() {
+	      return this._type;
+	    }
+	  }, {
+	    key: 'defaultValue',
+	    get: function get() {
+	      return this.primaryType._defaultValue;
+	    }
+	  }, {
+	    key: 'isSingleType',
+	    get: function get() {
+	      return this._type.length === 1;
+	    }
+	  }, {
+	    key: 'primaryType',
+	    get: function get() {
+	      return this._type[0];
+	    }
+	  }, {
+	    key: 'primarySchemaType',
+	    get: function get() {
+	      return this._type.find(function (type) {
+	        return type instanceof AxialSchema;
+	      });
+	    }
+	  }]);
+	
+	  return AxialSchemaProperty;
+	}();
+	
+	var AxialBinding = function () {
+	  function AxialBinding(instance, key, handler) {
+	    _classCallCheck(this, AxialBinding);
+	
+	    this._instance = instance;
+	    this._key = key;
+	    this._property = instance._prop(this._key);
+	    this._handler = handler;
+	    this._active = false;
+	  }
+	
+	  _createClass(AxialBinding, [{
+	    key: 'bind',
+	    value: function bind() {
+	      this._instance._bind(this._key, this._handler);
+	      this._active = true;
+	    }
+	  }, {
+	    key: 'unbind',
+	    value: function unbind() {
+	      this._instance._unbind(this._key, this._handler);
+	      this._active = false;
+	    }
+	  }, {
+	    key: 'dispose',
+	    value: function dispose() {
+	      if (this._active) {
+	        this.unbind();
+	      }
+	      delete this._instance;
+	      delete this._handler;
+	    }
+	  }, {
+	    key: 'get',
+	    value: function get() {
+	      return this._instance[this._key];
+	    }
+	  }, {
+	    key: 'set',
+	    value: function set(value) {
+	      this._instance[this._key] = value;
+	    }
+	  }, {
+	    key: 'instance',
+	    get: function get() {
+	      return this._instance;
+	    }
+	  }, {
+	    key: 'key',
+	    get: function get() {
+	      return this._key;
+	    }
+	  }, {
+	    key: 'property',
+	    get: function get() {
+	      return this._property;
+	    }
+	  }, {
+	    key: 'handler',
+	    get: function get() {
+	      return this._handler;
+	    }
+	  }, {
+	    key: 'isActive',
+	    get: function get() {
+	      return this._active;
+	    }
+	  }]);
+	
+	  return AxialBinding;
+	}();
+	
+	/* --------------------------------------------------------------------------------------  Util ---------- */
+	
+	
+	util = {
+	  isPlainObject: function isPlainObject(o) {
 	    var t = o;
 	    return (typeof o === 'undefined' ? 'undefined' : _typeof(o)) !== 'object' || o === null ? false : function () {
-	      while (!false) {
+	      while (true) {
 	        if (Object.getPrototypeOf(t = Object.getPrototypeOf(t)) === null) {
 	          break;
 	        }
@@ -389,196 +1327,16 @@
 	      return Object.getPrototypeOf(o) === t;
 	    }();
 	  },
-	  isType: function isType(t) {
-	    var types = Array.isArray(t) ? t : [t];
-	    var count = 0;
-	    for (var i = 0; i < types.length; i++) {
-	      var type = types[i];
-	      if (typeof type !== 'string') {
-	        return false;
-	      }
-	      if (type === TYPE.ARRAY()) {
-	        return true;
-	      }
-	      for (var typeName in TYPE) {
-	        if (TYPE.hasOwnProperty(typeName)) {
-	          if (type === TYPE[typeName]) {
-	            count++;
-	          }
-	          if (typeName !== 'ARRAY') {
-	            var arrayType = TYPE.ARRAY(TYPE[typeName]);
-	            if (type === arrayType) {
-	              count++;
-	            }
-	          }
-	        }
-	      }
-	    }
-	    return count === types.length;
-	  },
-	  isCustomType: function isCustomType(t) {
-	    return typeof this.getCustomType(t) !== 'undefined';
-	  },
-	  getCustomTypeKey: function getCustomTypeKey(t) {
-	    return t.replace(/^<|>$/g, '').toUpperCase();
-	  },
-	  getCustomType: function getCustomType(t) {
-	    var a = Array.isArray(t) ? t : [t];
-	    for (var i = 0, l = a.length; i < l; i++) {
-	      var tk = a[i];
-	      var T = void 0;
-	      try {
-	        T = TYPES[this.getCustomTypeKey(this.isArray(tk) ? this.getArrayType(tk) : tk)];
-	      } catch (e) {}
-	      if (typeof T !== 'undefined') {
-	        return T;
-	      }
-	    }
-	  },
-	  getObjectPaths: function getObjectPaths(obj, includeBranchPaths) {
-	    var _this = this;
-	
-	    var keys = [];
-	    var ref = null;
-	    var path = null;
-	    var walk = function walk(o, p) {
-	      for (var k in o) {
-	        if (o.hasOwnProperty(k)) {
-	          ref = o[k];
-	          path = p ? p + '.' + k : k;
-	          if (_this.isObject(ref)) {
-	            if (includeBranchPaths === true) {
-	              keys.push(path);
-	            }
-	            walk(ref, path);
-	          } else {
-	            keys.push(path);
-	          }
-	        }
-	      }
-	    };
-	    walk(obj);
-	    return keys;
-	  },
-	  getObjectPathValues: function getObjectPathValues(obj, includeBranchPaths) {
-	    var _this2 = this;
-	
-	    var keyValues = [];
-	    var ref = null;
-	    var path = null;
-	    var walk = function walk(o, p) {
-	      for (var k in o) {
-	        if (o.hasOwnProperty(k)) {
-	          ref = o[k];
-	          path = p ? p + '.' + k : k;
-	          if (_this2.isObject(ref)) {
-	            if (includeBranchPaths === true) {
-	              keyValues.push({ path: path, value: ref, isBranch: true });
-	            }
-	            walk(ref, path);
-	          } else {
-	            keyValues.push({ path: path, value: ref, isBranch: false });
-	          }
-	        }
-	      }
-	    };
-	    walk(obj);
-	    return keyValues;
-	  },
-	  getObjectAtPath: function getObjectAtPath(obj, path, shouldThrowIfNotFound) {
-	    var steps = path.split('.');
-	    var l = steps.length;
-	    var ref = obj;
-	    var k = null;
-	    for (var i = 0; i < l; i++) {
-	      k = steps[i];
-	      ref = ref[k];
-	      if (typeof ref === 'undefined') {
-	        if (shouldThrowIfNotFound === true) {
-	          throw new Error(err(ERROR.AxialPathNotFound, 'Undefined value at path "' + path + '"'));
-	        }
-	        return ref;
-	      }
-	    }
-	    return ref;
-	  },
-	  renameAtPath: function renameAtPath(obj, path, key) {
-	    var steps = path.split('.');
-	    var l = steps.length - 1;
-	    var ref = obj;
-	    var k = null;
-	    for (var i = 0; i < l; i++) {
-	      k = steps[i];
-	      ref = ref[k];
-	      if (typeof ref === 'undefined') {
-	        throw new Error(err(ERROR.AxialPathNotFound, 'Undefined value at path "' + path + '"'));
-	      }
-	    }
-	    var lastSubKey = steps[steps.length - 1];
-	    ref[key] = ref[lastSubKey];
-	    delete ref[lastSubKey];
-	    return obj;
-	  },
-	
-	
-	  /**
-	   *
-	   * @param obj
-	   * @param path
-	   * @param value
-	   * @param branchFactory - use this factory function to return a branch that does not exist for sub paths
-	   * @returns {Map}
-	   */
-	  setObjectAtPath: function setObjectAtPath(obj, path, value, branchFactory) {
-	    var ref = obj;
-	    var steps = path.split('.');
-	    var l = steps.length - 1;
-	    var k = null;
-	    var branches = new Map();
-	    for (var i = 0; i < l; i++) {
-	      k = steps[i];
-	      if (!ref.hasOwnProperty(k)) {
-	        var branchPath = steps.slice(0, i + 1).join('.');
-	        var branch = typeof branchFactory === 'function' ? branchFactory(branchPath) : {};
-	        ref[k] = branch;
-	        branches.set(branchPath, branch);
-	      }
-	      ref = ref[k];
-	    }
-	    ref[steps[l]] = value;
-	    return branches;
-	  },
-	  deleteAtPath: function deleteAtPath(obj, path) {
-	    var parts = path.split('.');
-	    if (parts.length === 1) {
-	      delete obj[path];
-	    } else {
-	      var parentPath = parts.slice(0, parts.length - 1).join('.');
-	      var parentObj = this.getObjectAtPath(obj, parentPath);
-	      delete parentObj[path.split('.').pop()];
-	    }
-	  },
-	  multiSetObjectAtPath: function multiSetObjectAtPath(obj, pathOrObject, value, shouldThrowIfNotFound) {
-	    var modifiedPaths = null;
-	    if (this.isObject(pathOrObject)) {
-	      this.merge(obj, pathOrObject);
-	      modifiedPaths = this.getObjectPaths(pathOrObject);
-	    } else if (typeof pathOrObject === 'string') {
-	      this.setObjectAtPath(obj, pathOrObject, value);
-	      modifiedPaths = [pathOrObject];
-	    }
-	    return modifiedPaths;
-	  },
 	  merge: function merge(source, target) {
-	    var _this3 = this;
+	    var _this17 = this;
 	
 	    var copy = function copy(_source, _target) {
 	      for (var key in _target) {
 	        if (_target.hasOwnProperty(key)) {
 	          var sourceValue = _source[key];
 	          var targetValue = _target[key];
-	          if (_this3.isObject(targetValue)) {
-	            if (_this3.isObject(sourceValue)) {
+	          if (_this17.isPlainObject(targetValue)) {
+	            if (_this17.isPlainObject(sourceValue)) {
 	              copy(sourceValue, targetValue);
 	            } else {
 	              var obj = {};
@@ -590,681 +1348,147 @@
 	          }
 	        }
 	      }
+	      return source;
 	    };
-	    copy(source, target);
-	    return source;
-	  },
-	  isArray: function isArray(type) {
-	    return ('' + type).indexOf('<array>') === 0;
-	  },
-	  isTypedArray: function isTypedArray(type) {
-	    return this.isArray(type) && type !== TYPE.ARRAY();
-	  },
-	  getArrayType: function getArrayType(type) {
-	    return type.replace(/^<array>/, '').replace(/^\[/, '').replace(/\]$/, '');
+	    return copy(source, target);
 	  },
 	  typeOf: function typeOf(value) {
-	    if (value === null) {
-	      return TYPE.NULL;
-	    } else if (value === undefined) {
-	      return TYPE.UNDEFINED;
-	    } else if (this.isObject(value)) {
-	      return TYPE.OBJECT;
-	    } else if (typeof value === 'string') {
-	      return TYPE.STRING;
-	    } else if (typeof value === 'number') {
-	      return TYPE.NUMBER;
-	    } else if (typeof value === 'boolean') {
-	      return TYPE.BOOLEAN;
-	    } else if (value instanceof RegExp) {
-	      return TYPE.REGEX;
-	    } else if (value instanceof Date) {
-	      return TYPE.DATE;
+	    if (T.Null.is(value)) {
+	      return T.Null;
+	    } else if (T.Undefined.is(value)) {
+	      return T.Undefined;
+	    } else if (T.String.is(value)) {
+	      return T.String;
+	    } else if (T.Number.is(value)) {
+	      return T.Number;
+	    } else if (T.Boolean.is(value)) {
+	      return T.Boolean;
+	    } else if (T.Date.is(value)) {
+	      return T.Date;
+	    } else if (T.Regex.is(value)) {
+	      return T.Regex;
+	    } else if (T.Function.is(value)) {
+	      return T.Function;
+	    } else if (T.Array.is(value)) {
+	      if (value.length) {
+	        return T.Array(this.typeOf(value[0]));
+	      } else {
+	        return T.Array();
+	      }
+	    } else if (T.Object.is(value)) {
+	      return T.Object;
+	    } else if (T.Schema.is(value)) {
+	      return T.Schema;
 	    }
-	    if (Array.isArray(value)) {
-	      return TYPE.ARRAY(value.length ? this.typeOf(value[0]) : TYPE.ANY);
-	    } else if (typeof value === 'function') {
-	      return TYPE.FUNCTION;
-	    }
-	    return TYPE.UNKNOWN;
+	    throw new AxialUnsupportedType(value);
 	  },
-	  args: function args(_args) {
-	    return Array.prototype.slice.call(arguments);
+	  isType: function isType(type) {
+	    type = Array.isArray(type) ? type : [type];
+	    var l = type.length;
+	    for (var i = 0; i < l; i++) {
+	      if (!(type[i] instanceof AxialType)) {
+	        return false;
+	      }
+	    }
+	    return true;
 	  }
 	};
 	
-	util.log = util.log.bind(util);
-	util.error = util.error.bind(util);
-	util.err = err;
+	/* --------------------------------------------------------------------------------------  Define Types ---------- */
+	T = {
+	  Null: new AxialNull(),
+	  Undefined: new AxialUndefined(),
+	  String: new AxialString(),
+	  Number: new AxialNumber(),
+	  Boolean: new AxialBoolean(),
+	  Date: new AxialDate(),
+	  Regex: new AxialRegex(),
+	  Function: new AxialFunction(),
+	  Array: function Array(type) {
+	    var typeId = type ? type.name : '*';
+	    var t = _arrayTypes[typeId];
+	    if (t) {
+	      return t;
+	    } else {
+	      t = _arrayTypes[typeId] = new AxialArray(type);
+	      t._name = 'array[' + typeId + ']';
+	    }
+	    return t;
+	  },
+	  Object: new AxialObject(),
+	  Schema: new AxialSchema(),
+	  Instance: new AxialInstance()
+	};
 	
-	util.TYPE = TYPE;
-	util.TYPES = TYPES;
-	util.ERROR = ERROR;
+	T.Array.is = function (value) {
+	  return Array.isArray(value);
+	};
 	
-	module.exports = util;
+	/* --------------------------------------------------------------------------------------  Axial ---------- */
+	var Axial = window.Axial = {
+	  define: function define(name, prototype) {
+	    var schema = new AxialSchema(name, prototype);
+	    var _name = schema.name;
+	    _allSchemas[_name] = _allSchemas[_name] ? _allSchemas[_name] : [];
+	    _allSchemas[_name].push(schema);
+	    return schema;
+	  },
+	  schema: function schema(name) {
+	    var schemaArray = _allSchemas[name];
+	    if (schemaArray) {
+	      return schemaArray[0];
+	    }
+	  },
+	  schemaNames: function schemaNames() {
+	    return Object.keys(_allSchemas);
+	  },
+	  bind: function bind(fn) {
+	    _listeners.push(fn);
+	  },
+	  unbind: function unbind(fn) {
+	    if (fn) {
+	      var index = _listeners.indexOf(fn);
+	      _listeners.splice(index, 1);
+	    } else {
+	      _listeners.length = 0;
+	    }
+	  },
+	  dispatch: function dispatch(eventData) {
+	    var l = _listeners.length;
+	    for (var i = 0; i < l; i++) {
+	      _listeners[i](eventData);
+	    }
+	  },
+	
+	  Binding: AxialBinding
+	};
+	
+	// merge in types and errors
+	util.merge(Axial, T);
+	util.merge(Axial, Errors);
+	
+	Axial.util = util;
+	AxialSchema.prototype.new = AxialSchema.prototype.create;
+	
+	module.exports = Axial;
 
 /***/ },
 /* 2 */
 /***/ function(module, exports, __webpack_require__) {
 
-	/* WEBPACK VAR INJECTION */(function(module) {'use strict';
-	
-	var _slicedToArray = function () { function sliceIterator(arr, i) { var _arr = []; var _n = true; var _d = false; var _e = undefined; try { for (var _i = arr[Symbol.iterator](), _s; !(_n = (_s = _i.next()).done); _n = true) { _arr.push(_s.value); if (i && _arr.length === i) break; } } catch (err) { _d = true; _e = err; } finally { try { if (!_n && _i["return"]) _i["return"](); } finally { if (_d) throw _e; } } return _arr; } return function (arr, i) { if (Array.isArray(arr)) { return arr; } else if (Symbol.iterator in Object(arr)) { return sliceIterator(arr, i); } else { throw new TypeError("Invalid attempt to destructure non-iterable instance"); } }; }();
-	
-	var _typeof = typeof Symbol === "function" && typeof Symbol.iterator === "symbol" ? function (obj) { return typeof obj; } : function (obj) { return obj && typeof Symbol === "function" && obj.constructor === Symbol && obj !== Symbol.prototype ? "symbol" : typeof obj; };
-	
-	var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
-	
-	function _possibleConstructorReturn(self, call) { if (!self) { throw new ReferenceError("this hasn't been initialised - super() hasn't been called"); } return call && (typeof call === "object" || typeof call === "function") ? call : self; }
-	
-	function _inherits(subClass, superClass) { if (typeof superClass !== "function" && superClass !== null) { throw new TypeError("Super expression must either be null or a function, not " + typeof superClass); } subClass.prototype = Object.create(superClass && superClass.prototype, { constructor: { value: subClass, enumerable: false, writable: true, configurable: true } }); if (superClass) Object.setPrototypeOf ? Object.setPrototypeOf(subClass, superClass) : subClass.__proto__ = superClass; }
-	
-	function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
-	
-	var escapeStringRegexp = __webpack_require__(4);
-	var util = __webpack_require__(1);
-	var ERROR = util.ERROR;
-	var TYPE = util.TYPE;
-	var TYPES = util.TYPES;
-	var log = util.log;
-	
-	var _schema = {};
-	var _paths = new Map();
-	
-	// Errors...
-	ERROR.AxialPathExists = 'AxialPathExists';
-	ERROR.AxialSchemaLocked = 'AxialSchemaLocked';
-	ERROR.AxialUndefinedPath = 'AxialUndefinedPath';
-	ERROR.AxialInvalidType = 'AxialInvalidType';
-	ERROR.AxialUndefinedType = 'AxialUndefinedType';
-	ERROR.AxialArrayExpected = 'AxialArrayExpected';
-	ERROR.AxialTypeExists = 'AxialTypeExists';
-	
-	// helpers...
-	function _getPathsFromArgs(args) {
-	  var paths = [];
-	  var pathOrObject = args[0];
-	  if (util.typeOf(pathOrObject) === TYPE.STRING) {
-	    paths.push({ path: pathOrObject, value: args[1] });
-	  } else if (util.typeOf(pathOrObject) === TYPE.OBJECT) {
-	    paths = util.getObjectPathValues(pathOrObject, true);
-	  }
-	  return paths;
-	}
-	
-	function _validatePathExists(path) {
-	  if (!_paths.has(path)) {
-	    throw new Error(util.err(ERROR.AxialUndefinedPath, 'Path not found "' + path + '"'));
-	  }
-	}
-	
-	// Schema Property...
-	
-	var AxialSchemaProperty = function () {
-	  function AxialSchemaProperty(path, type) {
-	    _classCallCheck(this, AxialSchemaProperty);
-	
-	    this._path = path;
-	    this._type = Array.isArray(type) ? type : [type];
-	    this._values = [];
-	    this._validator = this.validate;
-	    this._isLocked = false;
-	    this._type.forEach(function (type) {
-	      if (!util.isType(type)) {
-	        throw new Error(util.err(ERROR.AxialUndefinedType, 'Undefined type "' + type + '"'));
-	      }
-	    });
-	    this._isCustomType = util.isCustomType(this._type);
-	  }
-	
-	  _createClass(AxialSchemaProperty, [{
-	    key: 'forEachType',
-	    value: function forEachType(fn) {
-	      var types = this._type;
-	      for (var i = 0, l = this._type.length; i < l; i++) {
-	        fn(types[i]);
-	      }
-	    }
-	  }, {
-	    key: 'validate',
-	    value: function validate(value) {
-	      var valueType = util.typeOf(value);
-	      for (var i = 0; i < this._type.length; i++) {
-	        // for each type to validate...
-	        var thisType = this._type[i];
-	        var arrayType = util.getArrayType(thisType);
-	        if (thisType === TYPE.ANY || util.isArray(valueType) && thisType === TYPE.ARRAY()) {
-	          // allow any type or array of any type
-	          return;
-	        } else if (util.isArray(thisType) && Array.isArray(value)) {
-	          var isCustomType = util.isCustomType(arrayType);
-	          for (var j = 0; j < value.length; j++) {
-	            var val = value[j];
-	            if (isCustomType) {
-	              util.getCustomType(arrayType).validate(val, this);
-	            } else if (util.typeOf(val) !== arrayType) {
-	              throw new Error(util.err(ERROR.AxialInvalidType, 'Invalid type for ' + thisType + '[' + j + '] at path "' + this._path + '" - ' + arrayType + ' expected, ' + util.typeOf(value[j]) + ' given.'));
-	            }
-	          }
-	          return;
-	        } else if (util.isCustomType(thisType)) {
-	          var type = util.getCustomType(thisType);
-	          type.validate(value, this);
-	        } else if (valueType === thisType) {
-	          return;
-	        }
-	      }
-	      throw new Error(util.err(ERROR.AxialInvalidType, 'Invalid type for path "' + this._path + '" - ' + (Array.isArray(this._type) ? this._type.join('|') : this._type) + ' expected, ' + util.typeOf(value) + ' given.'));
-	    }
-	  }, {
-	    key: 'value',
-	    value: function value(_value) {
-	      if (arguments.length === 0) {
-	        return this._values.length ? this._values[this._values.length - 1] : null;
-	      }
-	      this._validator.call(this, _value);
-	      this._values.push(_value);
-	    }
-	  }, {
-	    key: 'metaValue',
-	    value: function metaValue() {
-	      return this._type;
-	    }
-	  }, {
-	    key: 'remove',
-	    value: function remove() {
-	      _paths.delete(this._path);
-	      util.deleteAtPath(_schema, this._path);
-	    }
-	  }, {
-	    key: 'subPaths',
-	    value: function subPaths() {
-	      var paths = [];
-	      for (var i = 0; i < this._type.length; i++) {
-	        // for each type to validate...
-	        var thisType = this._type[i];
-	
-	        var isArray = util.isArray(thisType);
-	        var arrayType = util.getArrayType(thisType);
-	        var T = TYPES[util.getCustomTypeKey(isArray ? arrayType : thisType)];
-	
-	        paths.push.apply(paths, T.subPaths());
-	      }
-	      return paths;
-	    }
-	  }, {
-	    key: 'toString',
-	    value: function toString() {
-	      return '"' + this._path + '":[' + this._type.join('|') + ']';
-	    }
-	  }]);
-	
-	  return AxialSchemaProperty;
-	}();
-	
-	// AxialSchemaBranch...
-	
-	
-	var AxialSchemaBranch = function (_AxialSchemaProperty) {
-	  _inherits(AxialSchemaBranch, _AxialSchemaProperty);
-	
-	  function AxialSchemaBranch(path) {
-	    _classCallCheck(this, AxialSchemaBranch);
-	
-	    return _possibleConstructorReturn(this, (AxialSchemaBranch.__proto__ || Object.getPrototypeOf(AxialSchemaBranch)).call(this, path, TYPE.BRANCH));
-	  }
-	
-	  _createClass(AxialSchemaBranch, [{
-	    key: 'value',
-	    value: function value() {
-	      if (!this._value) {
-	        this._value = {};
-	      }
-	      return this._value;
-	    }
-	  }, {
-	    key: 'metaValue',
-	    value: function metaValue() {
-	      if (!this._metavalue) {
-	        this._metavalue = {};
-	      }
-	      return this._metavalue;
-	    }
-	  }]);
-	
-	  return AxialSchemaBranch;
-	}(AxialSchemaProperty);
-	
-	// AxialType...
-	
-	
-	var AxialType = function () {
-	  function AxialType(typeValue, typeOrObject) {
-	    _classCallCheck(this, AxialType);
-	
-	    this._typeValue = typeValue;
-	    if (typeof typeOrObject === 'string') {
-	      this._typeDefition = typeOrObject;
-	    } else if (typeof typeOrObject === 'undefined' ? 'undefined' : _typeof(typeOrObject)) {
-	      this._definition = typeOrObject;
-	      this._paths = util.getObjectPaths(typeOrObject);
-	    }
-	  }
-	
-	  _createClass(AxialType, [{
-	    key: 'subPaths',
-	    value: function subPaths() {
-	      if (this._typeDefition) {
-	        return [];
-	      }if (this._definition) {
-	        return util.getObjectPathValues(this._definition);
-	      }
-	    }
-	  }, {
-	    key: 'validate',
-	    value: function validate(value, prop) {
-	      if (this._typeDefition) {
-	        if (util.typeOf(value) === this._typeValue) {
-	          throw new Error(util.err(ERROR.AxialInvalidType, 'Invalid type for path "' + prop._path + '" - ' + this._typeValue + ' expected, ' + util.typeOf(value) + ' given.'));
-	        }
-	      } else if (this._definition) {
-	        var _paths2 = this._paths;
-	        for (var i = 0, l = _paths2.length; i < l; i++) {
-	          var path = _paths2[i];
-	          var absPath = prop._path + '.' + path;
-	          try {
-	            var val = util.getObjectAtPath(value, path, true);
-	            _paths.get(absPath).validate(val, prop);
-	          } catch (e) {}
-	        }
-	      }
-	    }
-	  }, {
-	    key: 'toString',
-	    value: function toString() {
-	      var typeInfo = this._typeDefition ? this._typeDefition : JSON.stringify(this._definition, null, 4);
-	      return '[' + util.getCustomTypeKey(this._typeValue) + ']: ' + typeInfo;
-	    }
-	  }]);
-	
-	  return AxialType;
-	}();
-	
-	// Axial Singleton...
-	
-	
-	var Axial = {
-	  paths: function paths() {
-	    var a = [];
-	    var _iteratorNormalCompletion = true;
-	    var _didIteratorError = false;
-	    var _iteratorError = undefined;
-	
-	    try {
-	      for (var _iterator = _paths.keys()[Symbol.iterator](), _step; !(_iteratorNormalCompletion = (_step = _iterator.next()).done); _iteratorNormalCompletion = true) {
-	        var path = _step.value;
-	
-	        a[a.length] = path;
-	      }
-	    } catch (err) {
-	      _didIteratorError = true;
-	      _iteratorError = err;
-	    } finally {
-	      try {
-	        if (!_iteratorNormalCompletion && _iterator.return) {
-	          _iterator.return();
-	        }
-	      } finally {
-	        if (_didIteratorError) {
-	          throw _iteratorError;
-	        }
-	      }
-	    }
-	
-	    a.sort();
-	    return a;
-	  },
-	  has: function has(pathPattern) {
-	    return !!this.match(pathPattern, true).length;
-	  },
-	  match: function match(pathPattern, oneOnly) {
-	    var matches = [];
-	    var regex = new RegExp(typeof pathPattern === 'string' ? '^' + escapeStringRegexp(pathPattern) : pathPattern);
-	    var paths = this.paths();
-	    var l = paths.length;
-	    for (var i = 0; i < l; i++) {
-	      var path = paths[i];
-	      if (path.match(regex)) {
-	        matches.push(_paths.get(path));
-	        if (oneOnly) {
-	          return matches;
-	        }
-	      }
-	    }
-	    return matches;
-	  },
-	  lock: function lock(pathOrObject) {
-	    var paths = [];
-	    if (arguments.length) {
-	      _getPathsFromArgs(arguments).forEach(function (info) {
-	        _validatePathExists(info.path);
-	        paths.push(info.path);
-	      });
-	      paths.sort();
-	    } else {
-	      paths = this.paths();
-	    }
-	    paths.forEach(function (path) {
-	      _paths.get(path)._isLocked = true;
-	    });
-	  },
-	  define: function define(pathOrObject, type) {
-	    var _this2 = this;
-	
-	    _getPathsFromArgs(arguments).forEach(function (info) {
-	      var path = info.path;
-	      var type = info.value;
-	      //      if (_paths.has(path)/*this.has(path)*/) {
-	      //        // path exists
-	      //        debugger;
-	      //        return;
-	      //        throw new Error(util.err(ERROR.AxialPathExists, `Cannot define new path "${path}", path already exists`));
-	      //      }
-	      if (Array.isArray(type)) {
-	        // handle multi-types (via array definition)
-	        for (var i = 0; i < type.length; i++) {
-	          var t = type[i];
-	          if (!util.isType(t)) {
-	            throw new Error(util.err(ERROR.AxialUndefinedType, 'Undefined type "' + t + '"'));
-	          }
-	        }
-	      }
-	      var node = void 0;
-	      if (util.isObject(type) || _paths.get(path) instanceof AxialSchemaBranch) {
-	        node = new AxialSchemaBranch(path);
-	      } else if (util.isType(type)) {
-	        // Custom type...
-	        node = new AxialSchemaProperty(path, type);
-	        if (util.isCustomType(type)) {
-	          node.subPaths().forEach(function (subPath) {
-	            if (!subPath.isBranch) {
-	              // extend sub path for custom type (leaf nodes only)
-	              _this2.define(path + '.' + subPath.path, subPath.value);
-	            }
-	          });
-	        }
-	      } else if (!Array.isArray(type)) {
-	        throw new Error(util.err(ERROR.AxialUndefinedType, 'Undefined type "' + type + '"'));
-	      }
-	      _paths.set(path, node);
-	      var branches = util.setObjectAtPath(_schema, path, node, function (p) {
-	        return new AxialSchemaBranch(p);
-	      });
-	      var _iteratorNormalCompletion2 = true;
-	      var _didIteratorError2 = false;
-	      var _iteratorError2 = undefined;
-	
-	      try {
-	        for (var _iterator2 = branches.entries()[Symbol.iterator](), _step2; !(_iteratorNormalCompletion2 = (_step2 = _iterator2.next()).done); _iteratorNormalCompletion2 = true) {
-	          var _step2$value = _slicedToArray(_step2.value, 2),
-	              pth = _step2$value[0],
-	              branch = _step2$value[1];
-	
-	          _paths.set(pth, branch);
-	        }
-	      } catch (err) {
-	        _didIteratorError2 = true;
-	        _iteratorError2 = err;
-	      } finally {
-	        try {
-	          if (!_iteratorNormalCompletion2 && _iterator2.return) {
-	            _iterator2.return();
-	          }
-	        } finally {
-	          if (_didIteratorError2) {
-	            throw _iteratorError2;
-	          }
-	        }
-	      }
-	
-	      log('%c#define(' + _paths.get(path).toString() + ')', 'color:blue');
-	    });
-	    return this;
-	  },
-	  undefine: function undefine(pathOrObject) {
-	    var _this3 = this;
-	
-	    _getPathsFromArgs(arguments).forEach(function (info) {
-	      var path = info.path;
-	      _validatePathExists(path);
-	      var matches = _this3.match(path);
-	      matches.reverse();
-	      matches.forEach(function (node) {
-	        if (node._isLocked) {
-	          throw new Error(util.err(ERROR.AxialSchemaLocked, 'Cannot undefine path "' + node._path + '", path is locked'));
-	        }
-	        log('%c#undefine(' + _paths.get(path).toString() + ')', 'color:brown');
-	        node.remove();
-	      });
-	    });
-	    return this;
-	  },
-	  defineType: function defineType(typeName, typeOrObject) {
-	    var typeKey = typeName.replace(/^<+|>+$/g, '').toUpperCase();
-	    var typeValue = '<' + typeName.toLowerCase() + '>';
-	    if (TYPE.hasOwnProperty(typeKey) || this.hasOwnProperty(typeKey)) {
-	      throw new Error(util.err(ERROR.AxialTypeExists, 'Cannot define type, already exists "' + typeKey + '"'));
-	    }
-	    TYPE[typeKey] = typeValue;
-	    this[typeKey] = typeValue;
-	
-	    var type = new AxialType(typeValue, typeOrObject);
-	    TYPES[typeKey] = type;
-	
-	    return type;
-	  },
-	  set: function set(pathOrObject, value) {
-	    var _this4 = this;
-	
-	    _getPathsFromArgs(arguments).forEach(function (info) {
-	      var path = info.path;
-	      var val = info.value;
-	      _validatePathExists(path);
-	      var prop = _paths.get(path);
-	      var isCustomType = util.isCustomType(prop._type);
-	      if (!isCustomType) {
-	        prop.value(val);
-	      } else {
-	        if (Array.isArray(val)) {
-	          prop.value(val);
-	        } else {
-	          if (util.isObject(val)) {
-	            var _paths3 = util.getObjectPathValues(val);
-	            for (var i = 0, l = _paths3.length; i < l; i++) {
-	              var pv = _paths3[i];
-	              _this4.set(path + '.' + pv.path, pv.value);
-	            }
-	          } else {
-	            prop.value(val);
-	          }
-	        }
-	      }
-	    });
-	    return this;
-	  },
-	  add: function add(path, value) {
-	    _validatePathExists(path);
-	    var prop = _schema[path];
-	    if (!util.isArray(prop.type)) {
-	      throw new Error(util.err(ERROR.AxialArrayExpected, 'Expected an array for path "' + path + '", ' + prop.type + ' found'));
-	    }
-	    if (util.isTypedArray(prop.type)) {}
-	    var array = prop.value();
-	    array.push(value);
-	    return this;
-	  },
-	  get: function get(path) {
-	    _validatePathExists(path);
-	    return _paths.get(path).value();
-	  },
-	  getNullPaths: function getNullPaths() {
-	    var nullPaths = [];
-	    var _iteratorNormalCompletion3 = true;
-	    var _didIteratorError3 = false;
-	    var _iteratorError3 = undefined;
-	
-	    try {
-	      for (var _iterator3 = _paths[Symbol.iterator](), _step3; !(_iteratorNormalCompletion3 = (_step3 = _iterator3.next()).done); _iteratorNormalCompletion3 = true) {
-	        var _step3$value = _slicedToArray(_step3.value, 2),
-	            path = _step3$value[0],
-	            node = _step3$value[1];
-	
-	        if (node.value() === null) {
-	          nullPaths.push(path);
-	        }
-	      }
-	    } catch (err) {
-	      _didIteratorError3 = true;
-	      _iteratorError3 = err;
-	    } finally {
-	      try {
-	        if (!_iteratorNormalCompletion3 && _iterator3.return) {
-	          _iterator3.return();
-	        }
-	      } finally {
-	        if (_didIteratorError3) {
-	          throw _iteratorError3;
-	        }
-	      }
-	    }
-	
-	    return nullPaths;
-	  },
-	
-	
-	  dump: function dump() {
-	    return;
-	    log('----+< toJSON >+----');
-	    var json = this.toJSON();
-	    var queue = this.paths().filter(function (p) {
-	      return _paths.get(p)._type[0] !== Axial.BRANCH;
-	    });
-	    while (queue.length) {}
-	    paths.forEach(function (p) {
-	      return util.renameAtPath(json, p, p);
-	    });
-	    log('%c' + JSON.stringify(json, null, 4), 'color:darkBlue');
-	    log('----+< Custom Types >+----');
-	    for (var typeKey in TYPES) {
-	      if (TYPES.hasOwnProperty(typeKey)) {
-	        log('%c' + TYPES[typeKey].toString(), 'color:darkBlue');
-	      }
-	    }
-	    return this;
-	  },
-	
-	  toJSON: function toJSON() {
-	    var json = {};
-	    var paths = this.paths();
-	    var usedPaths = [];
-	    while (paths.length) {
-	      var path = paths.splice(0, 1)[0];
-	      var node = _paths.get(path);
-	      if (node instanceof AxialSchemaProperty) {
-	        if (node._isCustomType && node.value() === null) {
-	          (function () {
-	            util.setObjectAtPath(json, path, null);
-	            var key = path + '.';
-	            paths = paths.filter(function (p) {
-	              return p.indexOf(key) === -1;
-	            });
-	          })();
-	        } else {
-	          util.setObjectAtPath(json, path, node.value());
-	        }
-	        usedPaths.push({ path: path, node: node });
-	      }
-	    }
-	    return json;
-	  }
-	};
-	
-	// copy util types directly into Axial
-	util.merge(Axial, TYPE);
-	Axial.ERROR = {};
-	util.merge(Axial.ERROR, ERROR);
-	Axial.schema = _schema;
-	Axial.log = util.log;
-	Axial.error = util.error;
-	Axial.type = TYPE;
-	Axial.types = TYPES;
-	Axial.util = util;
-	Axial.prop = function (path) {
-	  return _paths.get(path);
-	};
-	Axial.isValidType = util.isType;
-	
-	// export window...
-	if (typeof window !== 'undefined') {
-	  window.Axial = Axial;
-	}
-	
-	// export module.exports...
-	if (( false ? 'undefined' : _typeof(module)) === 'object') {
-	  module.exports = Axial;
-	}
-	/* WEBPACK VAR INJECTION */}.call(exports, __webpack_require__(3)(module)))
-
-/***/ },
-/* 3 */
-/***/ function(module, exports) {
-
-	module.exports = function(module) {
-		if(!module.webpackPolyfill) {
-			module.deprecate = function() {};
-			module.paths = [];
-			// module.parent = undefined by default
-			module.children = [];
-			module.webpackPolyfill = 1;
-		}
-		return module;
-	}
-
-
-/***/ },
-/* 4 */
-/***/ function(module, exports) {
-
 	'use strict';
 	
-	var matchOperatorsRe = /[|\\{}()[\]^$+*?.]/g;
-	
-	module.exports = function (str) {
-		if (typeof str !== 'string') {
-			throw new TypeError('Expected a string');
-		}
-	
-		return str.replace(matchOperatorsRe, '\\$&');
-	};
-
-
-/***/ },
-/* 5 */
-/***/ function(module, exports, __webpack_require__) {
-
-	'use strict';
-	
-	var _Expectation = __webpack_require__(6);
+	var _Expectation = __webpack_require__(3);
 	
 	var _Expectation2 = _interopRequireDefault(_Expectation);
 	
-	var _SpyUtils = __webpack_require__(18);
+	var _SpyUtils = __webpack_require__(15);
 	
-	var _assert = __webpack_require__(16);
+	var _assert = __webpack_require__(13);
 	
 	var _assert2 = _interopRequireDefault(_assert);
 	
-	var _extend = __webpack_require__(36);
+	var _extend = __webpack_require__(33);
 	
 	var _extend2 = _interopRequireDefault(_extend);
 	
@@ -1284,7 +1508,7 @@
 	module.exports = expect;
 
 /***/ },
-/* 6 */
+/* 3 */
 /***/ function(module, exports, __webpack_require__) {
 
 	'use strict';
@@ -1297,21 +1521,21 @@
 	
 	var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
 	
-	var _has = __webpack_require__(7);
+	var _has = __webpack_require__(4);
 	
 	var _has2 = _interopRequireDefault(_has);
 	
-	var _tmatch = __webpack_require__(10);
+	var _tmatch = __webpack_require__(7);
 	
 	var _tmatch2 = _interopRequireDefault(_tmatch);
 	
-	var _assert = __webpack_require__(16);
+	var _assert = __webpack_require__(13);
 	
 	var _assert2 = _interopRequireDefault(_assert);
 	
-	var _SpyUtils = __webpack_require__(18);
+	var _SpyUtils = __webpack_require__(15);
 	
-	var _TestUtils = __webpack_require__(23);
+	var _TestUtils = __webpack_require__(20);
 	
 	function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 	
@@ -1699,25 +1923,25 @@
 	}exports.default = Expectation;
 
 /***/ },
-/* 7 */
+/* 4 */
 /***/ function(module, exports, __webpack_require__) {
 
-	var bind = __webpack_require__(8);
+	var bind = __webpack_require__(5);
 	
 	module.exports = bind.call(Function.call, Object.prototype.hasOwnProperty);
 
 
 /***/ },
-/* 8 */
+/* 5 */
 /***/ function(module, exports, __webpack_require__) {
 
-	var implementation = __webpack_require__(9);
+	var implementation = __webpack_require__(6);
 	
 	module.exports = Function.prototype.bind || implementation;
 
 
 /***/ },
-/* 9 */
+/* 6 */
 /***/ function(module, exports) {
 
 	var ERROR_MESSAGE = 'Function.prototype.bind called on incompatible ';
@@ -1771,7 +1995,7 @@
 
 
 /***/ },
-/* 10 */
+/* 7 */
 /***/ function(module, exports, __webpack_require__) {
 
 	/* WEBPACK VAR INJECTION */(function(process, Buffer) {'use strict'
@@ -1929,10 +2153,10 @@
 	  throw new Error('impossible to reach this point')
 	}
 	
-	/* WEBPACK VAR INJECTION */}.call(exports, __webpack_require__(11), __webpack_require__(12).Buffer))
+	/* WEBPACK VAR INJECTION */}.call(exports, __webpack_require__(8), __webpack_require__(9).Buffer))
 
 /***/ },
-/* 11 */
+/* 8 */
 /***/ function(module, exports) {
 
 	// shim for using process in browser
@@ -2118,7 +2342,7 @@
 
 
 /***/ },
-/* 12 */
+/* 9 */
 /***/ function(module, exports, __webpack_require__) {
 
 	/* WEBPACK VAR INJECTION */(function(global) {/*!
@@ -2131,9 +2355,9 @@
 	
 	'use strict'
 	
-	var base64 = __webpack_require__(13)
-	var ieee754 = __webpack_require__(14)
-	var isArray = __webpack_require__(15)
+	var base64 = __webpack_require__(10)
+	var ieee754 = __webpack_require__(11)
+	var isArray = __webpack_require__(12)
 	
 	exports.Buffer = Buffer
 	exports.SlowBuffer = SlowBuffer
@@ -3914,7 +4138,7 @@
 	/* WEBPACK VAR INJECTION */}.call(exports, (function() { return this; }())))
 
 /***/ },
-/* 13 */
+/* 10 */
 /***/ function(module, exports) {
 
 	'use strict'
@@ -4034,7 +4258,7 @@
 
 
 /***/ },
-/* 14 */
+/* 11 */
 /***/ function(module, exports) {
 
 	exports.read = function (buffer, offset, isLE, mLen, nBytes) {
@@ -4124,7 +4348,7 @@
 
 
 /***/ },
-/* 15 */
+/* 12 */
 /***/ function(module, exports) {
 
 	var toString = {}.toString;
@@ -4135,7 +4359,7 @@
 
 
 /***/ },
-/* 16 */
+/* 13 */
 /***/ function(module, exports, __webpack_require__) {
 
 	'use strict';
@@ -4144,7 +4368,7 @@
 	  value: true
 	});
 	
-	var _objectInspect = __webpack_require__(17);
+	var _objectInspect = __webpack_require__(14);
 	
 	var _objectInspect2 = _interopRequireDefault(_objectInspect);
 	
@@ -4172,7 +4396,7 @@
 	exports.default = assert;
 
 /***/ },
-/* 17 */
+/* 14 */
 /***/ function(module, exports) {
 
 	var hasMap = typeof Map === 'function' && Map.prototype;
@@ -4385,7 +4609,7 @@
 
 
 /***/ },
-/* 18 */
+/* 15 */
 /***/ function(module, exports, __webpack_require__) {
 
 	'use strict';
@@ -4395,13 +4619,13 @@
 	});
 	exports.spyOn = exports.createSpy = exports.restoreSpies = exports.isSpy = undefined;
 	
-	var _defineProperties = __webpack_require__(19);
+	var _defineProperties = __webpack_require__(16);
 	
-	var _assert = __webpack_require__(16);
+	var _assert = __webpack_require__(13);
 	
 	var _assert2 = _interopRequireDefault(_assert);
 	
-	var _TestUtils = __webpack_require__(23);
+	var _TestUtils = __webpack_require__(20);
 	
 	function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 	
@@ -4511,13 +4735,13 @@
 	};
 
 /***/ },
-/* 19 */
+/* 16 */
 /***/ function(module, exports, __webpack_require__) {
 
 	'use strict';
 	
-	var keys = __webpack_require__(20);
-	var foreach = __webpack_require__(22);
+	var keys = __webpack_require__(17);
+	var foreach = __webpack_require__(19);
 	var hasSymbols = typeof Symbol === 'function' && typeof Symbol() === 'symbol';
 	
 	var toStr = Object.prototype.toString;
@@ -4573,7 +4797,7 @@
 
 
 /***/ },
-/* 20 */
+/* 17 */
 /***/ function(module, exports, __webpack_require__) {
 
 	'use strict';
@@ -4582,7 +4806,7 @@
 	var has = Object.prototype.hasOwnProperty;
 	var toStr = Object.prototype.toString;
 	var slice = Array.prototype.slice;
-	var isArgs = __webpack_require__(21);
+	var isArgs = __webpack_require__(18);
 	var isEnumerable = Object.prototype.propertyIsEnumerable;
 	var hasDontEnumBug = !isEnumerable.call({ toString: null }, 'toString');
 	var hasProtoEnumBug = isEnumerable.call(function () {}, 'prototype');
@@ -4719,7 +4943,7 @@
 
 
 /***/ },
-/* 21 */
+/* 18 */
 /***/ function(module, exports) {
 
 	'use strict';
@@ -4742,7 +4966,7 @@
 
 
 /***/ },
-/* 22 */
+/* 19 */
 /***/ function(module, exports) {
 
 	
@@ -4770,7 +4994,7 @@
 
 
 /***/ },
-/* 23 */
+/* 20 */
 /***/ function(module, exports, __webpack_require__) {
 
 	'use strict';
@@ -4782,15 +5006,15 @@
 	
 	var _typeof = typeof Symbol === "function" && typeof Symbol.iterator === "symbol" ? function (obj) { return typeof obj; } : function (obj) { return obj && typeof Symbol === "function" && obj.constructor === Symbol ? "symbol" : typeof obj; };
 	
-	var _isRegex = __webpack_require__(24);
+	var _isRegex = __webpack_require__(21);
 	
 	var _isRegex2 = _interopRequireDefault(_isRegex);
 	
-	var _why = __webpack_require__(25);
+	var _why = __webpack_require__(22);
 	
 	var _why2 = _interopRequireDefault(_why);
 	
-	var _objectKeys = __webpack_require__(20);
+	var _objectKeys = __webpack_require__(17);
 	
 	var _objectKeys2 = _interopRequireDefault(_objectKeys);
 	
@@ -4921,7 +5145,7 @@
 	};
 
 /***/ },
-/* 24 */
+/* 21 */
 /***/ function(module, exports) {
 
 	'use strict';
@@ -4946,7 +5170,7 @@
 
 
 /***/ },
-/* 25 */
+/* 22 */
 /***/ function(module, exports, __webpack_require__) {
 
 	'use strict';
@@ -4954,16 +5178,16 @@
 	var ObjectPrototype = Object.prototype;
 	var toStr = ObjectPrototype.toString;
 	var booleanValue = Boolean.prototype.valueOf;
-	var has = __webpack_require__(7);
-	var isArrowFunction = __webpack_require__(26);
-	var isBoolean = __webpack_require__(28);
-	var isDate = __webpack_require__(29);
-	var isGenerator = __webpack_require__(30);
-	var isNumber = __webpack_require__(31);
-	var isRegex = __webpack_require__(24);
-	var isString = __webpack_require__(32);
-	var isSymbol = __webpack_require__(33);
-	var isCallable = __webpack_require__(27);
+	var has = __webpack_require__(4);
+	var isArrowFunction = __webpack_require__(23);
+	var isBoolean = __webpack_require__(25);
+	var isDate = __webpack_require__(26);
+	var isGenerator = __webpack_require__(27);
+	var isNumber = __webpack_require__(28);
+	var isRegex = __webpack_require__(21);
+	var isString = __webpack_require__(29);
+	var isSymbol = __webpack_require__(30);
+	var isCallable = __webpack_require__(24);
 	
 	var isProto = Object.prototype.isPrototypeOf;
 	
@@ -4971,9 +5195,9 @@
 	var functionsHaveNames = foo.name === 'foo';
 	
 	var symbolValue = typeof Symbol === 'function' ? Symbol.prototype.valueOf : null;
-	var symbolIterator = __webpack_require__(34)();
+	var symbolIterator = __webpack_require__(31)();
 	
-	var collectionsForEach = __webpack_require__(35)();
+	var collectionsForEach = __webpack_require__(32)();
 	
 	var getPrototypeOf = Object.getPrototypeOf;
 	if (!getPrototypeOf) {
@@ -5246,12 +5470,12 @@
 
 
 /***/ },
-/* 26 */
+/* 23 */
 /***/ function(module, exports, __webpack_require__) {
 
 	'use strict';
 	
-	var isCallable = __webpack_require__(27);
+	var isCallable = __webpack_require__(24);
 	var fnToStr = Function.prototype.toString;
 	var isNonArrowFnRegex = /^\s*function/;
 	var isArrowFnWithParensRegex = /^\([^\)]*\) *=>/;
@@ -5267,7 +5491,7 @@
 
 
 /***/ },
-/* 27 */
+/* 24 */
 /***/ function(module, exports) {
 
 	'use strict';
@@ -5312,7 +5536,7 @@
 
 
 /***/ },
-/* 28 */
+/* 25 */
 /***/ function(module, exports) {
 
 	'use strict';
@@ -5339,7 +5563,7 @@
 
 
 /***/ },
-/* 29 */
+/* 26 */
 /***/ function(module, exports) {
 
 	'use strict';
@@ -5365,7 +5589,7 @@
 
 
 /***/ },
-/* 30 */
+/* 27 */
 /***/ function(module, exports) {
 
 	'use strict';
@@ -5403,7 +5627,7 @@
 
 
 /***/ },
-/* 31 */
+/* 28 */
 /***/ function(module, exports) {
 
 	'use strict';
@@ -5429,7 +5653,7 @@
 
 
 /***/ },
-/* 32 */
+/* 29 */
 /***/ function(module, exports) {
 
 	'use strict';
@@ -5455,7 +5679,7 @@
 
 
 /***/ },
-/* 33 */
+/* 30 */
 /***/ function(module, exports) {
 
 	'use strict';
@@ -5488,12 +5712,12 @@
 
 
 /***/ },
-/* 34 */
+/* 31 */
 /***/ function(module, exports, __webpack_require__) {
 
 	'use strict';
 	
-	var isSymbol = __webpack_require__(33);
+	var isSymbol = __webpack_require__(30);
 	
 	module.exports = function getSymbolIterator() {
 		var symbolIterator = typeof Symbol === 'function' && isSymbol(Symbol.iterator) ? Symbol.iterator : null;
@@ -5511,7 +5735,7 @@
 
 
 /***/ },
-/* 35 */
+/* 32 */
 /***/ function(module, exports) {
 
 	'use strict';
@@ -5542,7 +5766,7 @@
 
 
 /***/ },
-/* 36 */
+/* 33 */
 /***/ function(module, exports, __webpack_require__) {
 
 	'use strict';
@@ -5551,7 +5775,7 @@
 	  value: true
 	});
 	
-	var _Expectation = __webpack_require__(6);
+	var _Expectation = __webpack_require__(3);
 	
 	var _Expectation2 = _interopRequireDefault(_Expectation);
 	

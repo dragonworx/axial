@@ -30,7 +30,7 @@ gulp.task('webpack-test', function() {
 });
 
 gulp.task('test:watch', function () {
-  gulp.watch(['*.js', './test/*.js'], ['webpack-test']);
+  gulp.watch(['./lib/*.js', './test/*.js'], ['webpack-test']);
 });
 
 gulp.task('default', ['webpack-test', 'test:watch']);

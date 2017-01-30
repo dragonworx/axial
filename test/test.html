@@ -20,7 +20,7 @@
         #mocha code.javascript .variable { color: #e69745; font-style: italic; }
         #mocha h2 .string { color: #001fff; font-style: italic; }
         #mocha .hljs-comment {color: #299a3d; }
-        #mocha .test pre { margin: 0; padding: 0; }
+        #mocha .test pre { margin: 0; padding: 0; width: 100%; }
         .hljs { color: #5e5e5e; }
     </style>
 </head>
@@ -36,7 +36,6 @@
 <script>mocha.setup('bdd')</script>
 <script src="lib/test.js"></script>
 <script>
-    Axial.util.logEnabled = true;
     mocha.checkLeaks();
     mocha.globals(['jQuery']);
     mocha.run().$events.end.push(function () {
