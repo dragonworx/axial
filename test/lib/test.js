@@ -397,6 +397,7 @@
 	var _arrayTypes = {};
 	var _listeners = [];
 	var _allSchemas = {};
+	var BLANK_SCHEMA_KEY = '*';
 	
 	/* --------------------------------------------------------------------------------------  Errors ---------- */
 	var Exception = function ExtendableBuiltin(cls) {
@@ -802,7 +803,11 @@
 	var AxialSchema = function (_AxialObject) {
 	  _inherits(AxialSchema, _AxialObject);
 	
-	  function AxialSchema(name, prototype, rootSchema) {
+	  function AxialSchema() {
+	    var name = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : BLANK_SCHEMA_KEY;
+	    var prototype = arguments[1];
+	    var rootSchema = arguments[2];
+	
 	    _classCallCheck(this, AxialSchema);
 	
 	    var _this15 = _possibleConstructorReturn(this, (AxialSchema.__proto__ || Object.getPrototypeOf(AxialSchema)).call(this));
@@ -810,7 +815,7 @@
 	    if (util.isPlainObject(name) && typeof prototype === 'undefined') {
 	      // handle case where just single object prototype argument given
 	      prototype = name;
-	      name = null;
+	      name = BLANK_SCHEMA_KEY;
 	    }
 	
 	    _this15._name = name;
@@ -820,9 +825,13 @@
 	
 	    _this15.from(prototype);
 	
-	    if (_this15._name) {
-	      Axial.Schema[name.replace(/\./g, '_')] = _this15;
+	    if (name) {
+	      Axial.Schema[_this15._name.replace(/\./g, '_')] = _this15;
 	    }
+	
+	    var _name = _this15._name;
+	    _allSchemas[_name] = _allSchemas[_name] ? _allSchemas[_name] : [];
+	    _allSchemas[_name].push(_this15);
 	    return _this15;
 	  }
 	
@@ -908,7 +917,7 @@
 	      for (var key in prototype) {
 	        if (prototype.hasOwnProperty(key)) {
 	          var type = prototype[key];
-	          var path = this._name ? this._name + '.' + key : key;
+	          var path = this._name ? this._name + '.' + key : BLANK_SCHEMA_KEY + '.' + key;
 	          if (util.isPlainObject(type)) {
 	            type = new AxialSchema(path, type, this.root);
 	          } else {
@@ -928,8 +937,10 @@
 	      var defaultValues = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : {};
 	
 	      // check undefined keys are not being passed
+	      var isInstance = defaultValues instanceof AxialInstance;
+	      var isPlainObject = util.isPlainObject(defaultValues);
 	      for (var key in defaultValues) {
-	        if (defaultValues.hasOwnProperty(key) && key !== '$') {
+	        if (isPlainObject && defaultValues.hasOwnProperty(key)) {
 	          if (!this._properties.has(key)) {
 	            throw new AxialIllegalProperty(key, this);
 	          }
@@ -1416,7 +1427,7 @@
 	    return t;
 	  },
 	  Object: new AxialObject(),
-	  Schema: new AxialSchema(),
+	  Schema: new AxialSchema(null),
 	  Instance: new AxialInstance()
 	};
 	
@@ -1427,20 +1438,25 @@
 	/* --------------------------------------------------------------------------------------  Axial ---------- */
 	var Axial = window.Axial = {
 	  define: function define(name, prototype) {
-	    var schema = new AxialSchema(name, prototype);
-	    var _name = schema.name;
-	    _allSchemas[_name] = _allSchemas[_name] ? _allSchemas[_name] : [];
-	    _allSchemas[_name].push(schema);
-	    return schema;
+	    return new AxialSchema(name, prototype);
 	  },
-	  schema: function schema(name) {
+	  schema: function schema() {
+	    var name = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : 'null';
+	
 	    var schemaArray = _allSchemas[name];
 	    if (schemaArray) {
-	      return schemaArray[0];
+	      return schemaArray[schemaArray.length - 1];
 	    }
 	  },
 	  schemaNames: function schemaNames() {
 	    return Object.keys(_allSchemas);
+	  },
+	  schemas: function schemas() {
+	    var o = {};
+	    this.schemaNames().forEach(function (name) {
+	      return o[name] = _allSchemas[name];
+	    });
+	    return o;
 	  },
 	  bind: function bind(fn) {
 	    _listeners.push(fn);
