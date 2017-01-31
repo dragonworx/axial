@@ -401,6 +401,7 @@
 	var _listeners = [];
 	var _interfaces = {};
 	var BLANK_INTERFACE_NAME = '*';
+	var _legalInstanceProperties = ['_state', '_iface', '_listeners', '_parentInstance', '_isWatching', '_watchIntervalId'];
 	
 	/* --------------------------------------------------------------------------------------  Errors ---------- */
 	var Exception = function ExtendableBuiltin(cls) {
@@ -514,7 +515,7 @@
 	  function AxialIllegalProperty(key, iface) {
 	    _classCallCheck(this, AxialIllegalProperty);
 	
-	    var message = 'Illegal key ' + key + ' given from object, not declared in interface';
+	    var message = 'Illegal key "' + key + '" set but not declared in interface "' + iface._name + '"';
 	
 	    var _this6 = _possibleConstructorReturn(this, (AxialIllegalProperty.__proto__ || Object.getPrototypeOf(AxialIllegalProperty)).call(this, message));
 	
@@ -1060,6 +1061,7 @@
 	    this._iface = iface;
 	    this._listeners = {};
 	    this._parentInstance = parentInstance;
+	    this._isWatching = false;
 	  }
 	
 	  _createClass(AxialInstance, [{
@@ -1137,6 +1139,35 @@
 	      }
 	      return root;
 	    }
+	  }, {
+	    key: '_watch',
+	    get: function get() {
+	      return this._isWatching;
+	    },
+	    set: function set(bool) {
+	      var _this19 = this;
+	
+	      if (bool && this._isWatching) {
+	        return;
+	      }
+	      if (!bool && this._isWatching) {
+	        clearInterval(this._watchIntervalId);
+	      }
+	      this._isWatching = bool;
+	      if (bool) {
+	        (function () {
+	          var props = _this19._iface._properties;
+	          _this19._watchIntervalId = setInterval(function () {
+	            for (var key in _this19) {
+	              if (_this19.hasOwnProperty(key) && _legalInstanceProperties.indexOf(key) === -1 && !props.has(key)) {
+	                clearInterval(_this19._watchIntervalId);
+	                throw new AxialIllegalProperty(key, _this19._iface);
+	              }
+	            }
+	          }, 30);
+	        })();
+	      }
+	    }
 	  }]);
 	
 	  return AxialInstance;
@@ -1206,7 +1237,7 @@
 	      var oldValue = instance._state[this._key];
 	      var rawValue = value;
 	
-	      console.log('%cSET: ' + this._path + ':<' + this._type.join('|') + '> = ' + value, 'color:orange');
+	      console.log('%cSET: ' + this._path + ':<' + this._type.join('|') + '> = ' + util.stringify(value), 'color:orange');
 	
 	      this.validate(value);
 	
@@ -1247,7 +1278,7 @@
 	    value: function get(instance) {
 	      var value = instance._state[this._key];
 	
-	      console.log('%cGET: ' + this._path + ':<' + this._type.join('|') + '> = ' + (T.Object.is(value) ? '{}' : value), 'color:#999');
+	      console.log('%cGET: ' + this._path + ':<' + this._type.join('|') + '> = ' + util.stringify(value), 'color:#999');
 	
 	      // dispatch event
 	      instance._dispatch(this._key, {
@@ -1395,15 +1426,15 @@
 	    }();
 	  },
 	  merge: function merge(source, target) {
-	    var _this19 = this;
+	    var _this20 = this;
 	
 	    var copy = function copy(_source, _target) {
 	      for (var key in _target) {
 	        if (_target.hasOwnProperty(key)) {
 	          var sourceValue = _source[key];
 	          var targetValue = _target[key];
-	          if (_this19.isPlainObject(targetValue)) {
-	            if (_this19.isPlainObject(sourceValue)) {
+	          if (_this20.isPlainObject(targetValue)) {
+	            if (_this20.isPlainObject(sourceValue)) {
 	              copy(sourceValue, targetValue);
 	            } else {
 	              var obj = {};
@@ -1460,7 +1491,7 @@
 	    return true;
 	  },
 	  getObjectPaths: function getObjectPaths(obj, includeBranchPaths) {
-	    var _this20 = this;
+	    var _this21 = this;
 	
 	    var keys = [];
 	    var ref = null;
@@ -1470,7 +1501,7 @@
 	        if (o.hasOwnProperty(k)) {
 	          ref = o[k];
 	          path = p ? p + '.' + k : k;
-	          if (_this20.isPlainObject(ref)) {
+	          if (_this21.isPlainObject(ref)) {
 	            if (includeBranchPaths === true) {
 	              keys.push(path);
 	            }
@@ -1485,7 +1516,7 @@
 	    return keys;
 	  },
 	  getObjectPathValues: function getObjectPathValues(obj, includeBranchPaths) {
-	    var _this21 = this;
+	    var _this22 = this;
 	
 	    var keyValues = [];
 	    var ref = null;
@@ -1495,7 +1526,7 @@
 	        if (o.hasOwnProperty(k)) {
 	          ref = o[k];
 	          path = p ? p + '.' + k : k;
-	          if (_this21.isPlainObject(ref)) {
+	          if (_this22.isPlainObject(ref)) {
 	            if (includeBranchPaths === true) {
 	              keyValues.push({ path: path, value: ref, isBranch: true });
 	            }
@@ -1561,6 +1592,17 @@
 	      }
 	    }
 	    return obj;
+	  },
+	  stringify: function stringify(value) {
+	    if (T.Object.is(value)) {
+	      return '{' + Object.keys(value).map(function (k) {
+	        return k + ':<' + _typeof(value[k]) + '>';
+	      }) + '}';
+	    } else if (T.Function.is(value)) {
+	      return 'function () {..}';
+	    } else {
+	      return JSON.stringify(value);
+	    }
 	  }
 	};
 	
