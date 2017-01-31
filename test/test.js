@@ -30,18 +30,16 @@ describe('2. Defining Schemas', () => {
         y: {
           z: [Axial.Number, Axial.Boolean]
         }
-      }
+      },
+      'a.b.c': Axial.Boolean
     });
     expect(schema).toBeA(Axial.Schema.constructor);
+    expect(schema.prop('a.b.c').is(Axial.Boolean)).toBe(true);
   });
 
   it('2.2 should be able to define a schema with an id', () => {
     schema = Axial.define('schema', {
-      x: {
-        y: {
-          z: [Axial.Number, Axial.Boolean]
-        }
-      },
+      'x.y.z': [Axial.Number, Axial.Boolean],
       v: Axial.Array(),
       w: Axial.Array(Axial.String)
     });
@@ -66,6 +64,9 @@ describe('3. Creating Instances', () => {
       y: {
         z: [Axial.Number, Axial.Boolean, Axial.Undefined]
       }
+    },
+    a: {
+      b: Axial.Function
     }
   });
   let a = null;
@@ -77,15 +78,17 @@ describe('3. Creating Instances', () => {
 
   it('3.1.b should be able to create instances of schemas from default values', () => {
     a = schema.new({
-      x: {
-        y: {
-          z: 1
+      'x.y.z': 6,
+      a: {
+        b: function () {
+          return this._root.x.y.z;
         }
       }
     });
     expect(a.x).toBeA(Axial.Instance.constructor);
     expect(a.x.y).toBeA(Axial.Instance.constructor);
-    expect(a.x.y.z).toBe(1);
+    expect(a.x.y.z).toBe(6);
+    expect(a.a.b()).toBe(6);
   });
 
   it('3.1.c should be able to create instances of schemas from partial set of default values', () => {

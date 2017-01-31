@@ -78,18 +78,16 @@
 	        y: {
 	          z: [Axial.Number, Axial.Boolean]
 	        }
-	      }
+	      },
+	      'a.b.c': Axial.Boolean
 	    });
 	    expect(schema).toBeA(Axial.Schema.constructor);
+	    expect(schema.prop('a.b.c').is(Axial.Boolean)).toBe(true);
 	  });
 	
 	  it('2.2 should be able to define a schema with an id', function () {
 	    schema = Axial.define('schema', {
-	      x: {
-	        y: {
-	          z: [Axial.Number, Axial.Boolean]
-	        }
-	      },
+	      'x.y.z': [Axial.Number, Axial.Boolean],
 	      v: Axial.Array(),
 	      w: Axial.Array(Axial.String)
 	    });
@@ -114,6 +112,9 @@
 	      y: {
 	        z: [Axial.Number, Axial.Boolean, Axial.Undefined]
 	      }
+	    },
+	    a: {
+	      b: Axial.Function
 	    }
 	  });
 	  var a = null;
@@ -125,15 +126,17 @@
 	
 	  it('3.1.b should be able to create instances of schemas from default values', function () {
 	    a = schema.new({
-	      x: {
-	        y: {
-	          z: 1
+	      'x.y.z': 6,
+	      a: {
+	        b: function b() {
+	          return this._root.x.y.z;
 	        }
 	      }
 	    });
 	    expect(a.x).toBeA(Axial.Instance.constructor);
 	    expect(a.x.y).toBeA(Axial.Instance.constructor);
-	    expect(a.x.y.z).toBe(1);
+	    expect(a.x.y.z).toBe(6);
+	    expect(a.a.b()).toBe(6);
 	  });
 	
 	  it('3.1.c should be able to create instances of schemas from partial set of default values', function () {
@@ -415,7 +418,7 @@
 	  function AxialUnsupportedType(value) {
 	    _classCallCheck(this, AxialUnsupportedType);
 	
-	    var message = 'Unsupported type "' + ('' + (typeof value === 'undefined' ? 'undefined' : _typeof(value))) + '"';
+	    var message = 'Unsupported type "' + ('' + (typeof value === 'undefined' ? 'undefined' : _typeof(value))) + '". Only AxialTypes can be provided.';
 	
 	    var _this = _possibleConstructorReturn(this, (AxialUnsupportedType.__proto__ || Object.getPrototypeOf(AxialUnsupportedType)).call(this, message));
 	
@@ -448,39 +451,77 @@
 	  return AxialInvalidType;
 	}(Exception);
 	
-	var AxialMissingProperty = function (_Exception3) {
-	  _inherits(AxialMissingProperty, _Exception3);
+	var AxialUndefinedValue = function (_Exception3) {
+	  _inherits(AxialUndefinedValue, _Exception3);
+	
+	  function AxialUndefinedValue(source, path) {
+	    _classCallCheck(this, AxialUndefinedValue);
+	
+	    var message = 'Undefined value for object path "' + path + '"';
+	
+	    var _this3 = _possibleConstructorReturn(this, (AxialUndefinedValue.__proto__ || Object.getPrototypeOf(AxialUndefinedValue)).call(this, message));
+	
+	    _this3.source = source;
+	    _this3.path = path;
+	    _this3.message = message;
+	    return _this3;
+	  }
+	
+	  return AxialUndefinedValue;
+	}(Exception);
+	
+	var AxialInvalidArgument = function (_Exception4) {
+	  _inherits(AxialInvalidArgument, _Exception4);
+	
+	  function AxialInvalidArgument(index, expected, given) {
+	    _classCallCheck(this, AxialInvalidArgument);
+	
+	    var message = 'Invalid argument #' + index + ' - Expected "' + expected + '", given "' + given + '"';
+	
+	    var _this4 = _possibleConstructorReturn(this, (AxialInvalidArgument.__proto__ || Object.getPrototypeOf(AxialInvalidArgument)).call(this, message));
+	
+	    _this4.index = index;
+	    _this4.expected = expected;
+	    _this4.given = given;
+	    return _this4;
+	  }
+	
+	  return AxialInvalidArgument;
+	}(Exception);
+	
+	var AxialMissingProperty = function (_Exception5) {
+	  _inherits(AxialMissingProperty, _Exception5);
 	
 	  function AxialMissingProperty(key, schema) {
 	    _classCallCheck(this, AxialMissingProperty);
 	
 	    var message = 'Missing schema ' + key + ' from given object';
 	
-	    var _this3 = _possibleConstructorReturn(this, (AxialMissingProperty.__proto__ || Object.getPrototypeOf(AxialMissingProperty)).call(this, message));
+	    var _this5 = _possibleConstructorReturn(this, (AxialMissingProperty.__proto__ || Object.getPrototypeOf(AxialMissingProperty)).call(this, message));
 	
-	    _this3.key = key;
-	    _this3.schema = schema;
-	    _this3.message = message;
-	    return _this3;
+	    _this5.key = key;
+	    _this5.schema = schema;
+	    _this5.message = message;
+	    return _this5;
 	  }
 	
 	  return AxialMissingProperty;
 	}(Exception);
 	
-	var AxialIllegalProperty = function (_Exception4) {
-	  _inherits(AxialIllegalProperty, _Exception4);
+	var AxialIllegalProperty = function (_Exception6) {
+	  _inherits(AxialIllegalProperty, _Exception6);
 	
 	  function AxialIllegalProperty(key, schema) {
 	    _classCallCheck(this, AxialIllegalProperty);
 	
 	    var message = 'Illegal key ' + key + ' given from object, not declared in schema';
 	
-	    var _this4 = _possibleConstructorReturn(this, (AxialIllegalProperty.__proto__ || Object.getPrototypeOf(AxialIllegalProperty)).call(this, message));
+	    var _this6 = _possibleConstructorReturn(this, (AxialIllegalProperty.__proto__ || Object.getPrototypeOf(AxialIllegalProperty)).call(this, message));
 	
-	    _this4.key = key;
-	    _this4.schema = schema;
-	    _this4.message = message;
-	    return _this4;
+	    _this6.key = key;
+	    _this6.schema = schema;
+	    _this6.message = message;
+	    return _this6;
 	  }
 	
 	  return AxialIllegalProperty;
@@ -489,6 +530,8 @@
 	var Errors = {
 	  UnsupportedType: AxialUnsupportedType,
 	  InvalidType: AxialInvalidType,
+	  UndefinedValue: AxialUndefinedValue,
+	  InvalidArgument: AxialInvalidArgument,
 	  MissingProperty: AxialMissingProperty,
 	  IllegalProperty: AxialIllegalProperty
 	};
@@ -739,10 +782,10 @@
 	  function AxialArray(type) {
 	    _classCallCheck(this, AxialArray);
 	
-	    var _this13 = _possibleConstructorReturn(this, (AxialArray.__proto__ || Object.getPrototypeOf(AxialArray)).call(this));
+	    var _this15 = _possibleConstructorReturn(this, (AxialArray.__proto__ || Object.getPrototypeOf(AxialArray)).call(this));
 	
-	    _this13._type = type;
-	    return _this13;
+	    _this15._type = type;
+	    return _this15;
 	  }
 	
 	  _createClass(AxialArray, [{
@@ -810,7 +853,7 @@
 	
 	    _classCallCheck(this, AxialSchema);
 	
-	    var _this15 = _possibleConstructorReturn(this, (AxialSchema.__proto__ || Object.getPrototypeOf(AxialSchema)).call(this));
+	    var _this17 = _possibleConstructorReturn(this, (AxialSchema.__proto__ || Object.getPrototypeOf(AxialSchema)).call(this));
 	
 	    if (util.isPlainObject(name) && typeof prototype === 'undefined') {
 	      // handle case where just single object prototype argument given
@@ -818,21 +861,21 @@
 	      name = BLANK_SCHEMA_KEY;
 	    }
 	
-	    _this15._name = name;
-	    _this15._properties = new Map();
-	    _this15._allProps = new Map();
-	    _this15._rootSchema = rootSchema;
+	    _this17._name = name;
+	    _this17._properties = new Map();
+	    _this17._allProps = new Map();
+	    _this17._rootSchema = rootSchema;
 	
-	    _this15.from(prototype);
+	    _this17.define(prototype);
 	
 	    if (name) {
-	      Axial.Schema[_this15._name.replace(/\./g, '_')] = _this15;
+	      Axial.Schema[_this17._name.replace(/\./g, '_')] = _this17;
 	    }
 	
-	    var _name = _this15._name;
+	    var _name = _this17._name;
 	    _allSchemas[_name] = _allSchemas[_name] ? _allSchemas[_name] : [];
-	    _allSchemas[_name].push(_this15);
-	    return _this15;
+	    _allSchemas[_name].push(_this17);
+	    return _this17;
 	  }
 	
 	  _createClass(AxialSchema, [{
@@ -912,8 +955,10 @@
 	      return keys;
 	    }
 	  }, {
-	    key: 'from',
-	    value: function from(prototype) {
+	    key: 'define',
+	    value: function define(prototype) {
+	      // expand dot-syntax keys into prototype object
+	      util.expandDotSyntaxKeys(prototype);
 	      for (var key in prototype) {
 	        if (prototype.hasOwnProperty(key)) {
 	          var type = prototype[key];
@@ -932,13 +977,16 @@
 	  }, {
 	    key: 'create',
 	    value: function create() {
-	      var _this16 = this;
+	      var _this18 = this;
 	
 	      var defaultValues = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : {};
+	      var parentInstance = arguments[1];
 	
 	      // check undefined keys are not being passed
-	      var isInstance = defaultValues instanceof AxialInstance;
 	      var isPlainObject = util.isPlainObject(defaultValues);
+	      if (isPlainObject) {
+	        util.expandDotSyntaxKeys(defaultValues);
+	      }
 	      for (var key in defaultValues) {
 	        if (isPlainObject && defaultValues.hasOwnProperty(key)) {
 	          if (!this._properties.has(key)) {
@@ -948,7 +996,7 @@
 	      }
 	
 	      // create instance
-	      var instance = new AxialInstance(this);
+	      var instance = new AxialInstance(this, parentInstance);
 	
 	      this._properties.forEach(function (property, key) {
 	        // install getters and setters for each property in schema
@@ -958,13 +1006,13 @@
 	
 	        // expect property definition type to be valid AxialType
 	        if (defaultValues.hasOwnProperty(key) && !property.is(givenType)) {
-	          throw new AxialInvalidType(givenType.toString(), expectedType.join('|'), key, _this16);
+	          throw new AxialInvalidType(givenType.toString(), expectedType.join('|'), key, _this18);
 	        }
 	
 	        instance._defineAccessors(property);
 	
 	        if (property.is(Axial.Schema)) {
-	          value = property.primarySchemaType.create(value);
+	          value = property.primarySchemaType.create(value, instance);
 	        } else if (!defaultValues.hasOwnProperty(key)) {
 	          value = property.defaultValue;
 	        }
@@ -1005,12 +1053,13 @@
 	
 	
 	var AxialInstance = function () {
-	  function AxialInstance(schema) {
+	  function AxialInstance(schema, parentInstance) {
 	    _classCallCheck(this, AxialInstance);
 	
 	    this._state = {};
 	    this._schema = schema;
 	    this._listeners = {};
+	    this._parentInstance = parentInstance;
 	  }
 	
 	  _createClass(AxialInstance, [{
@@ -1072,14 +1121,21 @@
 	      }
 	    }
 	  }, {
-	    key: '_set',
-	    value: function _set(key, value) {
-	      this._state[key] = value;
+	    key: '_value',
+	    value: function _value(path, shouldThrowIfNotFound) {
+	      var root = this._root;
+	      return util.getObjectAtPath(root, path, shouldThrowIfNotFound);
 	    }
 	  }, {
-	    key: '_get',
-	    value: function _get(key) {
-	      return this._state[key];
+	    key: '_root',
+	    get: function get() {
+	      var obj = this._parentInstance;
+	      var root = this;
+	      while (obj) {
+	        root = obj;
+	        obj = obj._parentInstance;
+	      }
+	      return root;
 	    }
 	  }]);
 	
@@ -1147,7 +1203,7 @@
 	  }, {
 	    key: 'set',
 	    value: function set(instance, value) {
-	      var oldValue = instance._get(this._key);
+	      var oldValue = instance._state[this._key];
 	      var rawValue = value;
 	
 	      console.log('%cSET: ' + this._path + ':<' + this._type.join('|') + '> = ' + value, 'color:orange');
@@ -1177,7 +1233,7 @@
 	      });
 	
 	      // set state in obj
-	      instance._set(this._key, value);
+	      instance._state[this._key] = value;
 	    }
 	
 	    /**
@@ -1189,7 +1245,7 @@
 	  }, {
 	    key: 'get',
 	    value: function get(instance) {
-	      var value = instance._get(this._key);
+	      var value = instance._state[this._key];
 	
 	      console.log('%cGET: ' + this._path + ':<' + this._type.join('|') + '> = ' + (T.Object.is(value) ? '{}' : value), 'color:#999');
 	
@@ -1339,15 +1395,15 @@
 	    }();
 	  },
 	  merge: function merge(source, target) {
-	    var _this17 = this;
+	    var _this19 = this;
 	
 	    var copy = function copy(_source, _target) {
 	      for (var key in _target) {
 	        if (_target.hasOwnProperty(key)) {
 	          var sourceValue = _source[key];
 	          var targetValue = _target[key];
-	          if (_this17.isPlainObject(targetValue)) {
-	            if (_this17.isPlainObject(sourceValue)) {
+	          if (_this19.isPlainObject(targetValue)) {
+	            if (_this19.isPlainObject(sourceValue)) {
 	              copy(sourceValue, targetValue);
 	            } else {
 	              var obj = {};
@@ -1402,6 +1458,109 @@
 	      }
 	    }
 	    return true;
+	  },
+	  getObjectPaths: function getObjectPaths(obj, includeBranchPaths) {
+	    var _this20 = this;
+	
+	    var keys = [];
+	    var ref = null;
+	    var path = null;
+	    var walk = function walk(o, p) {
+	      for (var k in o) {
+	        if (o.hasOwnProperty(k)) {
+	          ref = o[k];
+	          path = p ? p + '.' + k : k;
+	          if (_this20.isPlainObject(ref)) {
+	            if (includeBranchPaths === true) {
+	              keys.push(path);
+	            }
+	            walk(ref, path);
+	          } else {
+	            keys.push(path);
+	          }
+	        }
+	      }
+	    };
+	    walk(obj);
+	    return keys;
+	  },
+	  getObjectPathValues: function getObjectPathValues(obj, includeBranchPaths) {
+	    var _this21 = this;
+	
+	    var keyValues = [];
+	    var ref = null;
+	    var path = null;
+	    var walk = function walk(o, p) {
+	      for (var k in o) {
+	        if (o.hasOwnProperty(k)) {
+	          ref = o[k];
+	          path = p ? p + '.' + k : k;
+	          if (_this21.isPlainObject(ref)) {
+	            if (includeBranchPaths === true) {
+	              keyValues.push({ path: path, value: ref, isBranch: true });
+	            }
+	            walk(ref, path);
+	          } else {
+	            keyValues.push({ path: path, value: ref, isBranch: false });
+	          }
+	        }
+	      }
+	    };
+	    walk(obj);
+	    return keyValues;
+	  },
+	  getObjectAtPath: function getObjectAtPath(obj, path, shouldThrowIfNotFound) {
+	    var steps = path.split('.');
+	    var l = steps.length;
+	    var ref = obj;
+	    var k = null;
+	    for (var i = 0; i < l; i++) {
+	      k = steps[i];
+	      ref = ref[k];
+	      if (ref === null || typeof ref === 'undefined') {
+	        if (shouldThrowIfNotFound === true) {
+	          throw new AxialUndefinedValue(obj, path);
+	        }
+	        return ref;
+	      }
+	    }
+	    return ref;
+	  },
+	  setObjectAtPath: function setObjectAtPath(obj, path, value) {
+	    var ref = obj;
+	    var steps = path.split('.');
+	    var l = steps.length - 1;
+	    var k = null;
+	    for (var i = 0; i < l; i++) {
+	      k = steps[i];
+	      if (!ref.hasOwnProperty(k)) {
+	        ref[k] = {};
+	      }
+	      ref = ref[k];
+	    }
+	    ref[steps[l]] = value;
+	  },
+	  multiSetObjectAtPath: function multiSetObjectAtPath(obj, pathOrObject, value) {
+	    var modifiedPaths = null;
+	    if (this.isPlainObject(pathOrObject)) {
+	      this.merge(obj, pathOrObject);
+	      modifiedPaths = this.getObjectPaths(pathOrObject);
+	    } else if (typeof pathOrObject === 'string') {
+	      this.setObjectAtPath(obj, pathOrObject, value);
+	      modifiedPaths = [pathOrObject];
+	    }
+	    return modifiedPaths;
+	  },
+	  expandDotSyntaxKeys: function expandDotSyntaxKeys(obj) {
+	    for (var key in obj) {
+	      if (obj.hasOwnProperty(key)) {
+	        if (key.indexOf('.') > -1) {
+	          this.setObjectAtPath(obj, key, obj[key]);
+	          delete obj[key];
+	        }
+	      }
+	    }
+	    return obj;
 	  }
 	};
 	
