@@ -20,12 +20,12 @@ describe('1. Types', () => {
   });
 });
 
-describe('2. Defining Schemas', () => {
-  let schema = null;
+describe('2. Defining Interfaces', () => {
+  let iface = null;
   let a = null;
 
-  it('2.1 should be able to define a schema without an id', () => {
-    schema = Axial.define({
+  it('2.1 should be able to define an interface without a name', () => {
+    iface = Axial.define({
       x: {
         y: {
           z: [Axial.Number, Axial.Boolean]
@@ -33,33 +33,33 @@ describe('2. Defining Schemas', () => {
       },
       'a.b.c': Axial.Boolean
     });
-    expect(schema).toBeA(Axial.Schema.constructor);
-    expect(schema.prop('a.b.c').is(Axial.Boolean)).toBe(true);
+    expect(iface).toBeA(Axial.Interface.constructor);
+    expect(iface.prop('a.b.c').is(Axial.Boolean)).toBe(true);
   });
 
-  it('2.2 should be able to define a schema with an id', () => {
-    schema = Axial.define('schema', {
+  it('2.2 should be able to define an interface with a name', () => {
+    iface = Axial.define('iface', {
       'x.y.z': [Axial.Number, Axial.Boolean],
       v: Axial.Array(),
       w: Axial.Array(Axial.String)
     });
-    expect(schema.prop('schema.x.y.z').schema.name).toBe('schema.x.y');
+    expect(iface.prop('iface.x.y.z').iface.name).toBe('iface.x.y');
   });
 
-  it('2.3 should be able to access schema properties by path', () => {
-    expect(schema.prop('schema.x').is(Axial.Schema)).toBe(true);
-    expect(schema.prop('schema.x').is(Axial.String)).toBe(false);
-    expect(schema.prop('schema.x.y.z').is(Axial.Number)).toBe(true);
-    expect(schema.prop('schema.x.y.z').is(Axial.Boolean)).toBe(true);
-    expect(schema.prop('schema.v').is(Axial.Array())).toBe(true);
-    expect(schema.prop('schema.v').is(Axial.Array(Axial.String))).toBe(false);
-    expect(schema.prop('schema.w').is(Axial.Array(Axial.String))).toBe(true);
-    expect(schema.prop('schema.w').is(Axial.Array(Axial.Number))).toBe(false);
+  it('2.3 should be able to access interface properties by path', () => {
+    expect(iface.prop('iface.x').is(Axial.Interface)).toBe(true);
+    expect(iface.prop('iface.x').is(Axial.String)).toBe(false);
+    expect(iface.prop('iface.x.y.z').is(Axial.Number)).toBe(true);
+    expect(iface.prop('iface.x.y.z').is(Axial.Boolean)).toBe(true);
+    expect(iface.prop('iface.v').is(Axial.Array())).toBe(true);
+    expect(iface.prop('iface.v').is(Axial.Array(Axial.String))).toBe(false);
+    expect(iface.prop('iface.w').is(Axial.Array(Axial.String))).toBe(true);
+    expect(iface.prop('iface.w').is(Axial.Array(Axial.Number))).toBe(false);
   });
 });
 
 describe('3. Creating Instances', () => {
-  let schema = Axial.define('schema', {
+  let iface = Axial.define('iface', {
     x: {
       y: {
         z: [Axial.Number, Axial.Boolean, Axial.Undefined]
@@ -71,13 +71,13 @@ describe('3. Creating Instances', () => {
   });
   let a = null;
 
-  it('3.1.a should be able to create instances of schemas', () => {
-    a = schema.new();
+  it('3.1.a should be able to create instances of interfaces', () => {
+    a = iface.new();
     expect(a).toBeA(Axial.Instance.constructor);
   });
 
-  it('3.1.b should be able to create instances of schemas from default values', () => {
-    a = schema.new({
+  it('3.1.b should be able to create instances of interfaces with given values', () => {
+    a = iface.new({
       'x.y.z': 6,
       a: {
         b: function () {
@@ -91,8 +91,8 @@ describe('3. Creating Instances', () => {
     expect(a.a.b()).toBe(6);
   });
 
-  it('3.1.c should be able to create instances of schemas from partial set of default values', () => {
-    a = schema.new({
+  it('3.1.c should be able to create instances of interfaces from partial set of given values', () => {
+    a = iface.new({
       x: {}
     });
     expect(a.x.y).toBeA(Axial.Instance.constructor);
@@ -100,24 +100,24 @@ describe('3. Creating Instances', () => {
     expect(a.x.y.z).toBe(5);
   });
 
-  it('3.2.a should NOT be allowed to create instance with non-schema property', () => {
+  it('3.2.a should NOT be allowed to create instance with non-interface properties', () => {
     expect(() => {
-      schema.new({
+      iface.new({
         a: 1
       });
-    }).toThrow(Axial.UnknownSchemaKey);
+    }).toThrow(Axial.UnknownInterfaceKey);
   });
 
   it('3.2.b should NOT be allowed to create instance with invalid type', () => {
     expect(() => {
-      schema.new({
+      iface.new({
         x: {
           y: false
         }
       });
     }).toThrow(Axial.InvalidType);
     expect(() => {
-      schema.new({
+      iface.new({
         x: {
           y: {
             z: 'foo'
@@ -138,13 +138,13 @@ describe('3. Creating Instances', () => {
   });
 
   it('3.4 should be able to use arrays', () => {
-    schema = Axial.define('schema', {
+    iface = Axial.define('iface', {
       a: Axial.Array(),
       b: Axial.Array(Axial.String),
       c: Axial.Array(Axial.Object),
       d: Axial.Array(Axial.Array(Axial.String))
     });
-    a = schema.new();
+    a = iface.new();
     a.a = [];
     a.b = [];
     a.b = ['abc'];
@@ -159,36 +159,36 @@ describe('3. Creating Instances', () => {
   });
 
   it('3.5 should be able to use objects', () => {
-    schema = Axial.define('schema', {
+    iface = Axial.define('iface', {
       a: Axial.Object
     });
-    a = schema.new();
+    a = iface.new();
     a.a = {x:1};
     expect(() => a.a = false).toThrow(Axial.InvalidType);
     expect(() => a.a = [123]).toThrow(Axial.InvalidType);
   });
 });
 
-describe('4. Configuring Schema Property Types', () => {
-  let schema;
+describe('4. Configuring Interface Property Types', () => {
+  let iface;
 
   it('4.1 should be able to set default property', () => {
-    schema = Axial.define({
+    iface = Axial.define({
       x: Axial.Number.define({
         defaultValue: 5
       })
     });
-    expect(schema.new().x).toBe(5);
+    expect(iface.new().x).toBe(5);
   });
 
 
 });
 
 describe('5. Listening to instance changes', () => {
-  let schema = Axial.define('schema', {
+  let iface = Axial.define('iface', {
     a: Axial.Object
   });
-  let a = schema.new();
+  let a = iface.new();
 
   it('5.1 should be able to listen to set property changes of instances (global/local)', () => {
     let handlerCount = 0;
@@ -221,23 +221,23 @@ describe('5. Listening to instance changes', () => {
   });
 });
 
-describe('6. Composite schemas', () => {
-  it('6.1 should be able to compose schemas from other schemas', () => {
-    let schemaA = Axial.define('schemaA', {
+describe('6. Composite interfaces', () => {
+  it('6.1 should be able to compose interfaces from other interfaces', () => {
+    let ifaceA = Axial.define('ifaceA', {
       x: [Axial.String, Axial.Undefined],
       y: {
         z: [Axial.Number, Axial.Undefined]
       }
     });
-    let schemaB = Axial.define('schemaB', {
-      a: schemaA,
+    let ifaceB = Axial.define('ifaceB', {
+      a: ifaceA,
       b: {
-        c: [Axial.Number, schemaA]
+        c: [Axial.Number, ifaceA]
       }
     });
-    let a = schemaB.new();
+    let a = ifaceB.new();
     expect(() => {
-      schemaB.new({
+      ifaceB.new({
         a: {
           x: 'a',
           y: {
@@ -250,7 +250,7 @@ describe('6. Composite schemas', () => {
       });
     }).toNotThrow();
     expect(() => {
-      schemaB.new({
+      ifaceB.new({
         a: {
           x: 'a',
           y: {
@@ -263,7 +263,7 @@ describe('6. Composite schemas', () => {
       });
     }).toThrow();
     expect(() => {
-      schemaB.new({
+      ifaceB.new({
         a: {
           x: 'a',
           y: {
@@ -281,7 +281,7 @@ describe('6. Composite schemas', () => {
       })
     }).toNotThrow();
     expect(() => {
-      schemaB.new({
+      ifaceB.new({
         a: {
           x: 'a',
           y: {
@@ -299,7 +299,7 @@ describe('6. Composite schemas', () => {
       })
     }).toNotThrow();
     expect(() => {
-      schemaB.new({
+      ifaceB.new({
         a: {
           x: 'a',
           y: {

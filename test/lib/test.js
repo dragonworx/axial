@@ -68,12 +68,12 @@
 	  });
 	});
 	
-	describe('2. Defining Schemas', function () {
-	  var schema = null;
+	describe('2. Defining Interfaces', function () {
+	  var iface = null;
 	  var a = null;
 	
-	  it('2.1 should be able to define a schema without an id', function () {
-	    schema = Axial.define({
+	  it('2.1 should be able to define an interface without a name', function () {
+	    iface = Axial.define({
 	      x: {
 	        y: {
 	          z: [Axial.Number, Axial.Boolean]
@@ -81,33 +81,33 @@
 	      },
 	      'a.b.c': Axial.Boolean
 	    });
-	    expect(schema).toBeA(Axial.Schema.constructor);
-	    expect(schema.prop('a.b.c').is(Axial.Boolean)).toBe(true);
+	    expect(iface).toBeA(Axial.Interface.constructor);
+	    expect(iface.prop('a.b.c').is(Axial.Boolean)).toBe(true);
 	  });
 	
-	  it('2.2 should be able to define a schema with an id', function () {
-	    schema = Axial.define('schema', {
+	  it('2.2 should be able to define an interface with a name', function () {
+	    iface = Axial.define('iface', {
 	      'x.y.z': [Axial.Number, Axial.Boolean],
 	      v: Axial.Array(),
 	      w: Axial.Array(Axial.String)
 	    });
-	    expect(schema.prop('schema.x.y.z').schema.name).toBe('schema.x.y');
+	    expect(iface.prop('iface.x.y.z').iface.name).toBe('iface.x.y');
 	  });
 	
-	  it('2.3 should be able to access schema properties by path', function () {
-	    expect(schema.prop('schema.x').is(Axial.Schema)).toBe(true);
-	    expect(schema.prop('schema.x').is(Axial.String)).toBe(false);
-	    expect(schema.prop('schema.x.y.z').is(Axial.Number)).toBe(true);
-	    expect(schema.prop('schema.x.y.z').is(Axial.Boolean)).toBe(true);
-	    expect(schema.prop('schema.v').is(Axial.Array())).toBe(true);
-	    expect(schema.prop('schema.v').is(Axial.Array(Axial.String))).toBe(false);
-	    expect(schema.prop('schema.w').is(Axial.Array(Axial.String))).toBe(true);
-	    expect(schema.prop('schema.w').is(Axial.Array(Axial.Number))).toBe(false);
+	  it('2.3 should be able to access interface properties by path', function () {
+	    expect(iface.prop('iface.x').is(Axial.Interface)).toBe(true);
+	    expect(iface.prop('iface.x').is(Axial.String)).toBe(false);
+	    expect(iface.prop('iface.x.y.z').is(Axial.Number)).toBe(true);
+	    expect(iface.prop('iface.x.y.z').is(Axial.Boolean)).toBe(true);
+	    expect(iface.prop('iface.v').is(Axial.Array())).toBe(true);
+	    expect(iface.prop('iface.v').is(Axial.Array(Axial.String))).toBe(false);
+	    expect(iface.prop('iface.w').is(Axial.Array(Axial.String))).toBe(true);
+	    expect(iface.prop('iface.w').is(Axial.Array(Axial.Number))).toBe(false);
 	  });
 	});
 	
 	describe('3. Creating Instances', function () {
-	  var schema = Axial.define('schema', {
+	  var iface = Axial.define('iface', {
 	    x: {
 	      y: {
 	        z: [Axial.Number, Axial.Boolean, Axial.Undefined]
@@ -119,13 +119,13 @@
 	  });
 	  var a = null;
 	
-	  it('3.1.a should be able to create instances of schemas', function () {
-	    a = schema.new();
+	  it('3.1.a should be able to create instances of interfaces', function () {
+	    a = iface.new();
 	    expect(a).toBeA(Axial.Instance.constructor);
 	  });
 	
-	  it('3.1.b should be able to create instances of schemas from default values', function () {
-	    a = schema.new({
+	  it('3.1.b should be able to create instances of interfaces with given values', function () {
+	    a = iface.new({
 	      'x.y.z': 6,
 	      a: {
 	        b: function b() {
@@ -139,8 +139,8 @@
 	    expect(a.a.b()).toBe(6);
 	  });
 	
-	  it('3.1.c should be able to create instances of schemas from partial set of default values', function () {
-	    a = schema.new({
+	  it('3.1.c should be able to create instances of interfaces from partial set of given values', function () {
+	    a = iface.new({
 	      x: {}
 	    });
 	    expect(a.x.y).toBeA(Axial.Instance.constructor);
@@ -148,24 +148,24 @@
 	    expect(a.x.y.z).toBe(5);
 	  });
 	
-	  it('3.2.a should NOT be allowed to create instance with non-schema property', function () {
+	  it('3.2.a should NOT be allowed to create instance with non-interface properties', function () {
 	    expect(function () {
-	      schema.new({
+	      iface.new({
 	        a: 1
 	      });
-	    }).toThrow(Axial.UnknownSchemaKey);
+	    }).toThrow(Axial.UnknownInterfaceKey);
 	  });
 	
 	  it('3.2.b should NOT be allowed to create instance with invalid type', function () {
 	    expect(function () {
-	      schema.new({
+	      iface.new({
 	        x: {
 	          y: false
 	        }
 	      });
 	    }).toThrow(Axial.InvalidType);
 	    expect(function () {
-	      schema.new({
+	      iface.new({
 	        x: {
 	          y: {
 	            z: 'foo'
@@ -186,13 +186,13 @@
 	  });
 	
 	  it('3.4 should be able to use arrays', function () {
-	    schema = Axial.define('schema', {
+	    iface = Axial.define('iface', {
 	      a: Axial.Array(),
 	      b: Axial.Array(Axial.String),
 	      c: Axial.Array(Axial.Object),
 	      d: Axial.Array(Axial.Array(Axial.String))
 	    });
-	    a = schema.new();
+	    a = iface.new();
 	    a.a = [];
 	    a.b = [];
 	    a.b = ['abc'];
@@ -215,10 +215,10 @@
 	  });
 	
 	  it('3.5 should be able to use objects', function () {
-	    schema = Axial.define('schema', {
+	    iface = Axial.define('iface', {
 	      a: Axial.Object
 	    });
-	    a = schema.new();
+	    a = iface.new();
 	    a.a = { x: 1 };
 	    expect(function () {
 	      return a.a = false;
@@ -229,24 +229,24 @@
 	  });
 	});
 	
-	describe('4. Configuring Schema Property Types', function () {
-	  var schema = void 0;
+	describe('4. Configuring Interface Property Types', function () {
+	  var iface = void 0;
 	
 	  it('4.1 should be able to set default property', function () {
-	    schema = Axial.define({
+	    iface = Axial.define({
 	      x: Axial.Number.define({
 	        defaultValue: 5
 	      })
 	    });
-	    expect(schema.new().x).toBe(5);
+	    expect(iface.new().x).toBe(5);
 	  });
 	});
 	
 	describe('5. Listening to instance changes', function () {
-	  var schema = Axial.define('schema', {
+	  var iface = Axial.define('iface', {
 	    a: Axial.Object
 	  });
-	  var a = schema.new();
+	  var a = iface.new();
 	
 	  it('5.1 should be able to listen to set property changes of instances (global/local)', function () {
 	    var handlerCount = 0;
@@ -279,23 +279,23 @@
 	  });
 	});
 	
-	describe('6. Composite schemas', function () {
-	  it('6.1 should be able to compose schemas from other schemas', function () {
-	    var schemaA = Axial.define('schemaA', {
+	describe('6. Composite interfaces', function () {
+	  it('6.1 should be able to compose interfaces from other interfaces', function () {
+	    var ifaceA = Axial.define('ifaceA', {
 	      x: [Axial.String, Axial.Undefined],
 	      y: {
 	        z: [Axial.Number, Axial.Undefined]
 	      }
 	    });
-	    var schemaB = Axial.define('schemaB', {
-	      a: schemaA,
+	    var ifaceB = Axial.define('ifaceB', {
+	      a: ifaceA,
 	      b: {
-	        c: [Axial.Number, schemaA]
+	        c: [Axial.Number, ifaceA]
 	      }
 	    });
-	    var a = schemaB.new();
+	    var a = ifaceB.new();
 	    expect(function () {
-	      schemaB.new({
+	      ifaceB.new({
 	        a: {
 	          x: 'a',
 	          y: {
@@ -308,7 +308,7 @@
 	      });
 	    }).toNotThrow();
 	    expect(function () {
-	      schemaB.new({
+	      ifaceB.new({
 	        a: {
 	          x: 'a',
 	          y: {
@@ -321,7 +321,7 @@
 	      });
 	    }).toThrow();
 	    expect(function () {
-	      schemaB.new({
+	      ifaceB.new({
 	        a: {
 	          x: 'a',
 	          y: {
@@ -339,7 +339,7 @@
 	      });
 	    }).toNotThrow();
 	    expect(function () {
-	      schemaB.new({
+	      ifaceB.new({
 	        a: {
 	          x: 'a',
 	          y: {
@@ -357,7 +357,7 @@
 	      });
 	    }).toNotThrow();
 	    expect(function () {
-	      schemaB.new({
+	      ifaceB.new({
 	        a: {
 	          x: 'a',
 	          y: {
@@ -399,8 +399,8 @@
 	var T = null;
 	var _arrayTypes = {};
 	var _listeners = [];
-	var _allSchemas = {};
-	var BLANK_SCHEMA_KEY = '*';
+	var _interfaces = {};
+	var BLANK_INTERFACE_NAME = '*';
 	
 	/* --------------------------------------------------------------------------------------  Errors ---------- */
 	var Exception = function ExtendableBuiltin(cls) {
@@ -433,7 +433,7 @@
 	var AxialInvalidType = function (_Exception2) {
 	  _inherits(AxialInvalidType, _Exception2);
 	
-	  function AxialInvalidType(given, expected, key, schema) {
+	  function AxialInvalidType(given, expected, key, iface) {
 	    _classCallCheck(this, AxialInvalidType);
 	
 	    var message = 'Invalid type' + (key ? ' for property "' + key + '"' : '') + ' - "' + given + '" given, "' + expected + '" expected';
@@ -443,7 +443,7 @@
 	    _this2.given = given;
 	    _this2.expected = expected;
 	    _this2.key = key;
-	    _this2.schema = schema;
+	    _this2.iface = iface;
 	    _this2.message = message;
 	    return _this2;
 	  }
@@ -492,15 +492,15 @@
 	var AxialMissingProperty = function (_Exception5) {
 	  _inherits(AxialMissingProperty, _Exception5);
 	
-	  function AxialMissingProperty(key, schema) {
+	  function AxialMissingProperty(key, iface) {
 	    _classCallCheck(this, AxialMissingProperty);
 	
-	    var message = 'Missing schema ' + key + ' from given object';
+	    var message = 'Missing interface ' + key + ' from given object';
 	
 	    var _this5 = _possibleConstructorReturn(this, (AxialMissingProperty.__proto__ || Object.getPrototypeOf(AxialMissingProperty)).call(this, message));
 	
 	    _this5.key = key;
-	    _this5.schema = schema;
+	    _this5.iface = iface;
 	    _this5.message = message;
 	    return _this5;
 	  }
@@ -511,15 +511,15 @@
 	var AxialIllegalProperty = function (_Exception6) {
 	  _inherits(AxialIllegalProperty, _Exception6);
 	
-	  function AxialIllegalProperty(key, schema) {
+	  function AxialIllegalProperty(key, iface) {
 	    _classCallCheck(this, AxialIllegalProperty);
 	
-	    var message = 'Illegal key ' + key + ' given from object, not declared in schema';
+	    var message = 'Illegal key ' + key + ' given from object, not declared in interface';
 	
 	    var _this6 = _possibleConstructorReturn(this, (AxialIllegalProperty.__proto__ || Object.getPrototypeOf(AxialIllegalProperty)).call(this, message));
 	
 	    _this6.key = key;
-	    _this6.schema = schema;
+	    _this6.iface = iface;
 	    _this6.message = message;
 	    return _this6;
 	  }
@@ -840,45 +840,45 @@
 	  return AxialObject;
 	}(AxialType);
 	
-	/* ------------------------------------------------------------------------------ AxialSchema */
+	/* ------------------------------------------------------------------------------ AxialInterface */
 	
 	
-	var AxialSchema = function (_AxialObject) {
-	  _inherits(AxialSchema, _AxialObject);
+	var AxialInterface = function (_AxialObject) {
+	  _inherits(AxialInterface, _AxialObject);
 	
-	  function AxialSchema() {
-	    var name = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : BLANK_SCHEMA_KEY;
+	  function AxialInterface() {
+	    var name = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : BLANK_INTERFACE_NAME;
 	    var prototype = arguments[1];
-	    var rootSchema = arguments[2];
+	    var rootInterface = arguments[2];
 	
-	    _classCallCheck(this, AxialSchema);
+	    _classCallCheck(this, AxialInterface);
 	
-	    var _this17 = _possibleConstructorReturn(this, (AxialSchema.__proto__ || Object.getPrototypeOf(AxialSchema)).call(this));
+	    var _this17 = _possibleConstructorReturn(this, (AxialInterface.__proto__ || Object.getPrototypeOf(AxialInterface)).call(this));
 	
 	    if (util.isPlainObject(name) && typeof prototype === 'undefined') {
 	      // handle case where just single object prototype argument given
 	      prototype = name;
-	      name = BLANK_SCHEMA_KEY;
+	      name = BLANK_INTERFACE_NAME;
 	    }
 	
 	    _this17._name = name;
 	    _this17._properties = new Map();
 	    _this17._allProps = new Map();
-	    _this17._rootSchema = rootSchema;
+	    _this17._rootInterface = rootInterface;
 	
 	    _this17.define(prototype);
 	
 	    if (name) {
-	      Axial.Schema[_this17._name.replace(/\./g, '_')] = _this17;
+	      Axial.Interface[_this17._name.replace(/\./g, '_')] = _this17;
 	    }
 	
 	    var _name = _this17._name;
-	    _allSchemas[_name] = _allSchemas[_name] ? _allSchemas[_name] : [];
-	    _allSchemas[_name].push(_this17);
+	    _interfaces[_name] = _interfaces[_name] ? _interfaces[_name] : [];
+	    _interfaces[_name].push(_this17);
 	    return _this17;
 	  }
 	
-	  _createClass(AxialSchema, [{
+	  _createClass(AxialInterface, [{
 	    key: 'validate',
 	    value: function validate(value) {
 	      // check value is object
@@ -962,15 +962,15 @@
 	      for (var key in prototype) {
 	        if (prototype.hasOwnProperty(key)) {
 	          var type = prototype[key];
-	          var path = this._name ? this._name + '.' + key : BLANK_SCHEMA_KEY + '.' + key;
+	          var path = this._name ? this._name + '.' + key : BLANK_INTERFACE_NAME + '.' + key;
 	          if (util.isPlainObject(type)) {
-	            type = new AxialSchema(path, type, this.root);
+	            type = new AxialInterface(path, type, this.root);
 	          } else {
 	            if (!util.isType(type)) {
 	              throw new AxialUnsupportedType(type);
 	            }
 	          }
-	          this._properties.set(key, new AxialSchemaProperty(this, key, type, path));
+	          this._properties.set(key, new AxialInterfaceProperty(this, key, type, path));
 	        }
 	      }
 	    }
@@ -999,7 +999,7 @@
 	      var instance = new AxialInstance(this, parentInstance);
 	
 	      this._properties.forEach(function (property, key) {
-	        // install getters and setters for each property in schema
+	        // install getters and setters for each property in interface
 	        var value = defaultValues[key];
 	        var expectedType = property.type;
 	        var givenType = util.typeOf(value);
@@ -1011,8 +1011,8 @@
 	
 	        instance._defineAccessors(property);
 	
-	        if (property.is(Axial.Schema)) {
-	          value = property.primarySchemaType.create(value, instance);
+	        if (property.is(Axial.Interface)) {
+	          value = property.primaryInterfaceType.create(value, instance);
 	        } else if (!defaultValues.hasOwnProperty(key)) {
 	          value = property.defaultValue;
 	        }
@@ -1032,32 +1032,32 @@
 	  }, {
 	    key: 'root',
 	    get: function get() {
-	      return this._rootSchema ? this._rootSchema : this;
+	      return this._rootInterface ? this._rootInterface : this;
 	    }
 	  }, {
-	    key: 'isRootSchema',
+	    key: 'isRootInterface',
 	    get: function get() {
 	      return this.root === this;
 	    }
 	  }, {
-	    key: 'isSubSchema',
+	    key: 'isSubInterface',
 	    get: function get() {
-	      return !this.isRootSchema;
+	      return !this.isRootInterface;
 	    }
 	  }]);
 	
-	  return AxialSchema;
+	  return AxialInterface;
 	}(AxialObject);
 	
 	/* ------------------------------------------------------------------------------ AxialInstance */
 	
 	
 	var AxialInstance = function () {
-	  function AxialInstance(schema, parentInstance) {
+	  function AxialInstance(iface, parentInstance) {
 	    _classCallCheck(this, AxialInstance);
 	
 	    this._state = {};
-	    this._schema = schema;
+	    this._iface = iface;
 	    this._listeners = {};
 	    this._parentInstance = parentInstance;
 	  }
@@ -1092,7 +1092,7 @@
 	  }, {
 	    key: '_prop',
 	    value: function _prop(path) {
-	      return this._schema.prop(path);
+	      return this._iface.prop(path);
 	    }
 	  }, {
 	    key: '_unbind',
@@ -1115,7 +1115,7 @@
 	      if (listeners) {
 	        var l = listeners.length;
 	        for (var i = 0; i < l; i++) {
-	          // dispatch for each event listener to schema keys
+	          // dispatch for each event listener to interface keys
 	          listeners[i](eventData);
 	        }
 	      }
@@ -1142,21 +1142,21 @@
 	  return AxialInstance;
 	}();
 	
-	/* ------------------------------------------------------------------------------ AxialSchemaProperty */
+	/* ------------------------------------------------------------------------------ AxialInterfaceProperty */
 	
 	
-	var AxialSchemaProperty = function () {
-	  function AxialSchemaProperty(schema, key, type, path) {
-	    _classCallCheck(this, AxialSchemaProperty);
+	var AxialInterfaceProperty = function () {
+	  function AxialInterfaceProperty(iface, key, type, path) {
+	    _classCallCheck(this, AxialInterfaceProperty);
 	
-	    this._schema = schema;
+	    this._iface = iface;
 	    this._key = key;
 	    this._type = Array.isArray(type) ? type : [type];
 	    this._path = path;
-	    schema.root._allProps.set(path, this);
+	    iface.root._allProps.set(path, this);
 	  }
 	
-	  _createClass(AxialSchemaProperty, [{
+	  _createClass(AxialInterfaceProperty, [{
 	    key: 'is',
 	    value: function is(type) {
 	      var t = this._type;
@@ -1190,7 +1190,7 @@
 	        }
 	      }
 	      if (!hasValidated) {
-	        throw new AxialInvalidType(util.typeOf(value).name, t.join('|'), this._key, this._schema);
+	        throw new AxialInvalidType(util.typeOf(value).name, t.join('|'), this._key, this._iface);
 	      }
 	    }
 	
@@ -1210,9 +1210,9 @@
 	
 	      this.validate(value);
 	
-	      if (this.is(Axial.Schema) && util.isPlainObject(value)) {
+	      if (this.is(Axial.Interface) && util.isPlainObject(value)) {
 	        for (var i = 0; i < this._type.length; i++) {
-	          if (this._type[i] instanceof AxialSchema) {
+	          if (this._type[i] instanceof AxialInterface) {
 	            if (this._type[i].is(value)) {
 	              value = this._type[i].create(value);
 	              break;
@@ -1266,9 +1266,9 @@
 	      return this._path;
 	    }
 	  }, {
-	    key: 'schema',
+	    key: 'iface',
 	    get: function get() {
-	      return this._schema;
+	      return this._iface;
 	    }
 	  }, {
 	    key: 'key',
@@ -1296,15 +1296,15 @@
 	      return this._type[0];
 	    }
 	  }, {
-	    key: 'primarySchemaType',
+	    key: 'primaryInterfaceType',
 	    get: function get() {
 	      return this._type.find(function (type) {
-	        return type instanceof AxialSchema;
+	        return type instanceof AxialInterface;
 	      });
 	    }
 	  }]);
 	
-	  return AxialSchemaProperty;
+	  return AxialInterfaceProperty;
 	}();
 	
 	var AxialBinding = function () {
@@ -1444,8 +1444,8 @@
 	      }
 	    } else if (T.Object.is(value)) {
 	      return T.Object;
-	    } else if (T.Schema.is(value)) {
-	      return T.Schema;
+	    } else if (T.Interface.is(value)) {
+	      return T.Interface;
 	    }
 	    throw new AxialUnsupportedType(value);
 	  },
@@ -1586,7 +1586,7 @@
 	    return t;
 	  },
 	  Object: new AxialObject(),
-	  Schema: new AxialSchema(null),
+	  Interface: new AxialInterface(null),
 	  Instance: new AxialInstance()
 	};
 	
@@ -1597,23 +1597,23 @@
 	/* --------------------------------------------------------------------------------------  Axial ---------- */
 	var Axial = window.Axial = {
 	  define: function define(name, prototype) {
-	    return new AxialSchema(name, prototype);
+	    return new AxialInterface(name, prototype);
 	  },
-	  schema: function schema() {
+	  getInterface: function getInterface() {
 	    var name = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : 'null';
 	
-	    var schemaArray = _allSchemas[name];
-	    if (schemaArray) {
-	      return schemaArray[schemaArray.length - 1];
+	    var ifaceArray = _interfaces[name];
+	    if (ifaceArray) {
+	      return ifaceArray[ifaceArray.length - 1];
 	    }
 	  },
-	  schemaNames: function schemaNames() {
-	    return Object.keys(_allSchemas);
+	  interfaceNames: function interfaceNames() {
+	    return Object.keys(_interfaces);
 	  },
-	  schemas: function schemas() {
+	  interfaces: function interfaces() {
 	    var o = {};
-	    this.schemaNames().forEach(function (name) {
-	      return o[name] = _allSchemas[name];
+	    this.interfaceNames().forEach(function (name) {
+	      return o[name] = _interfaces[name];
 	    });
 	    return o;
 	  },
@@ -1643,7 +1643,7 @@
 	util.merge(Axial, Errors);
 	
 	Axial.util = util;
-	AxialSchema.prototype.new = AxialSchema.prototype.create;
+	AxialInterface.prototype.new = AxialInterface.prototype.create;
 	
 	module.exports = Axial;
 
