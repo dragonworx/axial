@@ -56,6 +56,24 @@ describe('2. Defining Interfaces', () => {
     expect(iface.prop('iface.w').is(Axial.Array(Axial.String))).toBe(true);
     expect(iface.prop('iface.w').is(Axial.Array(Axial.Number))).toBe(false);
   });
+
+  it('2.4 should not be able to define the same type more than once', () => {
+    expect(() => {
+      Axial.define({
+        x: [Axial.String, Axial.Number, Axial.String]
+      });
+    }).toThrow(Axial.TypeAlreadyDefined);
+    expect(() => {
+      Axial.define({
+        x: [Axial.Array(), Axial.Number, Axial.Array()]
+      });
+    }).toThrow(Axial.TypeAlreadyDefined);
+    expect(() => {
+      Axial.define({
+        x: [Axial.Array(Axial.String), Axial.Array(Axial.Number), Axial.Array(Axial.String)]
+      });
+    }).toThrow(Axial.TypeAlreadyDefined);
+  });
 });
 
 describe('3. Creating Instances', () => {
@@ -174,14 +192,64 @@ describe('4. Configuring Interface Property Types', () => {
 
   it('4.1 should be able to set default property', () => {
     iface = Axial.define({
-      x: Axial.Number.define({
-        defaultValue: 5
+      x: Axial.Number.extend({
+        defaultValue: 5,
+        min: -10,
+        max: 10
+      }),
+      y: Axial.String.extend({
+        pattern: /foo/
+      }),
+      a: Axial.String.extend({
+        validator: value => {
+          if (value !== 'baz') {
+            throw new Error('Not a baz!');
+          }
+        }
+      }),
+      b: Axial.Number.extend({
+        validator: value => {
+          if (value % 10 !== 0) {
+            throw new Error('Must be multiple of 10');
+          }
+        }
       })
     });
     expect(iface.new().x).toBe(5);
   });
 
+  it('4.2 should be able to set min/max values for numbers', () => {
+    expect(() => {
+      iface.new({x:-11});
+    }).toThrow(Axial.InvalidNumericType);
+    expect(() => {
+      iface.new({x:11});
+    }).toThrow(Axial.InvalidNumericType);
+  });
 
+  it('4.3 should be able to match a string with a regex pattern', () => {
+    expect(() => {
+      iface.new({y:'bah'});
+    }).toThrow(Axial.InvalidStringPattern);
+    expect(() => {
+      iface.new({y:'foo'});
+    }).toNotThrow();
+  });
+
+  it('4.4 should be able to supply custom validator function', () => {
+    expect(() => {
+      iface.new({a:'bah'});
+    }).toThrow();
+    expect(() => {
+      iface.new({a:'baz'});
+    }).toNotThrow();
+    expect(() => {
+      iface.new({b:1000});
+    }).toNotThrow();
+    expect(() => {
+      iface.new({b:12});
+    }).toThrow();
+  });
 });
 
 describe('5. Listening to instance changes', () => {

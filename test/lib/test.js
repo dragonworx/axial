@@ -104,6 +104,24 @@
 	    expect(iface.prop('iface.w').is(Axial.Array(Axial.String))).toBe(true);
 	    expect(iface.prop('iface.w').is(Axial.Array(Axial.Number))).toBe(false);
 	  });
+	
+	  it('2.4 should not be able to define the same type more than once', function () {
+	    expect(function () {
+	      Axial.define({
+	        x: [Axial.String, Axial.Number, Axial.String]
+	      });
+	    }).toThrow(Axial.TypeAlreadyDefined);
+	    expect(function () {
+	      Axial.define({
+	        x: [Axial.Array(), Axial.Number, Axial.Array()]
+	      });
+	    }).toThrow(Axial.TypeAlreadyDefined);
+	    expect(function () {
+	      Axial.define({
+	        x: [Axial.Array(Axial.String), Axial.Array(Axial.Number), Axial.Array(Axial.String)]
+	      });
+	    }).toThrow(Axial.TypeAlreadyDefined);
+	  });
 	});
 	
 	describe('3. Creating Instances', function () {
@@ -234,11 +252,63 @@
 	
 	  it('4.1 should be able to set default property', function () {
 	    iface = Axial.define({
-	      x: Axial.Number.define({
-	        defaultValue: 5
+	      x: Axial.Number.extend({
+	        defaultValue: 5,
+	        min: -10,
+	        max: 10
+	      }),
+	      y: Axial.String.extend({
+	        pattern: /foo/
+	      }),
+	      a: Axial.String.extend({
+	        validator: function validator(value) {
+	          if (value !== 'baz') {
+	            throw new Error('Not a baz!');
+	          }
+	        }
+	      }),
+	      b: Axial.Number.extend({
+	        validator: function validator(value) {
+	          if (value % 10 !== 0) {
+	            throw new Error('Must be multiple of 10');
+	          }
+	        }
 	      })
 	    });
 	    expect(iface.new().x).toBe(5);
+	  });
+	
+	  it('4.2 should be able to set min/max values for numbers', function () {
+	    expect(function () {
+	      iface.new({ x: -11 });
+	    }).toThrow(Axial.InvalidNumericType);
+	    expect(function () {
+	      iface.new({ x: 11 });
+	    }).toThrow(Axial.InvalidNumericType);
+	  });
+	
+	  it('4.3 should be able to match a string with a regex pattern', function () {
+	    expect(function () {
+	      iface.new({ y: 'bah' });
+	    }).toThrow(Axial.InvalidStringPattern);
+	    expect(function () {
+	      iface.new({ y: 'foo' });
+	    }).toNotThrow();
+	  });
+	
+	  it('4.4 should be able to supply custom validator function', function () {
+	    expect(function () {
+	      iface.new({ a: 'bah' });
+	    }).toThrow();
+	    expect(function () {
+	      iface.new({ a: 'baz' });
+	    }).toNotThrow();
+	    expect(function () {
+	      iface.new({ b: 1000 });
+	    }).toNotThrow();
+	    expect(function () {
+	      iface.new({ b: 12 });
+	    }).toThrow();
 	  });
 	});
 	
@@ -403,7 +473,7 @@
 	var BLANK_INTERFACE_NAME = '*';
 	var _legalInstanceProperties = ['_state', '_iface', '_listeners', '_parentInstance', '_isWatching', '_watchIntervalId'];
 	
-	/* --------------------------------------------------------------------------------------  Errors ---------- */
+	// -------------------------------------------------------------------------------------- Errors
 	var Exception = function ExtendableBuiltin(cls) {
 	  function ExtendableBuiltin() {
 	    cls.apply(this, arguments);
@@ -452,77 +522,136 @@
 	  return AxialInvalidType;
 	}(Exception);
 	
-	var AxialUndefinedValue = function (_Exception3) {
-	  _inherits(AxialUndefinedValue, _Exception3);
+	var AxialInvalidNumericRange = function (_Exception3) {
+	  _inherits(AxialInvalidNumericRange, _Exception3);
+	
+	  function AxialInvalidNumericRange(given, min, max) {
+	    _classCallCheck(this, AxialInvalidNumericRange);
+	
+	    var message = 'Invalid numeric range - expected [' + min + ' .. ' + max + '], given ' + given;
+	
+	    var _this3 = _possibleConstructorReturn(this, (AxialInvalidNumericRange.__proto__ || Object.getPrototypeOf(AxialInvalidNumericRange)).call(this, message));
+	
+	    _this3.given = given;
+	    _this3.min = min;
+	    _this3.max = max;
+	    _this3.message = message;
+	    return _this3;
+	  }
+	
+	  return AxialInvalidNumericRange;
+	}(Exception);
+	
+	var AxialInvalidStringPattern = function (_Exception4) {
+	  _inherits(AxialInvalidStringPattern, _Exception4);
+	
+	  function AxialInvalidStringPattern(given, pattern) {
+	    _classCallCheck(this, AxialInvalidStringPattern);
+	
+	    var message = 'Invalid string pattern - expected "' + pattern + '", given "' + given + '"';
+	
+	    var _this4 = _possibleConstructorReturn(this, (AxialInvalidStringPattern.__proto__ || Object.getPrototypeOf(AxialInvalidStringPattern)).call(this, message));
+	
+	    _this4.given = given;
+	    _this4.pattern = pattern;
+	    _this4.message = message;
+	    return _this4;
+	  }
+	
+	  return AxialInvalidStringPattern;
+	}(Exception);
+	
+	var AxialUndefinedValue = function (_Exception5) {
+	  _inherits(AxialUndefinedValue, _Exception5);
 	
 	  function AxialUndefinedValue(source, path) {
 	    _classCallCheck(this, AxialUndefinedValue);
 	
 	    var message = 'Undefined value for object path "' + path + '"';
 	
-	    var _this3 = _possibleConstructorReturn(this, (AxialUndefinedValue.__proto__ || Object.getPrototypeOf(AxialUndefinedValue)).call(this, message));
+	    var _this5 = _possibleConstructorReturn(this, (AxialUndefinedValue.__proto__ || Object.getPrototypeOf(AxialUndefinedValue)).call(this, message));
 	
-	    _this3.source = source;
-	    _this3.path = path;
-	    _this3.message = message;
-	    return _this3;
+	    _this5.source = source;
+	    _this5.path = path;
+	    _this5.message = message;
+	    return _this5;
 	  }
 	
 	  return AxialUndefinedValue;
 	}(Exception);
 	
-	var AxialInvalidArgument = function (_Exception4) {
-	  _inherits(AxialInvalidArgument, _Exception4);
+	var AxialTypeAlreadyDefined = function (_Exception6) {
+	  _inherits(AxialTypeAlreadyDefined, _Exception6);
+	
+	  function AxialTypeAlreadyDefined(typeName, key, schema) {
+	    _classCallCheck(this, AxialTypeAlreadyDefined);
+	
+	    var message = 'Type "' + typeName + '" is already defined for property "' + key + '" in schema "' + schema.name + '"';
+	
+	    var _this6 = _possibleConstructorReturn(this, (AxialTypeAlreadyDefined.__proto__ || Object.getPrototypeOf(AxialTypeAlreadyDefined)).call(this, message));
+	
+	    _this6.typeName = typeName;
+	    _this6.key = key;
+	    _this6.schema = schema;
+	    _this6.message = message;
+	    return _this6;
+	  }
+	
+	  return AxialTypeAlreadyDefined;
+	}(Exception);
+	
+	var AxialInvalidArgument = function (_Exception7) {
+	  _inherits(AxialInvalidArgument, _Exception7);
 	
 	  function AxialInvalidArgument(index, expected, given) {
 	    _classCallCheck(this, AxialInvalidArgument);
 	
 	    var message = 'Invalid argument #' + index + ' - Expected "' + expected + '", given "' + given + '"';
 	
-	    var _this4 = _possibleConstructorReturn(this, (AxialInvalidArgument.__proto__ || Object.getPrototypeOf(AxialInvalidArgument)).call(this, message));
+	    var _this7 = _possibleConstructorReturn(this, (AxialInvalidArgument.__proto__ || Object.getPrototypeOf(AxialInvalidArgument)).call(this, message));
 	
-	    _this4.index = index;
-	    _this4.expected = expected;
-	    _this4.given = given;
-	    return _this4;
+	    _this7.index = index;
+	    _this7.expected = expected;
+	    _this7.given = given;
+	    return _this7;
 	  }
 	
 	  return AxialInvalidArgument;
 	}(Exception);
 	
-	var AxialMissingProperty = function (_Exception5) {
-	  _inherits(AxialMissingProperty, _Exception5);
+	var AxialMissingProperty = function (_Exception8) {
+	  _inherits(AxialMissingProperty, _Exception8);
 	
 	  function AxialMissingProperty(key, iface) {
 	    _classCallCheck(this, AxialMissingProperty);
 	
 	    var message = 'Missing interface ' + key + ' from given object';
 	
-	    var _this5 = _possibleConstructorReturn(this, (AxialMissingProperty.__proto__ || Object.getPrototypeOf(AxialMissingProperty)).call(this, message));
+	    var _this8 = _possibleConstructorReturn(this, (AxialMissingProperty.__proto__ || Object.getPrototypeOf(AxialMissingProperty)).call(this, message));
 	
-	    _this5.key = key;
-	    _this5.iface = iface;
-	    _this5.message = message;
-	    return _this5;
+	    _this8.key = key;
+	    _this8.iface = iface;
+	    _this8.message = message;
+	    return _this8;
 	  }
 	
 	  return AxialMissingProperty;
 	}(Exception);
 	
-	var AxialIllegalProperty = function (_Exception6) {
-	  _inherits(AxialIllegalProperty, _Exception6);
+	var AxialIllegalProperty = function (_Exception9) {
+	  _inherits(AxialIllegalProperty, _Exception9);
 	
 	  function AxialIllegalProperty(key, iface) {
 	    _classCallCheck(this, AxialIllegalProperty);
 	
 	    var message = 'Illegal key "' + key + '" set but not declared in interface "' + iface._name + '"';
 	
-	    var _this6 = _possibleConstructorReturn(this, (AxialIllegalProperty.__proto__ || Object.getPrototypeOf(AxialIllegalProperty)).call(this, message));
+	    var _this9 = _possibleConstructorReturn(this, (AxialIllegalProperty.__proto__ || Object.getPrototypeOf(AxialIllegalProperty)).call(this, message));
 	
-	    _this6.key = key;
-	    _this6.iface = iface;
-	    _this6.message = message;
-	    return _this6;
+	    _this9.key = key;
+	    _this9.iface = iface;
+	    _this9.message = message;
+	    return _this9;
 	  }
 	
 	  return AxialIllegalProperty;
@@ -531,24 +660,33 @@
 	var Errors = {
 	  UnsupportedType: AxialUnsupportedType,
 	  InvalidType: AxialInvalidType,
+	  InvalidNumericRange: AxialInvalidNumericRange,
+	  InvalidStringPattern: AxialInvalidStringPattern,
 	  UndefinedValue: AxialUndefinedValue,
+	  TypeAlreadyDefined: AxialTypeAlreadyDefined,
 	  InvalidArgument: AxialInvalidArgument,
 	  MissingProperty: AxialMissingProperty,
 	  IllegalProperty: AxialIllegalProperty
 	};
 	
-	/* --------------------------------------------------------------------------------------  Types ---------- */
+	// -------------------------------------------------------------------------------------- Types
 	
 	var AxialType = function () {
 	  function AxialType() {
 	    _classCallCheck(this, AxialType);
 	
 	    this._defaultValue = undefined;
+	    this._baseType = null;
+	    this._validator = null;
 	  }
 	
 	  _createClass(AxialType, [{
 	    key: 'validate',
 	    value: function validate(value) {
+	      if (typeof this._validator === 'function') {
+	        this._validator(value);
+	        return;
+	      }
 	      if (!this.is(value)) {
 	        throw new AxialInvalidType(this.name, util.typeOf(value).name);
 	      }
@@ -572,11 +710,12 @@
 	          copy[key] = this[key];
 	        }
 	      }
+	      copy._baseType = this.baseType;
 	      return copy;
 	    }
 	  }, {
-	    key: 'define',
-	    value: function define(options) {
+	    key: 'extend',
+	    value: function extend(options) {
 	      var copy = this.clone();
 	      for (var key in options) {
 	        if (options.hasOwnProperty(key)) {
@@ -590,6 +729,11 @@
 	    get: function get() {
 	      return this._name || this.constructor.name;
 	    }
+	  }, {
+	    key: 'baseType',
+	    get: function get() {
+	      return this._baseType ? this._baseType : this;
+	    }
 	  }], [{
 	    key: 'name',
 	    get: function get() {
@@ -599,6 +743,8 @@
 	
 	  return AxialType;
 	}();
+	
+	var AxialTypePrototype = AxialType.prototype;
 	
 	var AxialNull = function (_AxialType) {
 	  _inherits(AxialNull, _AxialType);
@@ -654,10 +800,32 @@
 	  function AxialString() {
 	    _classCallCheck(this, AxialString);
 	
-	    return _possibleConstructorReturn(this, (AxialString.__proto__ || Object.getPrototypeOf(AxialString)).apply(this, arguments));
+	    var _this12 = _possibleConstructorReturn(this, (AxialString.__proto__ || Object.getPrototypeOf(AxialString)).call(this));
+	
+	    _this12._pattern = null;
+	    return _this12;
 	  }
 	
-	  _createClass(AxialString, null, [{
+	  _createClass(AxialString, [{
+	    key: 'validate',
+	    value: function validate(value) {
+	      if (typeof this._validator === 'function') {
+	        this._validator(value);
+	        return;
+	      }
+	      if (!this.is(value)) {
+	        if (typeof value !== 'string') {
+	          throw new AxialInvalidType('string', util.typeOf(value).name);
+	        }
+	        throw new AxialInvalidStringPattern(value, this._pattern);
+	      }
+	    }
+	  }, {
+	    key: 'is',
+	    value: function is(value) {
+	      return AxialTypePrototype.is.call(this, value) && (this._pattern ? !!value.match(this._pattern) : true);
+	    }
+	  }], [{
 	    key: 'name',
 	    get: function get() {
 	      return 'string';
@@ -673,10 +841,33 @@
 	  function AxialNumber() {
 	    _classCallCheck(this, AxialNumber);
 	
-	    return _possibleConstructorReturn(this, (AxialNumber.__proto__ || Object.getPrototypeOf(AxialNumber)).apply(this, arguments));
+	    var _this13 = _possibleConstructorReturn(this, (AxialNumber.__proto__ || Object.getPrototypeOf(AxialNumber)).call(this));
+	
+	    _this13._min = Number.MIN_SAFE_INTEGER;
+	    _this13._max = Number.MAX_SAFE_INTEGER;
+	    return _this13;
 	  }
 	
-	  _createClass(AxialNumber, null, [{
+	  _createClass(AxialNumber, [{
+	    key: 'validate',
+	    value: function validate(value) {
+	      if (typeof this._validator === 'function') {
+	        this._validator(value);
+	        return;
+	      }
+	      if (!this.is(value)) {
+	        if (typeof value !== 'number') {
+	          throw new AxialInvalidType('number', util.typeOf(value).name);
+	        }
+	        throw new AxialInvalidNumericRange(value, this._min, this._max);
+	      }
+	    }
+	  }, {
+	    key: 'is',
+	    value: function is(value) {
+	      return AxialTypePrototype.is.call(this, value) && value >= this._min && value <= this._max;
+	    }
+	  }], [{
 	    key: 'name',
 	    get: function get() {
 	      return 'number';
@@ -783,10 +974,10 @@
 	  function AxialArray(type) {
 	    _classCallCheck(this, AxialArray);
 	
-	    var _this15 = _possibleConstructorReturn(this, (AxialArray.__proto__ || Object.getPrototypeOf(AxialArray)).call(this));
+	    var _this18 = _possibleConstructorReturn(this, (AxialArray.__proto__ || Object.getPrototypeOf(AxialArray)).call(this));
 	
-	    _this15._type = type;
-	    return _this15;
+	    _this18._type = type;
+	    return _this18;
 	  }
 	
 	  _createClass(AxialArray, [{
@@ -841,7 +1032,7 @@
 	  return AxialObject;
 	}(AxialType);
 	
-	/* ------------------------------------------------------------------------------ AxialInterface */
+	// -------------------------------------------------------------------------------------- AxialInterface
 	
 	
 	var AxialInterface = function (_AxialObject) {
@@ -854,7 +1045,7 @@
 	
 	    _classCallCheck(this, AxialInterface);
 	
-	    var _this17 = _possibleConstructorReturn(this, (AxialInterface.__proto__ || Object.getPrototypeOf(AxialInterface)).call(this));
+	    var _this20 = _possibleConstructorReturn(this, (AxialInterface.__proto__ || Object.getPrototypeOf(AxialInterface)).call(this));
 	
 	    if (util.isPlainObject(name) && typeof prototype === 'undefined') {
 	      // handle case where just single object prototype argument given
@@ -862,24 +1053,110 @@
 	      name = BLANK_INTERFACE_NAME;
 	    }
 	
-	    _this17._name = name;
-	    _this17._properties = new Map();
-	    _this17._allProps = new Map();
-	    _this17._rootInterface = rootInterface;
+	    _this20._name = name;
+	    _this20._properties = new Map();
+	    _this20._allProps = new Map();
+	    _this20._rootInterface = rootInterface;
 	
-	    _this17.define(prototype);
+	    _this20.define(prototype);
 	
 	    if (name) {
-	      Axial.Interface[_this17._name.replace(/\./g, '_')] = _this17;
+	      Axial.Interface[_this20._name.replace(/\./g, '_')] = _this20;
 	    }
 	
-	    var _name = _this17._name;
+	    var _name = _this20._name;
 	    _interfaces[_name] = _interfaces[_name] ? _interfaces[_name] : [];
-	    _interfaces[_name].push(_this17);
-	    return _this17;
+	    _interfaces[_name].push(_this20);
+	    return _this20;
 	  }
 	
 	  _createClass(AxialInterface, [{
+	    key: 'define',
+	    value: function define(prototype) {
+	      util.expandDotSyntaxKeys(prototype);
+	
+	      for (var key in prototype) {
+	        if (prototype.hasOwnProperty(key)) {
+	          var definedTypes = {};
+	          var typeDef = prototype[key];
+	          var isTypePlainObject = util.isPlainObject(typeDef);
+	          var typeArray = Array.isArray(typeDef) ? typeDef : [typeDef];
+	
+	          var path = this._name ? this._name + '.' + key : BLANK_INTERFACE_NAME + '.' + key;
+	
+	          if (isTypePlainObject) {
+	            typeArray = [new AxialInterface(path, typeDef, this.root)];
+	          } else {
+	            // check type is only defined once and is AxialType
+	            for (var i = 0; i < typeArray.length; i++) {
+	              var t = typeArray[i];
+	              if (!util.isType(t)) {
+	                throw new AxialUnsupportedType(t);
+	              }
+	              var typeName = t.name;
+	              if (definedTypes[typeName]) {
+	                throw new AxialTypeAlreadyDefined(t.name, key, this);
+	              } else {
+	                definedTypes[typeName] = true;
+	              }
+	            }
+	          }
+	
+	          this._properties.set(key, new AxialInterfaceProperty(this, key, typeArray, path));
+	        }
+	      }
+	    }
+	  }, {
+	    key: 'create',
+	    value: function create() {
+	      var _this21 = this;
+	
+	      var defaultValues = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : {};
+	      var parentInstance = arguments[1];
+	
+	      // check undefined keys are not being passed
+	      var isPlainObject = util.isPlainObject(defaultValues);
+	      if (isPlainObject) {
+	        util.expandDotSyntaxKeys(defaultValues);
+	      }
+	      for (var key in defaultValues) {
+	        if (isPlainObject && defaultValues.hasOwnProperty(key)) {
+	          if (!this._properties.has(key)) {
+	            throw new AxialIllegalProperty(key, this);
+	          }
+	        }
+	      }
+	
+	      // create instance
+	      var instance = new AxialInstance(this, parentInstance);
+	
+	      this._properties.forEach(function (property, key) {
+	        // install getters and setters for each property in interface
+	        var value = defaultValues[key];
+	        var expectedType = property.type;
+	        var givenType = util.typeOf(value);
+	
+	        // expect property definition type to be valid AxialType
+	        if (defaultValues.hasOwnProperty(key) && !property.is(givenType)) {
+	          throw new AxialInvalidType(givenType.toString(), expectedType.join('|'), key, _this21);
+	        }
+	
+	        instance._defineAccessors(property);
+	
+	        if (property.is(Axial.Interface)) {
+	          value = property.primaryInterfaceType.create(value, instance);
+	        } else if (!defaultValues.hasOwnProperty(key)) {
+	          value = property.defaultValue;
+	        }
+	
+	        if (typeof value !== 'undefined') {
+	          property.set(instance, value);
+	        }
+	      });
+	
+	      return instance;
+	    }
+	  }, {
 	    key: 'validate',
 	    value: function validate(value) {
 	      // check value is object
@@ -956,76 +1233,6 @@
 	      return keys;
 	    }
 	  }, {
-	    key: 'define',
-	    value: function define(prototype) {
-	      // expand dot-syntax keys into prototype object
-	      util.expandDotSyntaxKeys(prototype);
-	      for (var key in prototype) {
-	        if (prototype.hasOwnProperty(key)) {
-	          var type = prototype[key];
-	          var path = this._name ? this._name + '.' + key : BLANK_INTERFACE_NAME + '.' + key;
-	          if (util.isPlainObject(type)) {
-	            type = new AxialInterface(path, type, this.root);
-	          } else {
-	            if (!util.isType(type)) {
-	              throw new AxialUnsupportedType(type);
-	            }
-	          }
-	          this._properties.set(key, new AxialInterfaceProperty(this, key, type, path));
-	        }
-	      }
-	    }
-	  }, {
-	    key: 'create',
-	    value: function create() {
-	      var _this18 = this;
-	
-	      var defaultValues = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : {};
-	      var parentInstance = arguments[1];
-	
-	      // check undefined keys are not being passed
-	      var isPlainObject = util.isPlainObject(defaultValues);
-	      if (isPlainObject) {
-	        util.expandDotSyntaxKeys(defaultValues);
-	      }
-	      for (var key in defaultValues) {
-	        if (isPlainObject && defaultValues.hasOwnProperty(key)) {
-	          if (!this._properties.has(key)) {
-	            throw new AxialIllegalProperty(key, this);
-	          }
-	        }
-	      }
-	
-	      // create instance
-	      var instance = new AxialInstance(this, parentInstance);
-	
-	      this._properties.forEach(function (property, key) {
-	        // install getters and setters for each property in interface
-	        var value = defaultValues[key];
-	        var expectedType = property.type;
-	        var givenType = util.typeOf(value);
-	
-	        // expect property definition type to be valid AxialType
-	        if (defaultValues.hasOwnProperty(key) && !property.is(givenType)) {
-	          throw new AxialInvalidType(givenType.toString(), expectedType.join('|'), key, _this18);
-	        }
-	
-	        instance._defineAccessors(property);
-	
-	        if (property.is(Axial.Interface)) {
-	          value = property.primaryInterfaceType.create(value, instance);
-	        } else if (!defaultValues.hasOwnProperty(key)) {
-	          value = property.defaultValue;
-	        }
-	
-	        if (typeof value !== 'undefined') {
-	          property.set(instance, value);
-	        }
-	      });
-	
-	      return instance;
-	    }
-	  }, {
 	    key: 'name',
 	    get: function get() {
 	      return this._name;
@@ -1050,7 +1257,7 @@
 	  return AxialInterface;
 	}(AxialObject);
 	
-	/* ------------------------------------------------------------------------------ AxialInstance */
+	// -------------------------------------------------------------------------------------- AxialInstance
 	
 	
 	var AxialInstance = function () {
@@ -1145,7 +1352,7 @@
 	      return this._isWatching;
 	    },
 	    set: function set(bool) {
-	      var _this19 = this;
+	      var _this22 = this;
 	
 	      if (bool && this._isWatching) {
 	        return;
@@ -1156,12 +1363,12 @@
 	      this._isWatching = bool;
 	      if (bool) {
 	        (function () {
-	          var props = _this19._iface._properties;
-	          _this19._watchIntervalId = setInterval(function () {
-	            for (var key in _this19) {
-	              if (_this19.hasOwnProperty(key) && _legalInstanceProperties.indexOf(key) === -1 && !props.has(key)) {
-	                clearInterval(_this19._watchIntervalId);
-	                throw new AxialIllegalProperty(key, _this19._iface);
+	          var props = _this22._iface._properties;
+	          _this22._watchIntervalId = setInterval(function () {
+	            for (var key in _this22) {
+	              if (_this22.hasOwnProperty(key) && _legalInstanceProperties.indexOf(key) === -1 && !props.has(key)) {
+	                clearInterval(_this22._watchIntervalId);
+	                throw new AxialIllegalProperty(key, _this22._iface);
 	              }
 	            }
 	          }, 30);
@@ -1173,7 +1380,7 @@
 	  return AxialInstance;
 	}();
 	
-	/* ------------------------------------------------------------------------------ AxialInterfaceProperty */
+	// -------------------------------------------------------------------------------------- AxialInterfaceProperty
 	
 	
 	var AxialInterfaceProperty = function () {
@@ -1182,7 +1389,7 @@
 	
 	    this._iface = iface;
 	    this._key = key;
-	    this._type = Array.isArray(type) ? type : [type];
+	    this._type = type;
 	    this._path = path;
 	    iface.root._allProps.set(path, this);
 	  }
@@ -1208,19 +1415,22 @@
 	      var t = this._type;
 	      var l = t.length;
 	      var hasValidated = false;
+	      var errors = [];
 	      for (var i = 0; i < l; i++) {
 	        var type = t[i];
 	        try {
 	          type.validate(value);
 	          hasValidated = true;
 	        } catch (e) {
-	          /* nothing... */
-	        }
-	        if (type.is(value)) {
-	          return;
+	          errors.push({ type: type, error: e });
 	        }
 	      }
 	      if (!hasValidated) {
+	        for (var _i2 = 0; _i2 < errors.length; _i2++) {
+	          if (errors[_i2].type.baseType.is(value)) {
+	            throw errors[_i2].error;
+	          }
+	        }
 	        throw new AxialInvalidType(util.typeOf(value).name, t.join('|'), this._key, this._iface);
 	      }
 	    }
@@ -1410,7 +1620,7 @@
 	  return AxialBinding;
 	}();
 	
-	/* --------------------------------------------------------------------------------------  Util ---------- */
+	// -------------------------------------------------------------------------------------- Util
 	
 	
 	util = {
@@ -1426,15 +1636,15 @@
 	    }();
 	  },
 	  merge: function merge(source, target) {
-	    var _this20 = this;
+	    var _this23 = this;
 	
 	    var copy = function copy(_source, _target) {
 	      for (var key in _target) {
 	        if (_target.hasOwnProperty(key)) {
 	          var sourceValue = _source[key];
 	          var targetValue = _target[key];
-	          if (_this20.isPlainObject(targetValue)) {
-	            if (_this20.isPlainObject(sourceValue)) {
+	          if (_this23.isPlainObject(targetValue)) {
+	            if (_this23.isPlainObject(sourceValue)) {
 	              copy(sourceValue, targetValue);
 	            } else {
 	              var obj = {};
@@ -1491,7 +1701,7 @@
 	    return true;
 	  },
 	  getObjectPaths: function getObjectPaths(obj, includeBranchPaths) {
-	    var _this21 = this;
+	    var _this24 = this;
 	
 	    var keys = [];
 	    var ref = null;
@@ -1501,7 +1711,7 @@
 	        if (o.hasOwnProperty(k)) {
 	          ref = o[k];
 	          path = p ? p + '.' + k : k;
-	          if (_this21.isPlainObject(ref)) {
+	          if (_this24.isPlainObject(ref)) {
 	            if (includeBranchPaths === true) {
 	              keys.push(path);
 	            }
@@ -1516,7 +1726,7 @@
 	    return keys;
 	  },
 	  getObjectPathValues: function getObjectPathValues(obj, includeBranchPaths) {
-	    var _this22 = this;
+	    var _this25 = this;
 	
 	    var keyValues = [];
 	    var ref = null;
@@ -1526,7 +1736,7 @@
 	        if (o.hasOwnProperty(k)) {
 	          ref = o[k];
 	          path = p ? p + '.' + k : k;
-	          if (_this22.isPlainObject(ref)) {
+	          if (_this25.isPlainObject(ref)) {
 	            if (includeBranchPaths === true) {
 	              keyValues.push({ path: path, value: ref, isBranch: true });
 	            }
@@ -1606,7 +1816,7 @@
 	  }
 	};
 	
-	/* --------------------------------------------------------------------------------------  Define Types ---------- */
+	// -------------------------------------------------------------------------------------- Define Types
 	T = {
 	  Null: new AxialNull(),
 	  Undefined: new AxialUndefined(),
@@ -1636,7 +1846,7 @@
 	  return Array.isArray(value);
 	};
 	
-	/* --------------------------------------------------------------------------------------  Axial ---------- */
+	// -------------------------------------------------------------------------------------- Axial
 	var Axial = window.Axial = {
 	  define: function define(name, prototype) {
 	    return new AxialInterface(name, prototype);
