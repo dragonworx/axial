@@ -87,14 +87,26 @@ describe('3. Creating Instances', () => {
       b: Axial.Function
     }
   });
+
   let a = null;
 
-  it('3.1.a should be able to create instances of interfaces', () => {
+  it('3.1.a should be able to create instances of interfaces', function () {
     a = iface.new();
     expect(a).toBeA(Axial.Instance.constructor);
   });
 
   it('3.1.b should be able to create instances of interfaces with given values', () => {
+    iface = Axial.define('iface', {
+      x: {
+        y: {
+          z: [Axial.Number, Axial.Boolean, Axial.Undefined]
+        }
+      },
+      a: {
+        b: Axial.Function.orNull()
+      }
+    });
+
     a = iface.new({
       'x.y.z': 6,
       a: {
@@ -107,15 +119,6 @@ describe('3. Creating Instances', () => {
     expect(a.x.y).toBeA(Axial.Instance.constructor);
     expect(a.x.y.z).toBe(6);
     expect(a.a.b()).toBe(6);
-  });
-
-  it('3.1.c should be able to create instances of interfaces from partial set of given values', () => {
-    a = iface.new({
-      x: {}
-    });
-    expect(a.x.y).toBeA(Axial.Instance.constructor);
-    a.x.y = {z: 5};
-    expect(a.x.y.z).toBe(5);
   });
 
   it('3.2.a should NOT be allowed to create instance with non-interface properties', () => {
@@ -198,9 +201,11 @@ describe('4. Configuring Interface Property Types', () => {
         max: 10
       }),
       y: Axial.String.extend({
+        defaultValue: 'foo',
         pattern: /foo/
       }),
       a: Axial.String.extend({
+        defaultValue: 'baz',
         validator: value => {
           if (value !== 'baz') {
             throw new Error('Not a baz!');
@@ -384,5 +389,26 @@ describe('6. Composite interfaces', () => {
         }
       })
     }).toThrow();
+  });
+});
+
+describe('7. Array Instances', () => {
+  it('7.1 should be able to bind array mutations to instance values', () => {
+    const ITest7 = Axial.define({
+      a: Axial.Array(Axial.Number)
+    });
+    const test7 = ITest7.new({
+      a: [1, 2, 3]
+    });
+    const accessors = [];
+    test7._bind('a', e => {
+      accessors.push(e.method);
+      if (e.method === 'set') {
+        expect(accessors).toEqual(['get', 'set']);
+        expect(e.arrayMethod).toBe('push');
+        expect(e.value).toBe(4);
+      }
+    });
+    test7.a.push(4);
   });
 });
