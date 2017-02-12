@@ -412,3 +412,77 @@ describe('7. Array Instances', () => {
     test7.a.push(4);
   });
 });
+
+describe('8. Interface Inheritance', () => {
+  let ifaceA, ifaceB, ifaceC;
+  let inst;
+
+  it('8.1 should be able to define interfaces which inherit from another interface', () => {
+    ifaceA = Axial.define('ifaceA', {
+      a: Axial.String.set('a'),
+      foo: Axial.String,
+      who: Axial.Function.set(x => {
+        return 'ifaceA-' + x;
+      })
+    });
+
+    ifaceB = ifaceA.extend('ifaceB', {
+      b: Axial.String.set('b'),
+      foo: Axial.Number,
+      who: Axial.Function.set(x => {
+        return 'ifaceB-' + x;
+      })
+    });
+
+    ifaceC = ifaceB.extend('ifaceC', {
+      c: Axial.String.set('c'),
+      foo: Axial.Boolean,
+      who: Axial.Function.set(x => {
+        return 'ifaceC-' + x;
+      })
+    });
+  });
+
+  it('8.2.a interface should be able to inherit from another interface by one level', () => {
+    inst = ifaceB.new();
+    expect(() => {
+      inst.foo = 'string'; // invalid input
+    }).toThrow();
+    expect(() => {
+      inst.foo = 3; // valid input
+    }).toNotThrow();
+    expect(ifaceB.has('a')).toBe(true);
+    expect(ifaceB.has('b')).toBe(true);
+    expect(ifaceB.has('foo')).toBe(true);
+    expect(ifaceB.has('who')).toBe(true);
+    expect(ifaceB.prop('a').iface.name).toBe('ifaceA');
+    expect(ifaceB.prop('b').iface.name).toBe('ifaceB');
+    expect(ifaceB.prop('foo').iface.name).toBe('ifaceB');
+    expect(ifaceB.prop('who').iface.name).toBe('ifaceB');
+    expect(inst.who(123)).toBe('ifaceB-123');
+    expect(inst._super.ifaceA.who(123)).toBe('ifaceA-123');
+  });
+
+  it('8.2.b interface should be able to to inherit from another interface by multiple levels', () => {
+    inst = ifaceC.new();
+    expect(() => {
+      inst.foo = 3; // invalid input
+    }).toThrow();
+    expect(() => {
+      inst.foo = false; // valid input
+    }).toNotThrow();
+    expect(ifaceC.has('a')).toBe(true);
+    expect(ifaceC.has('b')).toBe(true);
+    expect(ifaceC.has('c')).toBe(true);
+    expect(ifaceC.has('foo')).toBe(true);
+    expect(ifaceC.has('who')).toBe(true);
+    expect(ifaceC.prop('a').iface.name).toBe('ifaceA');
+    expect(ifaceC.prop('b').iface.name).toBe('ifaceB');
+    expect(ifaceC.prop('c').iface.name).toBe('ifaceC');
+    expect(ifaceC.prop('foo').iface.name).toBe('ifaceC');
+    expect(ifaceC.prop('who').iface.name).toBe('ifaceC');
+    expect(inst.who(123)).toBe('ifaceC-123');
+    expect(inst._super.ifaceA.who(123)).toBe('ifaceA-123');
+    expect(inst._super.ifaceB.who(123)).toBe('ifaceB-123');
+  });
+});

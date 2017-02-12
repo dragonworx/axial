@@ -48,7 +48,7 @@
 	
 	var Axial = __webpack_require__(1);
 	var util = Axial.util;
-	var expect = __webpack_require__(2);
+	var expect = __webpack_require__(3);
 	
 	describe('1. Types', function () {
 	  it('1.1 should determine correct types', function () {
@@ -472,10 +472,86 @@
 	    test7.a.push(4);
 	  });
 	});
+	
+	describe('8. Interface Inheritance', function () {
+	  var ifaceA = void 0,
+	      ifaceB = void 0,
+	      ifaceC = void 0;
+	  var inst = void 0;
+	
+	  it('8.1 should be able to define interfaces which inherit from another interface', function () {
+	    ifaceA = Axial.define('ifaceA', {
+	      a: Axial.String.set('a'),
+	      foo: Axial.String,
+	      who: Axial.Function.set(function (x) {
+	        return 'ifaceA-' + x;
+	      })
+	    });
+	
+	    ifaceB = ifaceA.extend('ifaceB', {
+	      b: Axial.String.set('b'),
+	      foo: Axial.Number,
+	      who: Axial.Function.set(function (x) {
+	        return 'ifaceB-' + x;
+	      })
+	    });
+	
+	    ifaceC = ifaceB.extend('ifaceC', {
+	      c: Axial.String.set('c'),
+	      foo: Axial.Boolean,
+	      who: Axial.Function.set(function (x) {
+	        return 'ifaceC-' + x;
+	      })
+	    });
+	  });
+	
+	  it('8.2.a interface should be able to inherit from another interface by one level', function () {
+	    inst = ifaceB.new();
+	    expect(function () {
+	      inst.foo = 'string'; // invalid input
+	    }).toThrow();
+	    expect(function () {
+	      inst.foo = 3; // valid input
+	    }).toNotThrow();
+	    expect(ifaceB.has('a')).toBe(true);
+	    expect(ifaceB.has('b')).toBe(true);
+	    expect(ifaceB.has('foo')).toBe(true);
+	    expect(ifaceB.has('who')).toBe(true);
+	    expect(ifaceB.prop('a').iface.name).toBe('ifaceA');
+	    expect(ifaceB.prop('b').iface.name).toBe('ifaceB');
+	    expect(ifaceB.prop('foo').iface.name).toBe('ifaceB');
+	    expect(ifaceB.prop('who').iface.name).toBe('ifaceB');
+	    expect(inst.who(123)).toBe('ifaceB-123');
+	    expect(inst._super.ifaceA.who(123)).toBe('ifaceA-123');
+	  });
+	
+	  it('8.2.b interface should be able to to inherit from another interface by multiple levels', function () {
+	    inst = ifaceC.new();
+	    expect(function () {
+	      inst.foo = 3; // invalid input
+	    }).toThrow();
+	    expect(function () {
+	      inst.foo = false; // valid input
+	    }).toNotThrow();
+	    expect(ifaceC.has('a')).toBe(true);
+	    expect(ifaceC.has('b')).toBe(true);
+	    expect(ifaceC.has('c')).toBe(true);
+	    expect(ifaceC.has('foo')).toBe(true);
+	    expect(ifaceC.has('who')).toBe(true);
+	    expect(ifaceC.prop('a').iface.name).toBe('ifaceA');
+	    expect(ifaceC.prop('b').iface.name).toBe('ifaceB');
+	    expect(ifaceC.prop('c').iface.name).toBe('ifaceC');
+	    expect(ifaceC.prop('foo').iface.name).toBe('ifaceC');
+	    expect(ifaceC.prop('who').iface.name).toBe('ifaceC');
+	    expect(inst.who(123)).toBe('ifaceC-123');
+	    expect(inst._super.ifaceA.who(123)).toBe('ifaceA-123');
+	    expect(inst._super.ifaceB.who(123)).toBe('ifaceB-123');
+	  });
+	});
 
 /***/ },
 /* 1 */
-/***/ function(module, exports) {
+/***/ function(module, exports, __webpack_require__) {
 
 	'use strict';
 	
@@ -492,16 +568,18 @@
 	function _inherits(subClass, superClass) { if (typeof superClass !== "function" && superClass !== null) { throw new TypeError("Super expression must either be null or a function, not " + typeof superClass); } subClass.prototype = Object.create(superClass && superClass.prototype, { constructor: { value: subClass, enumerable: false, writable: true, configurable: true } }); if (superClass) Object.setPrototypeOf ? Object.setPrototypeOf(subClass, superClass) : subClass.__proto__ = superClass; }
 	
 	module.exports = function Define_Axial() {
-	  var util = void 0;
-	  var T = null;
+	  var CONST = __webpack_require__(2);
+	  var util = void 0,
+	      T = void 0;
 	  var _arrayTypes = {};
 	  var _listeners = [];
 	  var _interfaces = {};
 	  var _instances = {};
-	  var BLANK_INTERFACE_NAME = '*';
-	  var _legalInstanceProperties = ['_state', '_iface', '_listeners', '_parentInstance', '_isWatching', '_watchIntervalId'];
-	  var _arrayMembers = ['concat', 'copyWithin', 'entries', 'every', 'fill', 'filter', 'find', 'findIndex', 'forEach', 'includes', 'indexOf', 'join', 'keys', 'lastIndexOf', 'map', 'pop', 'push', 'reduce', 'reduceRight', 'reverse', 'shift', 'slice', 'some', 'sort', 'splice', 'toLocaleString', 'toSource', 'toString', 'unshift', 'values'];
-	  var _arrayMutators = ['copyWithin', 'fill', 'pop', 'push', 'reverse', 'shift', 'sort', 'splice', 'unshift'];
+	  var _bindings = [];
+	  var BLANK_INTERFACE_NAME = CONST.BLANK_INTERFACE_NAME;
+	  var _instanceMembers = CONST.INSTANCE_MEMBERS;
+	  var _arrayMembers = CONST.ARRAY_MEMBERS;
+	  var _arrayMutators = CONST.ARRAY_MUTATORS;
 	
 	  // -------------------------------------------------------------------------------------- Errors
 	  var Exception = function ExtendableBuiltin(cls) {
@@ -752,6 +830,13 @@
 	            copy['_' + key] = options[key];
 	          }
 	        }
+	        return copy;
+	      }
+	    }, {
+	      key: 'defaultValue',
+	      value: function defaultValue(value) {
+	        var copy = this.clone();
+	        copy._defaultValue = value;
 	        return copy;
 	      }
 	    }, {
@@ -1104,7 +1189,7 @@
 	    _inherits(AxialInterface, _AxialObject);
 	
 	    function AxialInterface() {
-	      var name = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : BLANK_INTERFACE_NAME;
+	      var interfaceName = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : BLANK_INTERFACE_NAME;
 	      var prototype = arguments[1];
 	      var rootInterface = arguments[2];
 	
@@ -1112,20 +1197,21 @@
 	
 	      var _this20 = _possibleConstructorReturn(this, (AxialInterface.__proto__ || Object.getPrototypeOf(AxialInterface)).call(this));
 	
-	      if (util.isPlainObject(name) && typeof prototype === 'undefined') {
+	      if (util.isPlainObject(interfaceName) && typeof prototype === 'undefined') {
 	        // handle case where just single object prototype argument given
-	        prototype = name;
-	        name = BLANK_INTERFACE_NAME;
+	        prototype = interfaceName;
+	        interfaceName = BLANK_INTERFACE_NAME;
 	      }
 	
-	      _this20._name = name;
+	      _this20._name = interfaceName;
 	      _this20._properties = new Map();
 	      _this20._allProps = new Map();
 	      _this20._rootInterface = rootInterface;
+	      _this20._methods = new Map();
 	
 	      _this20.define(prototype);
 	
-	      if (name) {
+	      if (interfaceName) {
 	        Axial.Interface[_this20._name.replace(/\./g, '_')] = _this20;
 	      }
 	
@@ -1169,7 +1255,13 @@
 	              }
 	            }
 	
-	            this._properties.set(key, new AxialInterfaceProperty(this, key, typeArray, path));
+	            var property = new AxialInterfaceProperty(this, key, typeArray, path);
+	
+	            if (property.is(Axial.Function)) {
+	              this._methods.set(key, property.getType(Axial.Function)._defaultValue);
+	            }
+	
+	            this._properties.set(key, property);
 	          }
 	        }
 	      }
@@ -1253,7 +1345,7 @@
 	        // check value has no extra props
 	        for (var key in value) {
 	          if (value.hasOwnProperty(key)) {
-	            if (_legalInstanceProperties.indexOf(key) === -1 && !this._properties.has(key)) {
+	            if (_instanceMembers.indexOf(key) === -1 && !this._properties.has(key)) {
 	              throw new AxialIllegalProperty(key, this);
 	            }
 	          }
@@ -1304,6 +1396,11 @@
 	        }
 	      }
 	    }, {
+	      key: 'has',
+	      value: function has(key) {
+	        return this._properties.has(key);
+	      }
+	    }, {
 	      key: 'prop',
 	      value: function prop(name) {
 	        var path = name;
@@ -1346,6 +1443,53 @@
 	        return keys;
 	      }
 	    }, {
+	      key: 'extend',
+	      value: function extend(interfaceName) {
+	        var prototype = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : {};
+	
+	        if (typeof interfaceName !== 'string') {
+	          // TODO: make proper error
+	          throw new Error('Interface requires name');
+	        }
+	        var iface = new AxialInterface(interfaceName, prototype);
+	        iface._iparent = this;
+	        var obj = this;
+	        while (obj) {
+	          var _iteratorNormalCompletion3 = true;
+	          var _didIteratorError3 = false;
+	          var _iteratorError3 = undefined;
+	
+	          try {
+	            for (var _iterator3 = obj._properties.entries()[Symbol.iterator](), _step3; !(_iteratorNormalCompletion3 = (_step3 = _iterator3.next()).done); _iteratorNormalCompletion3 = true) {
+	              var _step3$value = _slicedToArray(_step3.value, 2),
+	                  key = _step3$value[0],
+	                  property = _step3$value[1];
+	
+	              if (!iface.has(key)) {
+	                iface._properties.set(key, property);
+	                iface._allProps.set(interfaceName + '.' + key, property);
+	              }
+	            }
+	          } catch (err) {
+	            _didIteratorError3 = true;
+	            _iteratorError3 = err;
+	          } finally {
+	            try {
+	              if (!_iteratorNormalCompletion3 && _iterator3.return) {
+	                _iterator3.return();
+	              }
+	            } finally {
+	              if (_didIteratorError3) {
+	                throw _iteratorError3;
+	              }
+	            }
+	          }
+	
+	          obj = obj._iparent;
+	        }
+	        return iface;
+	      }
+	    }, {
 	      key: 'name',
 	      get: function get() {
 	        return this._name;
@@ -1382,11 +1526,50 @@
 	      this._listeners = {};
 	      this._parentInstance = parentInstance;
 	      this._isWatching = false;
+	      this._super = {};
 	
 	      if (iface) {
 	        var _name = this._iface._name;
+	        // track instance
+	        // TODO: remove from tracking when dispose?
 	        _instances[_name] = _instances[_name] ? _instances[_name] : [];
 	        _instances[_name].push(this);
+	
+	        // go through each Interface _methodIndex and bind to this instance
+	        // TODO: up through parent interfaces (iparent)
+	        var ifaceToIndex = iface;
+	        while (ifaceToIndex) {
+	          var methods = {};
+	          this._super[ifaceToIndex.name] = methods;
+	          var _iteratorNormalCompletion4 = true;
+	          var _didIteratorError4 = false;
+	          var _iteratorError4 = undefined;
+	
+	          try {
+	            for (var _iterator4 = ifaceToIndex._methods.entries()[Symbol.iterator](), _step4; !(_iteratorNormalCompletion4 = (_step4 = _iterator4.next()).done); _iteratorNormalCompletion4 = true) {
+	              var _step4$value = _slicedToArray(_step4.value, 2),
+	                  key = _step4$value[0],
+	                  fn = _step4$value[1];
+	
+	              methods[key] = fn.bind(this);
+	            }
+	          } catch (err) {
+	            _didIteratorError4 = true;
+	            _iteratorError4 = err;
+	          } finally {
+	            try {
+	              if (!_iteratorNormalCompletion4 && _iterator4.return) {
+	                _iterator4.return();
+	              }
+	            } finally {
+	              if (_didIteratorError4) {
+	                throw _iteratorError4;
+	              }
+	            }
+	          }
+	
+	          ifaceToIndex = ifaceToIndex._iparent;
+	        }
 	      }
 	    }
 	
@@ -1485,7 +1668,7 @@
 	            var props = _this22._iface._properties;
 	            _this22._watchIntervalId = setInterval(function () {
 	              for (var key in _this22) {
-	                if (_this22.hasOwnProperty(key) && _legalInstanceProperties.indexOf(key) === -1 && !props.has(key)) {
+	                if (_this22.hasOwnProperty(key) && _instanceMembers.indexOf(key) === -1 && !props.has(key)) {
 	                  clearInterval(_this22._watchIntervalId);
 	                  throw new AxialIllegalProperty(key, _this22._iface);
 	                }
@@ -1597,7 +1780,7 @@
 	          value = new AxialInstanceArray(instance, this, value);
 	        }
 	
-	        // convert to bound function if function
+	        // convert to bound function (if function)
 	        if (this.is(Axial.Function) && typeof value === 'function' && !value._isAxialBound) {
 	          (function () {
 	            var fn = value;
@@ -1619,6 +1802,7 @@
 	                method: 'call',
 	                key: this._key,
 	                value: arguments,
+	                arguments: arguments,
 	                newValue: fn,
 	                oldValue: fn
 	              });
@@ -1667,6 +1851,17 @@
 	        });
 	
 	        return value;
+	      }
+	    }, {
+	      key: 'getType',
+	      value: function getType(type) {
+	        for (var i = 0; i < this._type.length; i++) {
+	          if (this._type[i].constructor === type.constructor) {
+	            return this._type[i];
+	          }
+	        }
+	        // TODO: proper error
+	        throw new Error('Type not found');
 	      }
 	    }, {
 	      key: 'path',
@@ -1736,12 +1931,15 @@
 	      value: function bind() {
 	        this._instance._bind(this._key, this._handler);
 	        this._active = true;
+	        _bindings.push(this);
 	      }
 	    }, {
 	      key: 'unbind',
 	      value: function unbind() {
 	        this._instance._unbind(this._key, this._handler);
 	        this._active = false;
+	        var i = _bindings.indexOf(this);
+	        _bindings.splice(i, 1);
 	      }
 	    }, {
 	      key: 'dispose',
@@ -2106,7 +2304,7 @@
 	  T.Array.Type = T.Array();
 	
 	  // -------------------------------------------------------------------------------------- Axial
-	  var Axial = window.Axial = {
+	  var Axial = {
 	    define: function define(name, prototype) {
 	      return new AxialInterface(name, prototype);
 	    },
@@ -2119,7 +2317,9 @@
 	      }
 	    },
 	    interfaceNames: function interfaceNames() {
-	      return Object.keys(_interfaces);
+	      return Object.keys(_interfaces).filter(function (name) {
+	        return _interfaces[name].isRootInterface;
+	      });
 	    },
 	    interfaces: function interfaces() {
 	      var o = {};
@@ -2131,6 +2331,9 @@
 	
 	    get instances() {
 	      return _instances;
+	    },
+	    get bindings() {
+	      return _bindings;
 	    },
 	    bind: function bind(fn) {
 	      _listeners.push(fn);
@@ -2153,34 +2356,54 @@
 	    Binding: AxialBinding
 	  };
 	
+	  // export for testing
+	  window.Axial = Axial;
+	
 	  // merge in types and errors
 	  util.merge(Axial, T);
 	  util.merge(Axial, Errors);
 	
+	  // extend Axial public interface
 	  Axial.Instance = new AxialInstance();
 	  Axial.util = util;
+	
+	  // extend misc types public interface
 	  AxialInterface.prototype.new = AxialInterface.prototype.create;
+	  AxialType.prototype.set = AxialType.prototype.defaultValue;
 	
 	  return Axial;
 	}();
 
 /***/ },
 /* 2 */
+/***/ function(module, exports) {
+
+	'use strict';
+	
+	module.exports = {
+	  BLANK_INTERFACE_NAME: '*',
+	  INSTANCE_MEMBERS: ['_super', '_state', '_iface', '_listeners', '_parentInstance', '_isWatching', '_watchIntervalId'],
+	  ARRAY_MEMBERS: ['concat', 'copyWithin', 'entries', 'every', 'fill', 'filter', 'find', 'findIndex', 'forEach', 'includes', 'indexOf', 'join', 'keys', 'lastIndexOf', 'map', 'pop', 'push', 'reduce', 'reduceRight', 'reverse', 'shift', 'slice', 'some', 'sort', 'splice', 'toLocaleString', 'toSource', 'toString', 'unshift', 'values'],
+	  ARRAY_MUTATORS: ['copyWithin', 'fill', 'pop', 'push', 'reverse', 'shift', 'sort', 'splice', 'unshift']
+	};
+
+/***/ },
+/* 3 */
 /***/ function(module, exports, __webpack_require__) {
 
 	'use strict';
 	
-	var _Expectation = __webpack_require__(3);
+	var _Expectation = __webpack_require__(4);
 	
 	var _Expectation2 = _interopRequireDefault(_Expectation);
 	
-	var _SpyUtils = __webpack_require__(15);
+	var _SpyUtils = __webpack_require__(16);
 	
-	var _assert = __webpack_require__(13);
+	var _assert = __webpack_require__(14);
 	
 	var _assert2 = _interopRequireDefault(_assert);
 	
-	var _extend = __webpack_require__(33);
+	var _extend = __webpack_require__(34);
 	
 	var _extend2 = _interopRequireDefault(_extend);
 	
@@ -2200,7 +2423,7 @@
 	module.exports = expect;
 
 /***/ },
-/* 3 */
+/* 4 */
 /***/ function(module, exports, __webpack_require__) {
 
 	'use strict';
@@ -2213,21 +2436,21 @@
 	
 	var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
 	
-	var _has = __webpack_require__(4);
+	var _has = __webpack_require__(5);
 	
 	var _has2 = _interopRequireDefault(_has);
 	
-	var _tmatch = __webpack_require__(7);
+	var _tmatch = __webpack_require__(8);
 	
 	var _tmatch2 = _interopRequireDefault(_tmatch);
 	
-	var _assert = __webpack_require__(13);
+	var _assert = __webpack_require__(14);
 	
 	var _assert2 = _interopRequireDefault(_assert);
 	
-	var _SpyUtils = __webpack_require__(15);
+	var _SpyUtils = __webpack_require__(16);
 	
-	var _TestUtils = __webpack_require__(20);
+	var _TestUtils = __webpack_require__(21);
 	
 	function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 	
@@ -2615,25 +2838,25 @@
 	}exports.default = Expectation;
 
 /***/ },
-/* 4 */
+/* 5 */
 /***/ function(module, exports, __webpack_require__) {
 
-	var bind = __webpack_require__(5);
+	var bind = __webpack_require__(6);
 	
 	module.exports = bind.call(Function.call, Object.prototype.hasOwnProperty);
 
 
 /***/ },
-/* 5 */
+/* 6 */
 /***/ function(module, exports, __webpack_require__) {
 
-	var implementation = __webpack_require__(6);
+	var implementation = __webpack_require__(7);
 	
 	module.exports = Function.prototype.bind || implementation;
 
 
 /***/ },
-/* 6 */
+/* 7 */
 /***/ function(module, exports) {
 
 	var ERROR_MESSAGE = 'Function.prototype.bind called on incompatible ';
@@ -2687,7 +2910,7 @@
 
 
 /***/ },
-/* 7 */
+/* 8 */
 /***/ function(module, exports, __webpack_require__) {
 
 	/* WEBPACK VAR INJECTION */(function(process, Buffer) {'use strict'
@@ -2845,10 +3068,10 @@
 	  throw new Error('impossible to reach this point')
 	}
 	
-	/* WEBPACK VAR INJECTION */}.call(exports, __webpack_require__(8), __webpack_require__(9).Buffer))
+	/* WEBPACK VAR INJECTION */}.call(exports, __webpack_require__(9), __webpack_require__(10).Buffer))
 
 /***/ },
-/* 8 */
+/* 9 */
 /***/ function(module, exports) {
 
 	// shim for using process in browser
@@ -3034,7 +3257,7 @@
 
 
 /***/ },
-/* 9 */
+/* 10 */
 /***/ function(module, exports, __webpack_require__) {
 
 	/* WEBPACK VAR INJECTION */(function(global) {/*!
@@ -3047,9 +3270,9 @@
 	
 	'use strict'
 	
-	var base64 = __webpack_require__(10)
-	var ieee754 = __webpack_require__(11)
-	var isArray = __webpack_require__(12)
+	var base64 = __webpack_require__(11)
+	var ieee754 = __webpack_require__(12)
+	var isArray = __webpack_require__(13)
 	
 	exports.Buffer = Buffer
 	exports.SlowBuffer = SlowBuffer
@@ -4830,7 +5053,7 @@
 	/* WEBPACK VAR INJECTION */}.call(exports, (function() { return this; }())))
 
 /***/ },
-/* 10 */
+/* 11 */
 /***/ function(module, exports) {
 
 	'use strict'
@@ -4950,7 +5173,7 @@
 
 
 /***/ },
-/* 11 */
+/* 12 */
 /***/ function(module, exports) {
 
 	exports.read = function (buffer, offset, isLE, mLen, nBytes) {
@@ -5040,7 +5263,7 @@
 
 
 /***/ },
-/* 12 */
+/* 13 */
 /***/ function(module, exports) {
 
 	var toString = {}.toString;
@@ -5051,7 +5274,7 @@
 
 
 /***/ },
-/* 13 */
+/* 14 */
 /***/ function(module, exports, __webpack_require__) {
 
 	'use strict';
@@ -5060,7 +5283,7 @@
 	  value: true
 	});
 	
-	var _objectInspect = __webpack_require__(14);
+	var _objectInspect = __webpack_require__(15);
 	
 	var _objectInspect2 = _interopRequireDefault(_objectInspect);
 	
@@ -5088,7 +5311,7 @@
 	exports.default = assert;
 
 /***/ },
-/* 14 */
+/* 15 */
 /***/ function(module, exports) {
 
 	var hasMap = typeof Map === 'function' && Map.prototype;
@@ -5301,7 +5524,7 @@
 
 
 /***/ },
-/* 15 */
+/* 16 */
 /***/ function(module, exports, __webpack_require__) {
 
 	'use strict';
@@ -5311,13 +5534,13 @@
 	});
 	exports.spyOn = exports.createSpy = exports.restoreSpies = exports.isSpy = undefined;
 	
-	var _defineProperties = __webpack_require__(16);
+	var _defineProperties = __webpack_require__(17);
 	
-	var _assert = __webpack_require__(13);
+	var _assert = __webpack_require__(14);
 	
 	var _assert2 = _interopRequireDefault(_assert);
 	
-	var _TestUtils = __webpack_require__(20);
+	var _TestUtils = __webpack_require__(21);
 	
 	function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 	
@@ -5427,13 +5650,13 @@
 	};
 
 /***/ },
-/* 16 */
+/* 17 */
 /***/ function(module, exports, __webpack_require__) {
 
 	'use strict';
 	
-	var keys = __webpack_require__(17);
-	var foreach = __webpack_require__(19);
+	var keys = __webpack_require__(18);
+	var foreach = __webpack_require__(20);
 	var hasSymbols = typeof Symbol === 'function' && typeof Symbol() === 'symbol';
 	
 	var toStr = Object.prototype.toString;
@@ -5489,7 +5712,7 @@
 
 
 /***/ },
-/* 17 */
+/* 18 */
 /***/ function(module, exports, __webpack_require__) {
 
 	'use strict';
@@ -5498,7 +5721,7 @@
 	var has = Object.prototype.hasOwnProperty;
 	var toStr = Object.prototype.toString;
 	var slice = Array.prototype.slice;
-	var isArgs = __webpack_require__(18);
+	var isArgs = __webpack_require__(19);
 	var isEnumerable = Object.prototype.propertyIsEnumerable;
 	var hasDontEnumBug = !isEnumerable.call({ toString: null }, 'toString');
 	var hasProtoEnumBug = isEnumerable.call(function () {}, 'prototype');
@@ -5635,7 +5858,7 @@
 
 
 /***/ },
-/* 18 */
+/* 19 */
 /***/ function(module, exports) {
 
 	'use strict';
@@ -5658,7 +5881,7 @@
 
 
 /***/ },
-/* 19 */
+/* 20 */
 /***/ function(module, exports) {
 
 	
@@ -5686,7 +5909,7 @@
 
 
 /***/ },
-/* 20 */
+/* 21 */
 /***/ function(module, exports, __webpack_require__) {
 
 	'use strict';
@@ -5698,15 +5921,15 @@
 	
 	var _typeof = typeof Symbol === "function" && typeof Symbol.iterator === "symbol" ? function (obj) { return typeof obj; } : function (obj) { return obj && typeof Symbol === "function" && obj.constructor === Symbol ? "symbol" : typeof obj; };
 	
-	var _isRegex = __webpack_require__(21);
+	var _isRegex = __webpack_require__(22);
 	
 	var _isRegex2 = _interopRequireDefault(_isRegex);
 	
-	var _why = __webpack_require__(22);
+	var _why = __webpack_require__(23);
 	
 	var _why2 = _interopRequireDefault(_why);
 	
-	var _objectKeys = __webpack_require__(17);
+	var _objectKeys = __webpack_require__(18);
 	
 	var _objectKeys2 = _interopRequireDefault(_objectKeys);
 	
@@ -5837,7 +6060,7 @@
 	};
 
 /***/ },
-/* 21 */
+/* 22 */
 /***/ function(module, exports) {
 
 	'use strict';
@@ -5862,7 +6085,7 @@
 
 
 /***/ },
-/* 22 */
+/* 23 */
 /***/ function(module, exports, __webpack_require__) {
 
 	'use strict';
@@ -5870,16 +6093,16 @@
 	var ObjectPrototype = Object.prototype;
 	var toStr = ObjectPrototype.toString;
 	var booleanValue = Boolean.prototype.valueOf;
-	var has = __webpack_require__(4);
-	var isArrowFunction = __webpack_require__(23);
-	var isBoolean = __webpack_require__(25);
-	var isDate = __webpack_require__(26);
-	var isGenerator = __webpack_require__(27);
-	var isNumber = __webpack_require__(28);
-	var isRegex = __webpack_require__(21);
-	var isString = __webpack_require__(29);
-	var isSymbol = __webpack_require__(30);
-	var isCallable = __webpack_require__(24);
+	var has = __webpack_require__(5);
+	var isArrowFunction = __webpack_require__(24);
+	var isBoolean = __webpack_require__(26);
+	var isDate = __webpack_require__(27);
+	var isGenerator = __webpack_require__(28);
+	var isNumber = __webpack_require__(29);
+	var isRegex = __webpack_require__(22);
+	var isString = __webpack_require__(30);
+	var isSymbol = __webpack_require__(31);
+	var isCallable = __webpack_require__(25);
 	
 	var isProto = Object.prototype.isPrototypeOf;
 	
@@ -5887,9 +6110,9 @@
 	var functionsHaveNames = foo.name === 'foo';
 	
 	var symbolValue = typeof Symbol === 'function' ? Symbol.prototype.valueOf : null;
-	var symbolIterator = __webpack_require__(31)();
+	var symbolIterator = __webpack_require__(32)();
 	
-	var collectionsForEach = __webpack_require__(32)();
+	var collectionsForEach = __webpack_require__(33)();
 	
 	var getPrototypeOf = Object.getPrototypeOf;
 	if (!getPrototypeOf) {
@@ -6162,12 +6385,12 @@
 
 
 /***/ },
-/* 23 */
+/* 24 */
 /***/ function(module, exports, __webpack_require__) {
 
 	'use strict';
 	
-	var isCallable = __webpack_require__(24);
+	var isCallable = __webpack_require__(25);
 	var fnToStr = Function.prototype.toString;
 	var isNonArrowFnRegex = /^\s*function/;
 	var isArrowFnWithParensRegex = /^\([^\)]*\) *=>/;
@@ -6183,7 +6406,7 @@
 
 
 /***/ },
-/* 24 */
+/* 25 */
 /***/ function(module, exports) {
 
 	'use strict';
@@ -6228,7 +6451,7 @@
 
 
 /***/ },
-/* 25 */
+/* 26 */
 /***/ function(module, exports) {
 
 	'use strict';
@@ -6255,7 +6478,7 @@
 
 
 /***/ },
-/* 26 */
+/* 27 */
 /***/ function(module, exports) {
 
 	'use strict';
@@ -6281,7 +6504,7 @@
 
 
 /***/ },
-/* 27 */
+/* 28 */
 /***/ function(module, exports) {
 
 	'use strict';
@@ -6319,7 +6542,7 @@
 
 
 /***/ },
-/* 28 */
+/* 29 */
 /***/ function(module, exports) {
 
 	'use strict';
@@ -6345,7 +6568,7 @@
 
 
 /***/ },
-/* 29 */
+/* 30 */
 /***/ function(module, exports) {
 
 	'use strict';
@@ -6371,7 +6594,7 @@
 
 
 /***/ },
-/* 30 */
+/* 31 */
 /***/ function(module, exports) {
 
 	'use strict';
@@ -6404,12 +6627,12 @@
 
 
 /***/ },
-/* 31 */
+/* 32 */
 /***/ function(module, exports, __webpack_require__) {
 
 	'use strict';
 	
-	var isSymbol = __webpack_require__(30);
+	var isSymbol = __webpack_require__(31);
 	
 	module.exports = function getSymbolIterator() {
 		var symbolIterator = typeof Symbol === 'function' && isSymbol(Symbol.iterator) ? Symbol.iterator : null;
@@ -6427,7 +6650,7 @@
 
 
 /***/ },
-/* 32 */
+/* 33 */
 /***/ function(module, exports) {
 
 	'use strict';
@@ -6458,7 +6681,7 @@
 
 
 /***/ },
-/* 33 */
+/* 34 */
 /***/ function(module, exports, __webpack_require__) {
 
 	'use strict';
@@ -6467,7 +6690,7 @@
 	  value: true
 	});
 	
-	var _Expectation = __webpack_require__(3);
+	var _Expectation = __webpack_require__(4);
 	
 	var _Expectation2 = _interopRequireDefault(_Expectation);
 	
