@@ -49,6 +49,7 @@
 	var Axial = __webpack_require__(1);
 	var util = Axial.util;
 	var expect = __webpack_require__(3);
+	var INSTANCE_PROXY_KEY = Axial.INSTANCE_PROXY_KEY;
 	
 	describe('1. Types', function () {
 	  it('1.1 should determine correct types', function () {
@@ -159,7 +160,7 @@
 	      'x.y.z': 6,
 	      a: {
 	        b: function b() {
-	          return this._root.x.y.z;
+	          return this[INSTANCE_PROXY_KEY].root.x.y.z;
 	        }
 	      }
 	    });
@@ -331,9 +332,9 @@
 	      handlerCount++;
 	    };
 	    Axial.bind(fn);
-	    a._bind('a', fn);
+	    a[INSTANCE_PROXY_KEY].bind('a', fn);
 	    a.a = { y: 5 };
-	    a._unbind();
+	    a[INSTANCE_PROXY_KEY].unbind();
 	    Axial.unbind();
 	    expect(handlerCount).toBe(2);
 	  });
@@ -346,9 +347,9 @@
 	      handlerCount++;
 	    };
 	    Axial.bind(fn);
-	    a._bind('a', fn);
+	    a[INSTANCE_PROXY_KEY].bind('a', fn);
 	    var test = a.a;
-	    a._unbind();
+	    a[INSTANCE_PROXY_KEY].unbind();
 	    Axial.unbind();
 	    expect(handlerCount).toBe(2);
 	  });
@@ -461,7 +462,7 @@
 	      a: [1, 2, 3]
 	    });
 	    var accessors = [];
-	    test7._bind('a', function (e) {
+	    test7[INSTANCE_PROXY_KEY].bind('a', function (e) {
 	      accessors.push(e.method);
 	      if (e.method === 'set') {
 	        expect(accessors).toEqual(['get', 'set']);
@@ -522,7 +523,7 @@
 	    expect(ifaceB.prop('foo').iface.name).toBe('ifaceB');
 	    expect(ifaceB.prop('who').iface.name).toBe('ifaceB');
 	    expect(inst.who(123)).toBe('ifaceB-123');
-	    expect(inst._super.ifaceA.who(123)).toBe('ifaceA-123');
+	    expect(inst[INSTANCE_PROXY_KEY].super.ifaceA.who(123)).toBe('ifaceA-123');
 	  });
 	
 	  it('8.2.b interface should be able to to inherit from another interface by multiple levels', function () {
@@ -544,8 +545,8 @@
 	    expect(ifaceC.prop('foo').iface.name).toBe('ifaceC');
 	    expect(ifaceC.prop('who').iface.name).toBe('ifaceC');
 	    expect(inst.who(123)).toBe('ifaceC-123');
-	    expect(inst._super.ifaceA.who(123)).toBe('ifaceA-123');
-	    expect(inst._super.ifaceB.who(123)).toBe('ifaceB-123');
+	    expect(inst[INSTANCE_PROXY_KEY].super.ifaceA.who(123)).toBe('ifaceA-123');
+	    expect(inst[INSTANCE_PROXY_KEY].super.ifaceB.who(123)).toBe('ifaceB-123');
 	  });
 	});
 
@@ -581,6 +582,8 @@
 	  var _instanceMembers = CONST.INSTANCE_MEMBERS;
 	  var _arrayMembers = CONST.ARRAY_MEMBERS;
 	  var _arrayMutators = CONST.ARRAY_MUTATORS;
+	  var INSTANCE_PROXY_KEY = '_';
+	  CONST.INSTANCE_MEMBERS.push(INSTANCE_PROXY_KEY);
 	
 	  // -------------------------------------------------------------------------------------- Errors
 	  var Exception = function ExtendableBuiltin(cls) {
@@ -1275,7 +1278,8 @@
 	        var parentInstance = arguments[1];
 	
 	        // create instance
-	        var instance = new AxialInstance(this, parentInstance);
+	        var instance = new AxialInstance();
+	        var proxy = new AxialInstanceProxy(instance, this, parentInstance);
 	
 	        // check undefined keys are not being passed
 	        var isPlainObject = util.isPlainObject(defaultValues);
@@ -1313,7 +1317,7 @@
 	          }
 	
 	          // define the getter and setter property of the instance
-	          instance._defineAccessors(property);
+	          instance[INSTANCE_PROXY_KEY].defineAccessors(property);
 	
 	          // if this is an interface, swap with AxialInstance from interface using plain object sub-tree as default values
 	          if (property.is(Axial.Interface) && !value) {
@@ -1549,10 +1553,16 @@
 	  // -------------------------------------------------------------------------------------- Instances
 	
 	
-	  var AxialInstance = function () {
-	    function AxialInstance(iface, parentInstance) {
-	      _classCallCheck(this, AxialInstance);
+	  var AxialInstance = function AxialInstance() {
+	    _classCallCheck(this, AxialInstance);
+	  };
 	
+	  var AxialInstanceProxy = function () {
+	    function AxialInstanceProxy(instance, iface, parentInstance) {
+	      _classCallCheck(this, AxialInstanceProxy);
+	
+	      instance[INSTANCE_PROXY_KEY] = this;
+	      this._instance = instance;
 	      this._state = {};
 	      this._iface = iface;
 	      this._listeners = {};
@@ -1562,14 +1572,13 @@
 	      this._instanceId = ++_instanceId;
 	
 	      if (iface) {
-	        var _name = this._iface._name;
+	        var _name = iface._name;
 	        // track instance
 	        // TODO: remove from tracking when dispose?
 	        _instances[_name] = _instances[_name] ? _instances[_name] : [];
-	        _instances[_name].push(this);
+	        _instances[_name].push(this._instance);
 	
-	        // go through each Interface _methodIndex and bind to this instance
-	        // TODO: up through parent interfaces (iparent)
+	        // go through each AxialInterface._methods and bind copy to this instance
 	        var ifaceToIndex = iface;
 	        while (ifaceToIndex) {
 	          var methods = {};
@@ -1584,7 +1593,7 @@
 	                  key = _step5$value[0],
 	                  fn = _step5$value[1];
 	
-	              methods[key] = fn.bind(this);
+	              methods[key] = fn.bind(this._instance);
 	            }
 	          } catch (err) {
 	            _didIteratorError5 = true;
@@ -1606,41 +1615,41 @@
 	      }
 	    }
 	
-	    _createClass(AxialInstance, [{
-	      key: '_defineAccessors',
-	      value: function _defineAccessors(property) {
+	    _createClass(AxialInstanceProxy, [{
+	      key: 'defineAccessors',
+	      value: function defineAccessors(property) {
 	        var key = property.key;
-	        if (this.hasOwnProperty(key)) {
+	        if (this._instance.hasOwnProperty(key)) {
 	          // TODO: use real error
 	          throw new Error('Illegal property key');
 	        }
-	        Object.defineProperty(this, key, {
+	        Object.defineProperty(this._instance, key, {
 	          // create setter for instance
-	          set: function set(value) {
+	          set: function (value) {
 	            // wrap property setter
-	            return property.set(this, value);
-	          },
+	            return property.set(this._instance, value);
+	          }.bind(this),
 	          // create getter for instance
-	          get: function get() {
+	          get: function () {
 	            // wrap property getter
-	            return property.get(this);
-	          }
+	            return property.get(this._instance);
+	          }.bind(this)
 	        });
 	      }
 	    }, {
-	      key: '_bind',
-	      value: function _bind(key, fn) {
+	      key: 'bind',
+	      value: function bind(key, fn) {
 	        this._listeners[key] = this._listeners[key] ? this._listeners[key] : [];
 	        this._listeners[key].push(fn);
 	      }
 	    }, {
-	      key: '_prop',
-	      value: function _prop(path) {
+	      key: 'prop',
+	      value: function prop(path) {
 	        return this._iface.prop(path);
 	      }
 	    }, {
-	      key: '_unbind',
-	      value: function _unbind(key, fn) {
+	      key: 'unbind',
+	      value: function unbind(key, fn) {
 	        if (arguments.length === 0) {
 	          this._listeners = {};
 	        } else if (key && !fn) {
@@ -1651,8 +1660,8 @@
 	        }
 	      }
 	    }, {
-	      key: '_dispatch',
-	      value: function _dispatch(key, eventData) {
+	      key: 'dispatch',
+	      value: function dispatch(key, eventData) {
 	        // dispatch globally too
 	        Axial.dispatch(eventData);
 	        var listeners = this._listeners[key];
@@ -1665,13 +1674,13 @@
 	        }
 	      }
 	    }, {
-	      key: '_value',
-	      value: function _value(path, shouldThrowIfNotFound) {
-	        var root = this._root;
+	      key: 'value',
+	      value: function value(path, shouldThrowIfNotFound) {
+	        var root = this.root;
 	        return util.getObjectAtPath(root, path, shouldThrowIfNotFound);
 	      }
 	    }, {
-	      key: '_root',
+	      key: 'root',
 	      get: function get() {
 	        var obj = this._parentInstance;
 	        var root = this;
@@ -1682,7 +1691,12 @@
 	        return root;
 	      }
 	    }, {
-	      key: '_watch',
+	      key: 'super',
+	      get: function get() {
+	        return this._super;
+	      }
+	    }, {
+	      key: 'watch',
 	      get: function get() {
 	        return this._isWatching;
 	      },
@@ -1712,7 +1726,7 @@
 	      }
 	    }]);
 	
-	    return AxialInstance;
+	    return AxialInstanceProxy;
 	  }();
 	
 	  var AxialInterfaceProperty = function () {
@@ -1789,7 +1803,7 @@
 	      value: function set(instance, value) {
 	        var _this23 = this;
 	
-	        var oldValue = instance._state[this._key];
+	        var oldValue = instance[INSTANCE_PROXY_KEY]._state[this._key];
 	        var rawValue = value;
 	
 	        console.log('%cSET: ' + this._path + ':<' + this._type.join('|') + '> = ' + util.stringify(value), 'color:orange');
@@ -1829,7 +1843,7 @@
 	              }
 	              console.log('%cCALL: ' + this._key + ('(' + (args.length ? '<' : '')) + args.join('>, <') + ((args.length ? '>' : '') + ')'), 'color:pink');
 	
-	              instance._dispatch(this._key, {
+	              instance[INSTANCE_PROXY_KEY].dispatch(this._key, {
 	                instance: instance,
 	                property: this,
 	                method: 'call',
@@ -1847,10 +1861,10 @@
 	        }
 	
 	        // set state in obj
-	        instance._state[this._key] = value;
+	        instance[INSTANCE_PROXY_KEY]._state[this._key] = value;
 	
 	        // dispatch event
-	        instance._dispatch(this._key, {
+	        instance[INSTANCE_PROXY_KEY].dispatch(this._key, {
 	          instance: instance,
 	          property: this,
 	          method: 'set',
@@ -1870,12 +1884,12 @@
 	    }, {
 	      key: 'get',
 	      value: function get(instance) {
-	        var value = instance._state[this._key];
+	        var value = instance[INSTANCE_PROXY_KEY]._state[this._key];
 	
 	        console.log('%cGET: ' + this._path + ':<' + this._type.join('|') + '> = ' + util.stringify(value), 'color:#999');
 	
 	        // dispatch event
-	        instance._dispatch(this._key, {
+	        instance[INSTANCE_PROXY_KEY].dispatch(this._key, {
 	          instance: instance,
 	          property: this,
 	          method: 'get',
@@ -1954,7 +1968,7 @@
 	
 	      this._instance = instance;
 	      this._key = key;
-	      this._property = instance._prop(this._key);
+	      this._property = instance[INSTANCE_PROXY_KEY].prop(this._key);
 	      this._handler = handler;
 	      this._active = false;
 	    }
@@ -1962,14 +1976,14 @@
 	    _createClass(AxialBinding, [{
 	      key: 'bind',
 	      value: function bind() {
-	        this._instance._bind(this._key, this._handler);
+	        this._instance[INSTANCE_PROXY_KEY].bind(this._key, this._handler);
 	        this._active = true;
 	        _bindings.push(this);
 	      }
 	    }, {
 	      key: 'unbind',
 	      value: function unbind() {
-	        this._instance._unbind(this._key, this._handler);
+	        this._instance[INSTANCE_PROXY_KEY].unbind(this._key, this._handler);
 	        this._active = false;
 	        var i = _bindings.indexOf(this);
 	        _bindings.splice(i, 1);
@@ -1986,7 +2000,7 @@
 	    }, {
 	      key: 'get',
 	      value: function get() {
-	        return this._instance._state[this._key];
+	        return this._instance[INSTANCE_PROXY_KEY]._state[this._key];
 	      }
 	    }, {
 	      key: 'instance',
@@ -2039,7 +2053,7 @@
 	
 	        if (_arrayMutators.indexOf(member) > -1) {
 	          // dispatch event
-	          instance._dispatch(this._key, {
+	          instance[INSTANCE_PROXY_KEY].dispatch(this._key, {
 	            instance: instance,
 	            property: this._property,
 	            method: 'set',
@@ -2072,7 +2086,7 @@
 	
 	          if (_arrayMutators.indexOf(member) > -1) {
 	            // dispatch event
-	            instance._dispatch(this._key, {
+	            instance[INSTANCE_PROXY_KEY].dispatch(this._key, {
 	              instance: instance,
 	              property: this._property,
 	              method: 'set',
@@ -2391,7 +2405,8 @@
 	      }
 	    },
 	
-	    Binding: AxialBinding
+	    Binding: AxialBinding,
+	    INSTANCE_PROXY_KEY: INSTANCE_PROXY_KEY
 	  };
 	
 	  // export for testing
@@ -2420,7 +2435,7 @@
 	
 	module.exports = {
 	  BLANK_INTERFACE_NAME: '*',
-	  INSTANCE_MEMBERS: ['_super', '_instanceId', '_state', '_iface', '_listeners', '_parentInstance', '_isWatching', '_watchIntervalId'],
+	  INSTANCE_MEMBERS: [],
 	  ARRAY_MEMBERS: ['concat', 'copyWithin', 'entries', 'every', 'fill', 'filter', 'find', 'findIndex', 'forEach', 'includes', 'indexOf', 'join', 'keys', 'lastIndexOf', 'map', 'pop', 'push', 'reduce', 'reduceRight', 'reverse', 'shift', 'slice', 'some', 'sort', 'splice', 'toLocaleString', 'toSource', 'toString', 'unshift', 'values'],
 	  ARRAY_MUTATORS: ['copyWithin', 'fill', 'pop', 'push', 'reverse', 'shift', 'sort', 'splice', 'unshift']
 	};

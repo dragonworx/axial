@@ -1,6 +1,7 @@
 const Axial = require('../lib/axial');
 const util = Axial.util;
 const expect = require('expect');
+const INSTANCE_PROXY_KEY = Axial.INSTANCE_PROXY_KEY;
 
 describe('1. Types', () => {
   it('1.1 should determine correct types', () => {
@@ -111,7 +112,7 @@ describe('3. Creating Instances', () => {
       'x.y.z': 6,
       a: {
         b: function () {
-          return this._root.x.y.z;
+          return this[INSTANCE_PROXY_KEY].root.x.y.z;
         }
       }
     });
@@ -271,9 +272,9 @@ describe('5. Listening to instance changes', () => {
       handlerCount++;
     };
     Axial.bind(fn);
-    a._bind('a', fn);
+    a[INSTANCE_PROXY_KEY].bind('a', fn);
     a.a = {y:5};
-    a._unbind();
+    a[INSTANCE_PROXY_KEY].unbind();
     Axial.unbind();
     expect(handlerCount).toBe(2);
   });
@@ -286,9 +287,9 @@ describe('5. Listening to instance changes', () => {
       handlerCount++;
     };
     Axial.bind(fn);
-    a._bind('a', fn);
+    a[INSTANCE_PROXY_KEY].bind('a', fn);
     const test = a.a;
-    a._unbind();
+    a[INSTANCE_PROXY_KEY].unbind();
     Axial.unbind();
     expect(handlerCount).toBe(2);
   });
@@ -401,7 +402,7 @@ describe('7. Array Instances', () => {
       a: [1, 2, 3]
     });
     const accessors = [];
-    test7._bind('a', e => {
+    test7[INSTANCE_PROXY_KEY].bind('a', e => {
       accessors.push(e.method);
       if (e.method === 'set') {
         expect(accessors).toEqual(['get', 'set']);
@@ -460,7 +461,7 @@ describe('8. Interface Inheritance', () => {
     expect(ifaceB.prop('foo').iface.name).toBe('ifaceB');
     expect(ifaceB.prop('who').iface.name).toBe('ifaceB');
     expect(inst.who(123)).toBe('ifaceB-123');
-    expect(inst._super.ifaceA.who(123)).toBe('ifaceA-123');
+    expect(inst[INSTANCE_PROXY_KEY].super.ifaceA.who(123)).toBe('ifaceA-123');
   });
 
   it('8.2.b interface should be able to to inherit from another interface by multiple levels', () => {
@@ -482,7 +483,7 @@ describe('8. Interface Inheritance', () => {
     expect(ifaceC.prop('foo').iface.name).toBe('ifaceC');
     expect(ifaceC.prop('who').iface.name).toBe('ifaceC');
     expect(inst.who(123)).toBe('ifaceC-123');
-    expect(inst._super.ifaceA.who(123)).toBe('ifaceA-123');
-    expect(inst._super.ifaceB.who(123)).toBe('ifaceB-123');
+    expect(inst[INSTANCE_PROXY_KEY].super.ifaceA.who(123)).toBe('ifaceA-123');
+    expect(inst[INSTANCE_PROXY_KEY].super.ifaceB.who(123)).toBe('ifaceB-123');
   });
 });
