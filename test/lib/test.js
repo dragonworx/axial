@@ -571,6 +571,7 @@
 	  var CONST = __webpack_require__(2);
 	  var util = void 0,
 	      T = void 0;
+	  var _instanceId = 0;
 	  var _arrayTypes = {};
 	  var _listeners = [];
 	  var _interfaces = {};
@@ -1388,12 +1389,43 @@
 	        if (!AxialObject.prototype.is.call(this, value)) {
 	          return false;
 	        }
+	
+	        // check each prop validates
+	        var _iteratorNormalCompletion2 = true;
+	        var _didIteratorError2 = false;
+	        var _iteratorError2 = undefined;
+	
 	        try {
-	          this.validate(value);
-	          return true;
-	        } catch (e) {
-	          return false;
+	          for (var _iterator2 = this._properties.entries()[Symbol.iterator](), _step2; !(_iteratorNormalCompletion2 = (_step2 = _iterator2.next()).done); _iteratorNormalCompletion2 = true) {
+	            var _step2$value = _slicedToArray(_step2.value, 2),
+	                k = _step2$value[0],
+	                property = _step2$value[1];
+	
+	            if (!value.hasOwnProperty(k)) {
+	              return false;
+	            }
+	            try {
+	              property.validate(value[k]);
+	            } catch (e) {
+	              return false;
+	            }
+	          }
+	        } catch (err) {
+	          _didIteratorError2 = true;
+	          _iteratorError2 = err;
+	        } finally {
+	          try {
+	            if (!_iteratorNormalCompletion2 && _iterator2.return) {
+	              _iterator2.return();
+	            }
+	          } finally {
+	            if (_didIteratorError2) {
+	              throw _iteratorError2;
+	            }
+	          }
 	        }
+	
+	        return true;
 	      }
 	    }, {
 	      key: 'has',
@@ -1413,29 +1445,29 @@
 	      key: 'keys',
 	      value: function keys() {
 	        var keys = [];
-	        var _iteratorNormalCompletion2 = true;
-	        var _didIteratorError2 = false;
-	        var _iteratorError2 = undefined;
+	        var _iteratorNormalCompletion3 = true;
+	        var _didIteratorError3 = false;
+	        var _iteratorError3 = undefined;
 	
 	        try {
-	          for (var _iterator2 = this.root._allProps[Symbol.iterator](), _step2; !(_iteratorNormalCompletion2 = (_step2 = _iterator2.next()).done); _iteratorNormalCompletion2 = true) {
-	            var _step2$value = _slicedToArray(_step2.value, 2),
-	                path = _step2$value[0],
-	                property = _step2$value[1];
+	          for (var _iterator3 = this.root._allProps[Symbol.iterator](), _step3; !(_iteratorNormalCompletion3 = (_step3 = _iterator3.next()).done); _iteratorNormalCompletion3 = true) {
+	            var _step3$value = _slicedToArray(_step3.value, 2),
+	                path = _step3$value[0],
+	                property = _step3$value[1];
 	
 	            keys.push(path);
 	          }
 	        } catch (err) {
-	          _didIteratorError2 = true;
-	          _iteratorError2 = err;
+	          _didIteratorError3 = true;
+	          _iteratorError3 = err;
 	        } finally {
 	          try {
-	            if (!_iteratorNormalCompletion2 && _iterator2.return) {
-	              _iterator2.return();
+	            if (!_iteratorNormalCompletion3 && _iterator3.return) {
+	              _iterator3.return();
 	            }
 	          } finally {
-	            if (_didIteratorError2) {
-	              throw _iteratorError2;
+	            if (_didIteratorError3) {
+	              throw _iteratorError3;
 	            }
 	          }
 	        }
@@ -1455,15 +1487,15 @@
 	        iface._iparent = this;
 	        var obj = this;
 	        while (obj) {
-	          var _iteratorNormalCompletion3 = true;
-	          var _didIteratorError3 = false;
-	          var _iteratorError3 = undefined;
+	          var _iteratorNormalCompletion4 = true;
+	          var _didIteratorError4 = false;
+	          var _iteratorError4 = undefined;
 	
 	          try {
-	            for (var _iterator3 = obj._properties.entries()[Symbol.iterator](), _step3; !(_iteratorNormalCompletion3 = (_step3 = _iterator3.next()).done); _iteratorNormalCompletion3 = true) {
-	              var _step3$value = _slicedToArray(_step3.value, 2),
-	                  key = _step3$value[0],
-	                  property = _step3$value[1];
+	            for (var _iterator4 = obj._properties.entries()[Symbol.iterator](), _step4; !(_iteratorNormalCompletion4 = (_step4 = _iterator4.next()).done); _iteratorNormalCompletion4 = true) {
+	              var _step4$value = _slicedToArray(_step4.value, 2),
+	                  key = _step4$value[0],
+	                  property = _step4$value[1];
 	
 	              if (!iface.has(key)) {
 	                iface._properties.set(key, property);
@@ -1471,16 +1503,16 @@
 	              }
 	            }
 	          } catch (err) {
-	            _didIteratorError3 = true;
-	            _iteratorError3 = err;
+	            _didIteratorError4 = true;
+	            _iteratorError4 = err;
 	          } finally {
 	            try {
-	              if (!_iteratorNormalCompletion3 && _iterator3.return) {
-	                _iterator3.return();
+	              if (!_iteratorNormalCompletion4 && _iterator4.return) {
+	                _iterator4.return();
 	              }
 	            } finally {
-	              if (_didIteratorError3) {
-	                throw _iteratorError3;
+	              if (_didIteratorError4) {
+	                throw _iteratorError4;
 	              }
 	            }
 	          }
@@ -1527,6 +1559,7 @@
 	      this._parentInstance = parentInstance;
 	      this._isWatching = false;
 	      this._super = {};
+	      this._instanceId = ++_instanceId;
 	
 	      if (iface) {
 	        var _name = this._iface._name;
@@ -1541,29 +1574,29 @@
 	        while (ifaceToIndex) {
 	          var methods = {};
 	          this._super[ifaceToIndex.name] = methods;
-	          var _iteratorNormalCompletion4 = true;
-	          var _didIteratorError4 = false;
-	          var _iteratorError4 = undefined;
+	          var _iteratorNormalCompletion5 = true;
+	          var _didIteratorError5 = false;
+	          var _iteratorError5 = undefined;
 	
 	          try {
-	            for (var _iterator4 = ifaceToIndex._methods.entries()[Symbol.iterator](), _step4; !(_iteratorNormalCompletion4 = (_step4 = _iterator4.next()).done); _iteratorNormalCompletion4 = true) {
-	              var _step4$value = _slicedToArray(_step4.value, 2),
-	                  key = _step4$value[0],
-	                  fn = _step4$value[1];
+	            for (var _iterator5 = ifaceToIndex._methods.entries()[Symbol.iterator](), _step5; !(_iteratorNormalCompletion5 = (_step5 = _iterator5.next()).done); _iteratorNormalCompletion5 = true) {
+	              var _step5$value = _slicedToArray(_step5.value, 2),
+	                  key = _step5$value[0],
+	                  fn = _step5$value[1];
 	
 	              methods[key] = fn.bind(this);
 	            }
 	          } catch (err) {
-	            _didIteratorError4 = true;
-	            _iteratorError4 = err;
+	            _didIteratorError5 = true;
+	            _iteratorError5 = err;
 	          } finally {
 	            try {
-	              if (!_iteratorNormalCompletion4 && _iterator4.return) {
-	                _iterator4.return();
+	              if (!_iteratorNormalCompletion5 && _iterator5.return) {
+	                _iterator5.return();
 	              }
 	            } finally {
-	              if (_didIteratorError4) {
-	                throw _iteratorError4;
+	              if (_didIteratorError5) {
+	                throw _iteratorError5;
 	              }
 	            }
 	          }
@@ -2335,6 +2368,11 @@
 	    get bindings() {
 	      return _bindings;
 	    },
+	    get bindingInfo() {
+	      return this.bindings.map(function (binding) {
+	        return binding.instance._instanceId + ':' + binding.key;
+	      });
+	    },
 	    bind: function bind(fn) {
 	      _listeners.push(fn);
 	    },
@@ -2382,7 +2420,7 @@
 	
 	module.exports = {
 	  BLANK_INTERFACE_NAME: '*',
-	  INSTANCE_MEMBERS: ['_super', '_state', '_iface', '_listeners', '_parentInstance', '_isWatching', '_watchIntervalId'],
+	  INSTANCE_MEMBERS: ['_super', '_instanceId', '_state', '_iface', '_listeners', '_parentInstance', '_isWatching', '_watchIntervalId'],
 	  ARRAY_MEMBERS: ['concat', 'copyWithin', 'entries', 'every', 'fill', 'filter', 'find', 'findIndex', 'forEach', 'includes', 'indexOf', 'join', 'keys', 'lastIndexOf', 'map', 'pop', 'push', 'reduce', 'reduceRight', 'reverse', 'shift', 'slice', 'some', 'sort', 'splice', 'toLocaleString', 'toSource', 'toString', 'unshift', 'values'],
 	  ARRAY_MUTATORS: ['copyWithin', 'fill', 'pop', 'push', 'reverse', 'shift', 'sort', 'splice', 'unshift']
 	};
