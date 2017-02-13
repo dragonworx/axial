@@ -1,10 +1,11 @@
 const Axial = require('../lib/axial');
 const util = Axial.util;
 const expect = require('expect');
-const INSTANCE_PROXY_KEY = Axial.INSTANCE_PROXY_KEY;
+const PROXY = Axial.PROXY_KEY;
 
 describe('1. Types', () => {
   it('1.1 should determine correct types', () => {
+    // return as type instances
     expect(util.typeOf(null)).toBe(Axial.Null);
     expect(util.typeOf(undefined)).toBe(Axial.Undefined);
     expect(util.typeOf('abc')).toBe(Axial.String);
@@ -18,6 +19,23 @@ describe('1. Types', () => {
     expect(util.typeOf(['abc'])).toBe(Axial.Array(Axial.String));
     expect(util.typeOf([123])).toBe(Axial.Array(Axial.Number));
     expect(util.typeOf({})).toBe(Axial.Object);
+    // check name of type
+    expect(util.typeOf(null).name).toBe('null');
+    expect(util.typeOf(undefined).name).toBe('undefined');
+    expect(util.typeOf('abc').name).toBe('string');
+    expect(util.typeOf(123).name).toBe('number');
+    expect(util.typeOf(true).name).toBe('boolean');
+    expect(util.typeOf(false).name).toBe('boolean');
+    expect(util.typeOf(new Date).name).toBe('date');
+    expect(util.typeOf(/abc/).name).toBe('regex');
+    expect(util.typeOf(function () {}).name).toBe('function');
+    expect(util.typeOf([]).name).toBe('array[*]');
+    expect(util.typeOf([]).type).toBe(undefined);
+    expect(util.typeOf(['abc']).name).toBe('array[string]');
+    expect(util.typeOf(['abc']).type.name).toBe('string');
+    expect(util.typeOf([1,2,3]).name).toBe('array[number]');
+    expect(util.typeOf([1,2,3]).type.name).toBe('number');
+    expect(util.typeOf({}).name).toBe('object');
   });
 });
 
@@ -112,7 +130,7 @@ describe('3. Creating Instances', () => {
       'x.y.z': 6,
       a: {
         b: function () {
-          return this[INSTANCE_PROXY_KEY].root.x.y.z;
+          return this[PROXY].root.x.y.z;
         }
       }
     });
@@ -144,6 +162,13 @@ describe('3. Creating Instances', () => {
           y: {
             z: 'foo'
           }
+        }
+      });
+    }).toThrow(Axial.InvalidType);
+    expect(() => {
+      iface.new({
+        x: {
+          y: {}
         }
       });
     }).toThrow(Axial.InvalidType);
@@ -272,9 +297,9 @@ describe('5. Listening to instance changes', () => {
       handlerCount++;
     };
     Axial.bind(fn);
-    a[INSTANCE_PROXY_KEY].bind('a', fn);
+    a[PROXY].bind('a', fn);
     a.a = {y:5};
-    a[INSTANCE_PROXY_KEY].unbind();
+    a[PROXY].unbind();
     Axial.unbind();
     expect(handlerCount).toBe(2);
   });
@@ -287,9 +312,9 @@ describe('5. Listening to instance changes', () => {
       handlerCount++;
     };
     Axial.bind(fn);
-    a[INSTANCE_PROXY_KEY].bind('a', fn);
+    a[PROXY].bind('a', fn);
     const test = a.a;
-    a[INSTANCE_PROXY_KEY].unbind();
+    a[PROXY].unbind();
     Axial.unbind();
     expect(handlerCount).toBe(2);
   });
@@ -393,24 +418,139 @@ describe('6. Composite interfaces', () => {
   });
 });
 
-describe('7. Array Instances', () => {
+describe('7. Arrays', () => {
   it('7.1 should be able to bind array mutations to instance values', () => {
-    const ITest7 = Axial.define({
+    const IFace = Axial.define({
       a: Axial.Array(Axial.Number)
     });
-    const test7 = ITest7.new({
+    const instance = IFace.new({
       a: [1, 2, 3]
     });
-    const accessors = [];
-    test7[INSTANCE_PROXY_KEY].bind('a', e => {
-      accessors.push(e.method);
-      if (e.method === 'set') {
-        expect(accessors).toEqual(['get', 'set']);
-        expect(e.arrayMethod).toBe('push');
-        expect(e.value).toBe(4);
-      }
+    const array = instance.a;
+    const proxy = instance[PROXY];
+    let dispatch = 0;
+
+    // copyWithin
+    proxy.bind('a', e => {
+      expect(e.arrayMethod).toBe('copyWithin');
+      expect(array.length).toBe(3);
+      expect(array.array).toEqual([1,1,2]);
+      dispatch++;
     });
-    test7.a.push(4);
+    array.copyWithin(1, 0);
+    proxy.unbind('a');
+
+    // fill
+    proxy.bind('a', e => {
+      expect(e.arrayMethod).toBe('fill');
+      expect(array.length).toBe(3);
+      expect(array.array).toEqual([4,4,4]);
+      dispatch++;
+    });
+    array.fill(4);
+    proxy.unbind('a');
+
+    // pop
+    proxy.bind('a', e => {
+      expect(e.arrayMethod).toBe('pop');
+      expect(array.length).toBe(2);
+      expect(array.array).toEqual([4,4]);
+      dispatch++;
+    });
+    array.pop();
+    proxy.unbind('a');
+
+    // push
+    proxy.bind('a', e => {
+      expect(e.arrayMethod).toBe('push');
+      expect(array.length).toBe(3);
+      expect(array.array).toEqual([4,4,5]);
+      dispatch++;
+    });
+    array.push(5);
+    proxy.unbind('a');
+
+    // reverse
+    proxy.bind('a', e => {
+      expect(e.arrayMethod).toBe('reverse');
+      expect(array.length).toBe(3);
+      expect(array.array).toEqual([5,4,4]);
+      dispatch++;
+    });
+    array.reverse();
+    proxy.unbind('a');
+
+    // shift
+    proxy.bind('a', e => {
+      expect(e.arrayMethod).toBe('shift');
+      expect(array.length).toBe(2);
+      expect(array.array).toEqual([4,4]);
+      dispatch++;
+    });
+    expect(array.shift()).toBe(5);
+    proxy.unbind('a');
+
+    // sort
+    array.push(3);
+    proxy.bind('a', e => {
+      expect(e.arrayMethod).toBe('sort');
+      expect(array.length).toBe(3);
+      expect(array.array).toEqual([3,4,4]);
+      dispatch++;
+    });
+    array.sort((a, b) => {
+      return a < b ? -1 : a > b ? 1 : 0;
+    });
+    proxy.unbind('a');
+
+    // splice
+    let round = 1;
+    proxy.bind('a', e => {
+      expect(e.arrayMethod).toBe('splice');
+      if (round === 1) {
+        expect(array.length).toBe(2);
+        expect(array.array).toEqual([3,4]);
+      } else if (round === 2) {
+        expect(array.length).toBe(5);
+        expect(array.array).toEqual([1,2,3,3,4]);
+      } else {
+        throw new Error('Too many rounds!');
+      }
+      round++;
+      dispatch++;
+    });
+    array.splice(1, 1);
+    array.splice(0, 0, 1,2,3);
+    proxy.unbind('a');
+
+    // unshift
+    proxy.bind('a', e => {
+      expect(e.arrayMethod).toBe('unshift');
+      expect(array.length).toBe(7);
+      expect(array.array).toEqual([7,8,1,2,3,3,4]);
+      dispatch++;
+    });
+    expect(array.unshift(7,8)).toBe(7);
+    proxy.unbind('a');
+
+    expect(dispatch).toBe(10);
+  });
+
+  it('7.2 should not be able to add illegal type to typed array', () => {
+    const Item = Axial.define({text: Axial.String});
+    const List = Axial.define({items: Axial.Array(Item)});
+    const list = List.new();
+    const validItem = Item.new();
+    const invalidItem = {foo:'bar'};
+    list.items.add(validItem);
+    expect(() => {
+      list.items.add(invalidItem);
+    }).toThrow();
+    expect(list.items.contains(validItem)).toBe(true);
+    expect(list.items.contains(invalidItem)).toBe(false);
+    list.items.remove(validItem);
+    expect(list.items.isEmpty).toBe(true);
+    expect(list.items.contains(validItem)).toBe(false);
   });
 });
 
@@ -461,7 +601,7 @@ describe('8. Interface Inheritance', () => {
     expect(ifaceB.prop('foo').iface.name).toBe('ifaceB');
     expect(ifaceB.prop('who').iface.name).toBe('ifaceB');
     expect(inst.who(123)).toBe('ifaceB-123');
-    expect(inst[INSTANCE_PROXY_KEY].super.ifaceA.who(123)).toBe('ifaceA-123');
+    expect(inst[PROXY].super.ifaceA.who(123)).toBe('ifaceA-123');
   });
 
   it('8.2.b interface should be able to to inherit from another interface by multiple levels', () => {
@@ -483,7 +623,7 @@ describe('8. Interface Inheritance', () => {
     expect(ifaceC.prop('foo').iface.name).toBe('ifaceC');
     expect(ifaceC.prop('who').iface.name).toBe('ifaceC');
     expect(inst.who(123)).toBe('ifaceC-123');
-    expect(inst[INSTANCE_PROXY_KEY].super.ifaceA.who(123)).toBe('ifaceA-123');
-    expect(inst[INSTANCE_PROXY_KEY].super.ifaceB.who(123)).toBe('ifaceB-123');
+    expect(inst[PROXY].super.ifaceA.who(123)).toBe('ifaceA-123');
+    expect(inst[PROXY].super.ifaceB.who(123)).toBe('ifaceB-123');
   });
 });

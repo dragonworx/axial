@@ -49,10 +49,11 @@
 	var Axial = __webpack_require__(1);
 	var util = Axial.util;
 	var expect = __webpack_require__(3);
-	var INSTANCE_PROXY_KEY = Axial.INSTANCE_PROXY_KEY;
+	var PROXY = Axial.PROXY_KEY;
 	
 	describe('1. Types', function () {
 	  it('1.1 should determine correct types', function () {
+	    // return as type instances
 	    expect(util.typeOf(null)).toBe(Axial.Null);
 	    expect(util.typeOf(undefined)).toBe(Axial.Undefined);
 	    expect(util.typeOf('abc')).toBe(Axial.String);
@@ -66,6 +67,23 @@
 	    expect(util.typeOf(['abc'])).toBe(Axial.Array(Axial.String));
 	    expect(util.typeOf([123])).toBe(Axial.Array(Axial.Number));
 	    expect(util.typeOf({})).toBe(Axial.Object);
+	    // check name of type
+	    expect(util.typeOf(null).name).toBe('null');
+	    expect(util.typeOf(undefined).name).toBe('undefined');
+	    expect(util.typeOf('abc').name).toBe('string');
+	    expect(util.typeOf(123).name).toBe('number');
+	    expect(util.typeOf(true).name).toBe('boolean');
+	    expect(util.typeOf(false).name).toBe('boolean');
+	    expect(util.typeOf(new Date()).name).toBe('date');
+	    expect(util.typeOf(/abc/).name).toBe('regex');
+	    expect(util.typeOf(function () {}).name).toBe('function');
+	    expect(util.typeOf([]).name).toBe('array[*]');
+	    expect(util.typeOf([]).type).toBe(undefined);
+	    expect(util.typeOf(['abc']).name).toBe('array[string]');
+	    expect(util.typeOf(['abc']).type.name).toBe('string');
+	    expect(util.typeOf([1, 2, 3]).name).toBe('array[number]');
+	    expect(util.typeOf([1, 2, 3]).type.name).toBe('number');
+	    expect(util.typeOf({}).name).toBe('object');
 	  });
 	});
 	
@@ -160,7 +178,7 @@
 	      'x.y.z': 6,
 	      a: {
 	        b: function b() {
-	          return this[INSTANCE_PROXY_KEY].root.x.y.z;
+	          return this[PROXY].root.x.y.z;
 	        }
 	      }
 	    });
@@ -192,6 +210,13 @@
 	          y: {
 	            z: 'foo'
 	          }
+	        }
+	      });
+	    }).toThrow(Axial.InvalidType);
+	    expect(function () {
+	      iface.new({
+	        x: {
+	          y: {}
 	        }
 	      });
 	    }).toThrow(Axial.InvalidType);
@@ -332,9 +357,9 @@
 	      handlerCount++;
 	    };
 	    Axial.bind(fn);
-	    a[INSTANCE_PROXY_KEY].bind('a', fn);
+	    a[PROXY].bind('a', fn);
 	    a.a = { y: 5 };
-	    a[INSTANCE_PROXY_KEY].unbind();
+	    a[PROXY].unbind();
 	    Axial.unbind();
 	    expect(handlerCount).toBe(2);
 	  });
@@ -347,9 +372,9 @@
 	      handlerCount++;
 	    };
 	    Axial.bind(fn);
-	    a[INSTANCE_PROXY_KEY].bind('a', fn);
+	    a[PROXY].bind('a', fn);
 	    var test = a.a;
-	    a[INSTANCE_PROXY_KEY].unbind();
+	    a[PROXY].unbind();
 	    Axial.unbind();
 	    expect(handlerCount).toBe(2);
 	  });
@@ -453,24 +478,139 @@
 	  });
 	});
 	
-	describe('7. Array Instances', function () {
+	describe('7. Arrays', function () {
 	  it('7.1 should be able to bind array mutations to instance values', function () {
-	    var ITest7 = Axial.define({
+	    var IFace = Axial.define({
 	      a: Axial.Array(Axial.Number)
 	    });
-	    var test7 = ITest7.new({
+	    var instance = IFace.new({
 	      a: [1, 2, 3]
 	    });
-	    var accessors = [];
-	    test7[INSTANCE_PROXY_KEY].bind('a', function (e) {
-	      accessors.push(e.method);
-	      if (e.method === 'set') {
-	        expect(accessors).toEqual(['get', 'set']);
-	        expect(e.arrayMethod).toBe('push');
-	        expect(e.value).toBe(4);
-	      }
+	    var array = instance.a;
+	    var proxy = instance[PROXY];
+	    var dispatch = 0;
+	
+	    // copyWithin
+	    proxy.bind('a', function (e) {
+	      expect(e.arrayMethod).toBe('copyWithin');
+	      expect(array.length).toBe(3);
+	      expect(array.array).toEqual([1, 1, 2]);
+	      dispatch++;
 	    });
-	    test7.a.push(4);
+	    array.copyWithin(1, 0);
+	    proxy.unbind('a');
+	
+	    // fill
+	    proxy.bind('a', function (e) {
+	      expect(e.arrayMethod).toBe('fill');
+	      expect(array.length).toBe(3);
+	      expect(array.array).toEqual([4, 4, 4]);
+	      dispatch++;
+	    });
+	    array.fill(4);
+	    proxy.unbind('a');
+	
+	    // pop
+	    proxy.bind('a', function (e) {
+	      expect(e.arrayMethod).toBe('pop');
+	      expect(array.length).toBe(2);
+	      expect(array.array).toEqual([4, 4]);
+	      dispatch++;
+	    });
+	    array.pop();
+	    proxy.unbind('a');
+	
+	    // push
+	    proxy.bind('a', function (e) {
+	      expect(e.arrayMethod).toBe('push');
+	      expect(array.length).toBe(3);
+	      expect(array.array).toEqual([4, 4, 5]);
+	      dispatch++;
+	    });
+	    array.push(5);
+	    proxy.unbind('a');
+	
+	    // reverse
+	    proxy.bind('a', function (e) {
+	      expect(e.arrayMethod).toBe('reverse');
+	      expect(array.length).toBe(3);
+	      expect(array.array).toEqual([5, 4, 4]);
+	      dispatch++;
+	    });
+	    array.reverse();
+	    proxy.unbind('a');
+	
+	    // shift
+	    proxy.bind('a', function (e) {
+	      expect(e.arrayMethod).toBe('shift');
+	      expect(array.length).toBe(2);
+	      expect(array.array).toEqual([4, 4]);
+	      dispatch++;
+	    });
+	    expect(array.shift()).toBe(5);
+	    proxy.unbind('a');
+	
+	    // sort
+	    array.push(3);
+	    proxy.bind('a', function (e) {
+	      expect(e.arrayMethod).toBe('sort');
+	      expect(array.length).toBe(3);
+	      expect(array.array).toEqual([3, 4, 4]);
+	      dispatch++;
+	    });
+	    array.sort(function (a, b) {
+	      return a < b ? -1 : a > b ? 1 : 0;
+	    });
+	    proxy.unbind('a');
+	
+	    // splice
+	    var round = 1;
+	    proxy.bind('a', function (e) {
+	      expect(e.arrayMethod).toBe('splice');
+	      if (round === 1) {
+	        expect(array.length).toBe(2);
+	        expect(array.array).toEqual([3, 4]);
+	      } else if (round === 2) {
+	        expect(array.length).toBe(5);
+	        expect(array.array).toEqual([1, 2, 3, 3, 4]);
+	      } else {
+	        throw new Error('Too many rounds!');
+	      }
+	      round++;
+	      dispatch++;
+	    });
+	    array.splice(1, 1);
+	    array.splice(0, 0, 1, 2, 3);
+	    proxy.unbind('a');
+	
+	    // unshift
+	    proxy.bind('a', function (e) {
+	      expect(e.arrayMethod).toBe('unshift');
+	      expect(array.length).toBe(7);
+	      expect(array.array).toEqual([7, 8, 1, 2, 3, 3, 4]);
+	      dispatch++;
+	    });
+	    expect(array.unshift(7, 8)).toBe(7);
+	    proxy.unbind('a');
+	
+	    expect(dispatch).toBe(10);
+	  });
+	
+	  it('7.2 should not be able to add illegal type to typed array', function () {
+	    var Item = Axial.define({ text: Axial.String });
+	    var List = Axial.define({ items: Axial.Array(Item) });
+	    var list = List.new();
+	    var validItem = Item.new();
+	    var invalidItem = { foo: 'bar' };
+	    list.items.add(validItem);
+	    expect(function () {
+	      list.items.add(invalidItem);
+	    }).toThrow();
+	    expect(list.items.contains(validItem)).toBe(true);
+	    expect(list.items.contains(invalidItem)).toBe(false);
+	    list.items.remove(validItem);
+	    expect(list.items.isEmpty).toBe(true);
+	    expect(list.items.contains(validItem)).toBe(false);
 	  });
 	});
 	
@@ -523,7 +663,7 @@
 	    expect(ifaceB.prop('foo').iface.name).toBe('ifaceB');
 	    expect(ifaceB.prop('who').iface.name).toBe('ifaceB');
 	    expect(inst.who(123)).toBe('ifaceB-123');
-	    expect(inst[INSTANCE_PROXY_KEY].super.ifaceA.who(123)).toBe('ifaceA-123');
+	    expect(inst[PROXY].super.ifaceA.who(123)).toBe('ifaceA-123');
 	  });
 	
 	  it('8.2.b interface should be able to to inherit from another interface by multiple levels', function () {
@@ -545,8 +685,8 @@
 	    expect(ifaceC.prop('foo').iface.name).toBe('ifaceC');
 	    expect(ifaceC.prop('who').iface.name).toBe('ifaceC');
 	    expect(inst.who(123)).toBe('ifaceC-123');
-	    expect(inst[INSTANCE_PROXY_KEY].super.ifaceA.who(123)).toBe('ifaceA-123');
-	    expect(inst[INSTANCE_PROXY_KEY].super.ifaceB.who(123)).toBe('ifaceB-123');
+	    expect(inst[PROXY].super.ifaceA.who(123)).toBe('ifaceA-123');
+	    expect(inst[PROXY].super.ifaceB.who(123)).toBe('ifaceB-123');
 	  });
 	});
 
@@ -570,20 +710,20 @@
 	
 	module.exports = function Define_Axial() {
 	  var CONST = __webpack_require__(2);
-	  var util = void 0,
-	      T = void 0;
-	  var _instanceId = 0;
+	  var PROXY_KEY = CONST.PROXY_KEY;
+	  var BLANK_INTERFACE_NAME = CONST.BLANK_INTERFACE_NAME;
 	  var _arrayTypes = {};
 	  var _listeners = [];
 	  var _interfaces = {};
 	  var _instances = {};
 	  var _bindings = [];
-	  var BLANK_INTERFACE_NAME = CONST.BLANK_INTERFACE_NAME;
-	  var _instanceMembers = CONST.INSTANCE_MEMBERS;
 	  var _arrayMembers = CONST.ARRAY_MEMBERS;
 	  var _arrayMutators = CONST.ARRAY_MUTATORS;
-	  var INSTANCE_PROXY_KEY = '_';
-	  CONST.INSTANCE_MEMBERS.push(INSTANCE_PROXY_KEY);
+	
+	  var util = void 0,
+	      T = void 0;
+	  var _instanceId = 0,
+	      _interfaceId = 0;
 	
 	  // -------------------------------------------------------------------------------------- Errors
 	  var Exception = function ExtendableBuiltin(cls) {
@@ -1139,6 +1279,14 @@
 	        }
 	      }
 	    }, {
+	      key: 'isItem',
+	      value: function isItem(item) {
+	        if (this._type) {
+	          return util.typeOf(item).name === this._type.name;
+	        }
+	        return true;
+	      }
+	    }, {
 	      key: 'validate',
 	      value: function validate(value) {
 	        if (!Array.isArray(value)) {
@@ -1151,6 +1299,11 @@
 	            t.validate(value[i]);
 	          }
 	        }
+	      }
+	    }, {
+	      key: 'type',
+	      get: function get() {
+	        return this._type;
 	      }
 	    }], [{
 	      key: 'name',
@@ -1207,6 +1360,10 @@
 	        interfaceName = BLANK_INTERFACE_NAME;
 	      }
 	
+	      if (interfaceName === BLANK_INTERFACE_NAME) {
+	        interfaceName += ++_interfaceId;
+	      }
+	
 	      _this20._name = interfaceName;
 	      _this20._properties = new Map();
 	      _this20._allProps = new Map();
@@ -1216,7 +1373,7 @@
 	      _this20.define(prototype);
 	
 	      if (interfaceName) {
-	        Axial.Interface[_this20._name.replace(/\./g, '_')] = _this20;
+	        Axial.Interface[_this20._name] = _this20;
 	      }
 	
 	      var _name = _this20._name;
@@ -1317,7 +1474,7 @@
 	          }
 	
 	          // define the getter and setter property of the instance
-	          instance[INSTANCE_PROXY_KEY].defineAccessors(property);
+	          instance[PROXY_KEY].defineAccessors(property);
 	
 	          // if this is an interface, swap with AxialInstance from interface using plain object sub-tree as default values
 	          if (property.is(Axial.Interface) && !value) {
@@ -1350,7 +1507,7 @@
 	        // check value has no extra props
 	        for (var key in value) {
 	          if (value.hasOwnProperty(key)) {
-	            if (_instanceMembers.indexOf(key) === -1 && !this._properties.has(key)) {
+	            if (key !== PROXY_KEY && !this._properties.has(key)) {
 	              throw new AxialIllegalProperty(key, this);
 	            }
 	          }
@@ -1446,20 +1603,19 @@
 	        return this.root._allProps.get(path);
 	      }
 	    }, {
-	      key: 'keys',
-	      value: function keys() {
-	        var keys = [];
+	      key: 'forEach',
+	      value: function forEach(fn) {
 	        var _iteratorNormalCompletion3 = true;
 	        var _didIteratorError3 = false;
 	        var _iteratorError3 = undefined;
 	
 	        try {
-	          for (var _iterator3 = this.root._allProps[Symbol.iterator](), _step3; !(_iteratorNormalCompletion3 = (_step3 = _iterator3.next()).done); _iteratorNormalCompletion3 = true) {
+	          for (var _iterator3 = this._properties[Symbol.iterator](), _step3; !(_iteratorNormalCompletion3 = (_step3 = _iterator3.next()).done); _iteratorNormalCompletion3 = true) {
 	            var _step3$value = _slicedToArray(_step3.value, 2),
-	                path = _step3$value[0],
+	                key = _step3$value[0],
 	                property = _step3$value[1];
 	
-	            keys.push(path);
+	            fn(property, key);
 	          }
 	        } catch (err) {
 	          _didIteratorError3 = true;
@@ -1472,6 +1628,37 @@
 	          } finally {
 	            if (_didIteratorError3) {
 	              throw _iteratorError3;
+	            }
+	          }
+	        }
+	      }
+	    }, {
+	      key: 'keys',
+	      value: function keys() {
+	        var keys = [];
+	        var _iteratorNormalCompletion4 = true;
+	        var _didIteratorError4 = false;
+	        var _iteratorError4 = undefined;
+	
+	        try {
+	          for (var _iterator4 = this.root._allProps[Symbol.iterator](), _step4; !(_iteratorNormalCompletion4 = (_step4 = _iterator4.next()).done); _iteratorNormalCompletion4 = true) {
+	            var _step4$value = _slicedToArray(_step4.value, 2),
+	                path = _step4$value[0],
+	                property = _step4$value[1];
+	
+	            keys.push(path);
+	          }
+	        } catch (err) {
+	          _didIteratorError4 = true;
+	          _iteratorError4 = err;
+	        } finally {
+	          try {
+	            if (!_iteratorNormalCompletion4 && _iterator4.return) {
+	              _iterator4.return();
+	            }
+	          } finally {
+	            if (_didIteratorError4) {
+	              throw _iteratorError4;
 	            }
 	          }
 	        }
@@ -1491,15 +1678,15 @@
 	        iface._iparent = this;
 	        var obj = this;
 	        while (obj) {
-	          var _iteratorNormalCompletion4 = true;
-	          var _didIteratorError4 = false;
-	          var _iteratorError4 = undefined;
+	          var _iteratorNormalCompletion5 = true;
+	          var _didIteratorError5 = false;
+	          var _iteratorError5 = undefined;
 	
 	          try {
-	            for (var _iterator4 = obj._properties.entries()[Symbol.iterator](), _step4; !(_iteratorNormalCompletion4 = (_step4 = _iterator4.next()).done); _iteratorNormalCompletion4 = true) {
-	              var _step4$value = _slicedToArray(_step4.value, 2),
-	                  key = _step4$value[0],
-	                  property = _step4$value[1];
+	            for (var _iterator5 = obj._properties.entries()[Symbol.iterator](), _step5; !(_iteratorNormalCompletion5 = (_step5 = _iterator5.next()).done); _iteratorNormalCompletion5 = true) {
+	              var _step5$value = _slicedToArray(_step5.value, 2),
+	                  key = _step5$value[0],
+	                  property = _step5$value[1];
 	
 	              if (!iface.has(key)) {
 	                iface._properties.set(key, property);
@@ -1507,16 +1694,16 @@
 	              }
 	            }
 	          } catch (err) {
-	            _didIteratorError4 = true;
-	            _iteratorError4 = err;
+	            _didIteratorError5 = true;
+	            _iteratorError5 = err;
 	          } finally {
 	            try {
-	              if (!_iteratorNormalCompletion4 && _iterator4.return) {
-	                _iterator4.return();
+	              if (!_iteratorNormalCompletion5 && _iterator5.return) {
+	                _iterator5.return();
 	              }
 	            } finally {
-	              if (_didIteratorError4) {
-	                throw _iteratorError4;
+	              if (_didIteratorError5) {
+	                throw _iteratorError5;
 	              }
 	            }
 	          }
@@ -1529,6 +1716,14 @@
 	      key: 'name',
 	      get: function get() {
 	        return this._name;
+	      },
+	      set: function set(name) {
+	        if (this._name) {
+	          delete Axial.Interface[this._name];
+	          //test-all gone?
+	        }
+	        this._name = name;
+	        Axial.Interface[this._name] = this;
 	      }
 	    }, {
 	      key: 'root',
@@ -1561,7 +1756,7 @@
 	    function AxialInstanceProxy(instance, iface, parentInstance) {
 	      _classCallCheck(this, AxialInstanceProxy);
 	
-	      instance[INSTANCE_PROXY_KEY] = this;
+	      instance[PROXY_KEY] = this;
 	      this._instance = instance;
 	      this._state = {};
 	      this._iface = iface;
@@ -1583,29 +1778,29 @@
 	        while (ifaceToIndex) {
 	          var methods = {};
 	          this._super[ifaceToIndex.name] = methods;
-	          var _iteratorNormalCompletion5 = true;
-	          var _didIteratorError5 = false;
-	          var _iteratorError5 = undefined;
+	          var _iteratorNormalCompletion6 = true;
+	          var _didIteratorError6 = false;
+	          var _iteratorError6 = undefined;
 	
 	          try {
-	            for (var _iterator5 = ifaceToIndex._methods.entries()[Symbol.iterator](), _step5; !(_iteratorNormalCompletion5 = (_step5 = _iterator5.next()).done); _iteratorNormalCompletion5 = true) {
-	              var _step5$value = _slicedToArray(_step5.value, 2),
-	                  key = _step5$value[0],
-	                  fn = _step5$value[1];
+	            for (var _iterator6 = ifaceToIndex._methods.entries()[Symbol.iterator](), _step6; !(_iteratorNormalCompletion6 = (_step6 = _iterator6.next()).done); _iteratorNormalCompletion6 = true) {
+	              var _step6$value = _slicedToArray(_step6.value, 2),
+	                  key = _step6$value[0],
+	                  fn = _step6$value[1];
 	
 	              methods[key] = fn.bind(this._instance);
 	            }
 	          } catch (err) {
-	            _didIteratorError5 = true;
-	            _iteratorError5 = err;
+	            _didIteratorError6 = true;
+	            _iteratorError6 = err;
 	          } finally {
 	            try {
-	              if (!_iteratorNormalCompletion5 && _iterator5.return) {
-	                _iterator5.return();
+	              if (!_iteratorNormalCompletion6 && _iterator6.return) {
+	                _iterator6.return();
 	              }
 	            } finally {
-	              if (_didIteratorError5) {
-	                throw _iteratorError5;
+	              if (_didIteratorError6) {
+	                throw _iteratorError6;
 	              }
 	            }
 	          }
@@ -1674,10 +1869,37 @@
 	        }
 	      }
 	    }, {
+	      key: 'dispose',
+	      value: function dispose() {
+	        var _this22 = this;
+	
+	        //test-all gone?
+	        this._iface.forEach(function (property, key) {
+	          var item = _this22._state[key];
+	          if (typeof item.dispose === 'function') {
+	            item.dispose();
+	          }
+	          delete _this22._state[key];
+	          delete _this22._instance[key];
+	        });
+	        delete this._instance[PROXY_KEY];
+	      }
+	    }, {
 	      key: 'value',
 	      value: function value(path, shouldThrowIfNotFound) {
 	        var root = this.root;
 	        return util.getObjectAtPath(root, path, shouldThrowIfNotFound);
+	      }
+	    }, {
+	      key: 'get',
+	      value: function get(key, defaultValue) {
+	        var value = this.instance[key];
+	        return this._state.hasOwnProperty(key) ? value : defaultValue;
+	      }
+	    }, {
+	      key: 'set',
+	      value: function set(key, value) {
+	        this.instance[key] = value;
 	      }
 	    }, {
 	      key: 'root',
@@ -1696,12 +1918,12 @@
 	        return this._super;
 	      }
 	    }, {
-	      key: 'watch',
+	      key: 'debug',
 	      get: function get() {
 	        return this._isWatching;
 	      },
 	      set: function set(bool) {
-	        var _this22 = this;
+	        var _this23 = this;
 	
 	        if (bool && this._isWatching) {
 	          return;
@@ -1712,12 +1934,12 @@
 	        this._isWatching = bool;
 	        if (bool) {
 	          (function () {
-	            var props = _this22._iface._properties;
-	            _this22._watchIntervalId = setInterval(function () {
-	              for (var key in _this22) {
-	                if (_this22.hasOwnProperty(key) && _instanceMembers.indexOf(key) === -1 && !props.has(key)) {
-	                  clearInterval(_this22._watchIntervalId);
-	                  throw new AxialIllegalProperty(key, _this22._iface);
+	            var props = _this23._iface._properties;
+	            _this23._watchIntervalId = setInterval(function () {
+	              for (var key in _this23) {
+	                if (_this23.hasOwnProperty(key) && key !== PROXY_KEY && !props.has(key)) {
+	                  clearInterval(_this23._watchIntervalId);
+	                  throw new AxialIllegalProperty(key, _this23._iface);
 	                }
 	              }
 	            }, 30);
@@ -1801,9 +2023,9 @@
 	    }, {
 	      key: 'set',
 	      value: function set(instance, value) {
-	        var _this23 = this;
+	        var _this24 = this;
 	
-	        var oldValue = instance[INSTANCE_PROXY_KEY]._state[this._key];
+	        var oldValue = instance[PROXY_KEY]._state[this._key];
 	        var rawValue = value;
 	
 	        console.log('%cSET: ' + this._path + ':<' + this._type.join('|') + '> = ' + util.stringify(value), 'color:orange');
@@ -1843,7 +2065,7 @@
 	              }
 	              console.log('%cCALL: ' + this._key + ('(' + (args.length ? '<' : '')) + args.join('>, <') + ((args.length ? '>' : '') + ')'), 'color:pink');
 	
-	              instance[INSTANCE_PROXY_KEY].dispatch(this._key, {
+	              instance[PROXY_KEY].dispatch(this._key, {
 	                instance: instance,
 	                property: this,
 	                method: 'call',
@@ -1855,16 +2077,16 @@
 	              });
 	
 	              return fn.apply(instance, arguments);
-	            }.bind(_this23);
+	            }.bind(_this24);
 	            value._isAxialBound = true;
 	          })();
 	        }
 	
 	        // set state in obj
-	        instance[INSTANCE_PROXY_KEY]._state[this._key] = value;
+	        instance[PROXY_KEY]._state[this._key] = value;
 	
 	        // dispatch event
-	        instance[INSTANCE_PROXY_KEY].dispatch(this._key, {
+	        instance[PROXY_KEY].dispatch(this._key, {
 	          instance: instance,
 	          property: this,
 	          method: 'set',
@@ -1884,12 +2106,12 @@
 	    }, {
 	      key: 'get',
 	      value: function get(instance) {
-	        var value = instance[INSTANCE_PROXY_KEY]._state[this._key];
+	        var value = instance[PROXY_KEY]._state[this._key];
 	
 	        console.log('%cGET: ' + this._path + ':<' + this._type.join('|') + '> = ' + util.stringify(value), 'color:#999');
 	
 	        // dispatch event
-	        instance[INSTANCE_PROXY_KEY].dispatch(this._key, {
+	        instance[PROXY_KEY].dispatch(this._key, {
 	          instance: instance,
 	          property: this,
 	          method: 'get',
@@ -1968,7 +2190,7 @@
 	
 	      this._instance = instance;
 	      this._key = key;
-	      this._property = instance[INSTANCE_PROXY_KEY].prop(this._key);
+	      this._property = instance[PROXY_KEY].prop(this._key);
 	      this._handler = handler;
 	      this._active = false;
 	    }
@@ -1976,14 +2198,14 @@
 	    _createClass(AxialBinding, [{
 	      key: 'bind',
 	      value: function bind() {
-	        this._instance[INSTANCE_PROXY_KEY].bind(this._key, this._handler);
+	        this._instance[PROXY_KEY].bind(this._key, this._handler);
 	        this._active = true;
 	        _bindings.push(this);
 	      }
 	    }, {
 	      key: 'unbind',
 	      value: function unbind() {
-	        this._instance[INSTANCE_PROXY_KEY].unbind(this._key, this._handler);
+	        this._instance[PROXY_KEY].unbind(this._key, this._handler);
 	        this._active = false;
 	        var i = _bindings.indexOf(this);
 	        _bindings.splice(i, 1);
@@ -2000,7 +2222,7 @@
 	    }, {
 	      key: 'get',
 	      value: function get() {
-	        return this._instance[INSTANCE_PROXY_KEY]._state[this._key];
+	        return this._instance[PROXY_KEY]._state[this._key];
 	      }
 	    }, {
 	      key: 'instance',
@@ -2032,87 +2254,145 @@
 	    return AxialBinding;
 	  }();
 	
-	  var AxialInstanceArray = function AxialInstanceArray(instance, property) {
-	    var _this24 = this;
+	  var AxialInstanceArray = function () {
+	    function AxialInstanceArray(instance, property) {
+	      var _this25 = this;
 	
-	    var array = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : [];
+	      var array = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : [];
 	
-	    _classCallCheck(this, AxialInstanceArray);
+	      _classCallCheck(this, AxialInstanceArray);
 	
-	    this._instance = instance;
-	    this._property = property;
-	    this._key = property.key;
-	    this._array = array;
+	      this._instance = instance;
+	      this._property = property;
+	      this._key = property.key;
+	      this._array = array;
 	
-	    _arrayMembers.forEach(function (member) {
-	      // handle immutable array methods
-	      var fn = function fn() {
-	        var returnValue = Array.prototype[member].apply(array, arguments);
+	      _arrayMembers.forEach(function (member) {
+	        // stub each member of Array.prototype
+	        // validate arguments if mutator, otherwise validate array afterwards
+	        Object.defineProperty(_this25, member, {
+	          enumerable: false,
+	          value: function value() {
+	            var args = Array.prototype.slice.call(arguments);
+	            var isMutator = _arrayMutators.indexOf(member) > -1;
+	            var hasValidated = true;
 	
-	        property.validate(array);
+	            if (member === 'push') {
+	              property.validate(args);
+	            } else if (member === 'splice') {
+	              property.validate(args.slice(2));
+	            } else if (member === 'unshift') {
+	              property.validate(args);
+	            } else if (member === 'fill') {
+	              property.primaryType.isItem(args[0]);
+	            } else {
+	              hasValidated = true;
+	            }
 	
-	        if (_arrayMutators.indexOf(member) > -1) {
-	          // dispatch event
-	          instance[INSTANCE_PROXY_KEY].dispatch(this._key, {
-	            instance: instance,
-	            property: this._property,
-	            method: 'set',
-	            arrayMethod: member,
-	            key: this._key,
-	            value: returnValue,
-	            newValue: this,
-	            oldValue: null
-	          });
-	        }
+	            var returnValue = Array.prototype[member].apply(array, args);
+	            this.length = array.length;
 	
-	        return returnValue;
-	      };
+	            if (!hasValidated) {
+	              property.validate(array);
+	            }
 	
-	      // TODO: refactor/work this - need clear plan for different methods...
-	      // can this be merged with above? simplify and make parts dynamic?
+	            if (isMutator) {
+	              // dispatch event
+	              instance[PROXY_KEY].dispatch(this._key, {
+	                instance: instance,
+	                property: this._property,
+	                method: 'set',
+	                arrayMethod: member,
+	                key: this._key,
+	                value: returnValue,
+	                newValue: this,
+	                oldValue: null
+	              });
+	            }
 	
-	      if (member === 'push' || member === 'splice') {
-	        fn = function fn() {
-	          var args = Array.prototype.slice.call(arguments);
-	
-	          if (member === 'push') {
-	            property.validate(args);
-	          } else if (member === 'splice') {
-	            property.validate(args.slice(2));
+	            return returnValue;
 	          }
-	
-	          var returnValue = Array.prototype[member].apply(array, args);
-	          this.length = array.length;
-	
-	          if (_arrayMutators.indexOf(member) > -1) {
-	            // dispatch event
-	            instance[INSTANCE_PROXY_KEY].dispatch(this._key, {
-	              instance: instance,
-	              property: this._property,
-	              method: 'set',
-	              arrayMethod: member,
-	              key: this._key,
-	              value: returnValue,
-	              newValue: this,
-	              oldValue: null
-	            });
-	          }
-	
-	          return returnValue;
-	        };
-	      }
-	
-	      // stub each member of Array.prototype
-	      Object.defineProperty(_this24, member, {
-	        enumerable: false,
-	        value: fn
+	        });
 	      });
-	    });
+	    }
+	
+	    _createClass(AxialInstanceArray, [{
+	      key: 'add',
+	      value: function add() /*items, ...*/{
+	        var items = AxialInstanceArray.argsToItems.apply(null, arguments);
+	        this.push.apply(this, items);
+	      }
+	    }, {
+	      key: 'remove',
+	      value: function remove() /*items, ...*/{
+	        var array = this._array;
+	        var items = AxialInstanceArray.argsToItems.apply(null, arguments);
+	        var l = items.length;
+	        for (var i = 0; i < l; i++) {
+	          var item = items[i];
+	          var index = array.indexOf(item);
+	          this._array.splice(index, 1);
+	        }
+	        this.length = this._array.length;
+	      }
+	    }, {
+	      key: 'contains',
+	      value: function contains() /*items, ...*/{
+	        var items = AxialInstanceArray.argsToItems.apply(null, arguments);
+	        var l = items.length;
+	        var array = this._array;
+	        for (var i = 0; i < l; i++) {
+	          if (array.indexOf(items[i]) > -1) {
+	            return true;
+	          }
+	        }
+	        return false;
+	      }
+	    }, {
+	      key: 'isEmpty',
+	      get: function get() {
+	        return this.length === 0;
+	      }
+	    }, {
+	      key: 'instance',
+	      get: function get() {
+	        return this._instance;
+	      }
+	    }, {
+	      key: 'property',
+	      get: function get() {
+	        return this._property;
+	      }
+	    }, {
+	      key: 'key',
+	      get: function get() {
+	        return this._key;
+	      }
+	    }, {
+	      key: 'array',
+	      get: function get() {
+	        return this._array;
+	      }
+	    }]);
+	
+	    return AxialInstanceArray;
+	  }();
+	
+	  AxialInstanceArray.argsToItems = function () {
+	    var array = [];
+	    var l = arguments.length;
+	    if (l === 1 && Array.isArray(arguments[0])) {
+	      array.push.apply(array, arguments);
+	    } else if (l > 0) {
+	      for (var i = 0; i < l; i++) {
+	        var item = arguments[i];
+	        array.push(item);
+	      }
+	    }
+	    return array;
 	  };
 	
 	  // -------------------------------------------------------------------------------------- Util
-	
-	
 	  util = {
 	    isPlainObject: function isPlainObject(o) {
 	      var t = o;
@@ -2126,15 +2406,15 @@
 	      }();
 	    },
 	    merge: function merge(source, target) {
-	      var _this25 = this;
+	      var _this26 = this;
 	
 	      var copy = function copy(_source, _target) {
 	        for (var key in _target) {
 	          if (_target.hasOwnProperty(key)) {
 	            var sourceValue = _source[key];
 	            var targetValue = _target[key];
-	            if (_this25.isPlainObject(targetValue)) {
-	              if (_this25.isPlainObject(sourceValue)) {
+	            if (_this26.isPlainObject(targetValue)) {
+	              if (_this26.isPlainObject(sourceValue)) {
 	                copy(sourceValue, targetValue);
 	              } else {
 	                var obj = {};
@@ -2191,7 +2471,7 @@
 	      return true;
 	    },
 	    getObjectPaths: function getObjectPaths(obj, includeBranchPaths) {
-	      var _this26 = this;
+	      var _this27 = this;
 	
 	      var keys = [];
 	      var ref = null;
@@ -2201,7 +2481,7 @@
 	          if (o.hasOwnProperty(k)) {
 	            ref = o[k];
 	            path = p ? p + '.' + k : k;
-	            if (_this26.isPlainObject(ref)) {
+	            if (_this27.isPlainObject(ref)) {
 	              if (includeBranchPaths === true) {
 	                keys.push(path);
 	              }
@@ -2216,7 +2496,7 @@
 	      return keys;
 	    },
 	    getObjectPathValues: function getObjectPathValues(obj, includeBranchPaths) {
-	      var _this27 = this;
+	      var _this28 = this;
 	
 	      var keyValues = [];
 	      var ref = null;
@@ -2226,7 +2506,7 @@
 	          if (o.hasOwnProperty(k)) {
 	            ref = o[k];
 	            path = p ? p + '.' + k : k;
-	            if (_this27.isPlainObject(ref)) {
+	            if (_this28.isPlainObject(ref)) {
 	              if (includeBranchPaths === true) {
 	                keyValues.push({ path: path, value: ref, isBranch: true });
 	              }
@@ -2406,7 +2686,8 @@
 	    },
 	
 	    Binding: AxialBinding,
-	    INSTANCE_PROXY_KEY: INSTANCE_PROXY_KEY
+	    PROXY_KEY: PROXY_KEY,
+	    CONST: CONST
 	  };
 	
 	  // export for testing
@@ -2434,10 +2715,11 @@
 	'use strict';
 	
 	module.exports = {
-	  BLANK_INTERFACE_NAME: '*',
-	  INSTANCE_MEMBERS: [],
+	  BLANK_INTERFACE_NAME: 'IFace',
+	  PROXY_KEY: '$',
 	  ARRAY_MEMBERS: ['concat', 'copyWithin', 'entries', 'every', 'fill', 'filter', 'find', 'findIndex', 'forEach', 'includes', 'indexOf', 'join', 'keys', 'lastIndexOf', 'map', 'pop', 'push', 'reduce', 'reduceRight', 'reverse', 'shift', 'slice', 'some', 'sort', 'splice', 'toLocaleString', 'toSource', 'toString', 'unshift', 'values'],
-	  ARRAY_MUTATORS: ['copyWithin', 'fill', 'pop', 'push', 'reverse', 'shift', 'sort', 'splice', 'unshift']
+	  ARRAY_MUTATORS: ['copyWithin', 'fill', 'pop', 'push', 'reverse', 'shift', 'sort', 'splice', 'unshift'],
+	  ARRAY_MUTATORS_REQUIRE_ARGS_VALIDATED: ['fill', 'push', 'splice', 'unshift']
 	};
 
 /***/ },
