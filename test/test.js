@@ -3,6 +3,11 @@ const util = Axial.util;
 const expect = require('expect');
 const PROXY = Axial.PROXY_KEY;
 
+if (typeof window !== 'undefined') {
+  window.Axial = Axial;
+  Axial.addDefaultLogListeners();
+}
+
 describe('1. Types', () => {
   it('1.1 should determine correct types', () => {
     // return as type instances
@@ -211,8 +216,22 @@ describe('3. Creating Instances', () => {
     });
     a = iface.new();
     a.a = {x:1};
-    expect(() => a.a = false).toThrow(Axial.InvalidType);
+    expect(() => a.a = null).toThrow(Axial.InvalidType);
     expect(() => a.a = [123]).toThrow(Axial.InvalidType);
+  });
+
+  it('3.6 should NOT be able to create empty instances with required properties', () => {
+    iface = Axial.define({
+      a: [Axial.String.required()]
+    });
+    expect(() => {
+      a = iface.new();
+    }).toThrow();
+    expect(() => {
+      a = iface.new({
+        a: 'foo'
+      });
+    }).toNotThrow();
   });
 });
 
@@ -321,14 +340,16 @@ describe('5. Listening to instance changes', () => {
 });
 
 describe('6. Composite interfaces', () => {
+  let ifaceA, ifaceB;
+
   it('6.1 should be able to compose interfaces from other interfaces', () => {
-    let ifaceA = Axial.define('ifaceA', {
+    ifaceA = Axial.define('ifaceA', {
       x: [Axial.String, Axial.Undefined],
       y: {
         z: [Axial.Number, Axial.Undefined]
       }
     });
-    let ifaceB = Axial.define('ifaceB', {
+    ifaceB = Axial.define('ifaceB', {
       a: ifaceA,
       b: {
         c: [Axial.Number, ifaceA]
@@ -415,6 +436,69 @@ describe('6. Composite interfaces', () => {
         }
       })
     }).toThrow();
+  });
+
+  it('6.2 should be able to test whether an object matches an interface', () => {
+    expect(ifaceA.is({
+      x: undefined,
+      y: {
+        z: 1
+      }
+    })).toBe(true);
+    expect(ifaceA.is({
+      x: 3, //<- error
+      y: {
+        z: 1
+      }
+    })).toBe(false);
+    expect(ifaceA.is({
+      x: 'a',
+      y: {}  //<- error
+    })).toBe(false);
+
+    expect(ifaceB.is({
+      a: {
+        x: undefined,
+        y: {
+          z: 1
+        }
+      },
+      b: {
+        c: 3
+      }
+    })).toBe(true);
+    expect(ifaceB.is({
+      a: {
+        x: undefined,
+        y: {
+          z: 1
+        }
+      },
+      b: {
+        c: {
+          x: undefined,
+          y: {
+            z: 1
+          }
+        }
+      }
+    })).toBe(true);
+    expect(ifaceB.is({
+      a: {
+        x: undefined,
+        y: {
+          z: 1
+        }
+      },
+      b: {
+        c: {
+          x: 3,  //<- error
+          y: {
+            z: 1
+          }
+        }
+      }
+    })).toBe(false);
   });
 });
 
