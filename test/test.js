@@ -8,6 +8,15 @@ if (typeof window !== 'undefined') {
   Axial.addDefaultLogListeners();
 }
 
+window.debug = false;
+Object.defineProperty(window, '$debug', {
+  get: function () {
+    window.debug = true;
+  }
+});
+
+//$debug
+
 describe('1. Types', () => {
   it('1.1 should determine correct types', () => {
     // return as type instances
@@ -98,25 +107,52 @@ describe('2. Defining Interfaces', () => {
       });
     }).toThrow(Axial.TypeAlreadyDefined);
   });
+
+  it('2.5 should be able to define multiple interface with same name (as stack)', () => {
+    const a = Axial.define('iface21a', {
+      a: Axial.String
+    });
+    expect(Axial.getInterface('iface21a').has('a')).toBe(true);
+    const b = Axial.define('iface21a', {
+      b: Axial.String
+    });
+    expect(Axial.getInterface('iface21a').has('a')).toBe(false);
+    expect(Axial.getInterface('iface21a').has('b')).toBe(true);
+    const c = Axial.define('iface21a', {
+      c: Axial.String
+    });
+    expect(Axial.getInterface('iface21a').has('a')).toBe(false);
+    expect(Axial.getInterface('iface21a').has('b')).toBe(false);
+    expect(Axial.getInterface('iface21a').has('c')).toBe(true);
+    expect(Axial.interfaces()['iface21a'].length).toBe(3);
+    expect(Axial.interfaces()['iface21a'][0].has('a')).toBe(true);
+    expect(Axial.interfaces()['iface21a'][1].has('b')).toBe(true);
+    expect(Axial.interfaces()['iface21a'][2].has('c')).toBe(true);
+  });
 });
 
 describe('3. Creating Instances', () => {
-  let iface = Axial.define('iface', {
-    x: {
-      y: {
-        z: [Axial.Number, Axial.Boolean, Axial.Undefined]
-      }
-    },
-    a: {
-      b: Axial.Function
-    }
-  });
-
+  let iface;
   let a = null;
+
+  before(() => {
+    iface = Axial.define('iface', {
+      x: {
+        y: {
+          z: [Axial.Number, Axial.Boolean, Axial.Undefined]
+        }
+      },
+      a: {
+        b: Axial.Function
+      }
+    });
+  });
 
   it('3.1.a should be able to create instances of interfaces', function () {
     a = iface.new();
     expect(a).toBeA(Axial.Instance.constructor);
+    expect(Axial.typeOf(a)).toBe(iface);
+    expect(Axial.proxy(a).stringify()).toBe('{"x":{"y":{"z":0}},"a":{}}');
   });
 
   it('3.1.b should be able to create instances of interfaces with given values', () => {
@@ -143,6 +179,9 @@ describe('3. Creating Instances', () => {
     expect(a.x.y).toBeA(Axial.Instance.constructor);
     expect(a.x.y.z).toBe(6);
     expect(a.a.b()).toBe(6);
+    expect(Axial.getInterface('iface')).toBe(iface);
+    expect(Axial.typeOf(a)).toBe(iface);
+    expect(Axial.proxy(a).stringify()).toBe('{"x":{"y":{"z":6}},"a":{}}');
   });
 
   it('3.2.a should NOT be allowed to create instance with non-interface properties', () => {
@@ -172,8 +211,8 @@ describe('3. Creating Instances', () => {
     }).toThrow(Axial.InvalidType);
     expect(() => {
       iface.new({
-        x: {
-          y: {}
+        a: {
+          b: 3
         }
       });
     }).toThrow(Axial.InvalidType);
@@ -208,6 +247,7 @@ describe('3. Creating Instances', () => {
     expect(() => a.b = [123]).toThrow(Axial.InvalidType);
     expect(() => a.c = [[]]).toThrow(Axial.InvalidType);
     expect(() => a.c = [[123]]).toThrow(Axial.InvalidType);
+    expect(Axial.proxy(a).stringify()).toBe('{"a":[],"b":["abc"],"c":[{"x":1}],"d":[["abc"],["efg"]]}');
   });
 
   it('3.5 should be able to use objects', () => {
@@ -436,6 +476,23 @@ describe('6. Composite interfaces', () => {
         }
       })
     }).toThrow();
+    expect(Axial.typeOf({
+      a: {
+        x: 'a',
+        y: {
+          z: 3
+        }
+      },
+      b: {
+        c: 2
+      }
+    })).toBe(ifaceB);
+    expect(Axial.typeOf({
+      x: undefined,
+      y: {
+        z: 3
+      }
+    })).toBe(ifaceA);
   });
 
   it('6.2 should be able to test whether an object matches an interface', () => {
@@ -453,8 +510,8 @@ describe('6. Composite interfaces', () => {
     })).toBe(false);
     expect(ifaceA.is({
       x: 'a',
-      y: {}  //<- error
-    })).toBe(false);
+      y: {}  //<- partial value ok
+    })).toBe(true);
 
     expect(ifaceB.is({
       a: {
@@ -503,7 +560,27 @@ describe('6. Composite interfaces', () => {
 });
 
 describe('7. Arrays', () => {
-  it('7.1 should be able to bind array mutations to instance values', () => {
+  it('7.1.a should detect nested array types', () => {
+    expect(Axial.Array(Axial.Array(Axial.Array(Axial.String))).is([[['abc']]])).toBe(true);
+    expect(Axial.Array(Axial.Array(Axial.Array(Axial.String))).is([[[3]]])).toBe(false);
+    expect(Axial.Array(Axial.Array(Axial.Array(Axial.String))).is([[['abc', 3]]])).toBe(false);
+  });
+
+  it('7.1.b should detect complex array types' , () => {
+    const subIFace = Axial.define({
+      x: Axial.String
+    });
+    const iface = Axial.define({
+      a: Axial.Array(Axial.Array(subIFace))
+    });
+    expect(() => iface.new({a:[[{x:'foo'}]]})).toNotThrow();
+    expect(() => iface.new({a:[[{x:1}]]})).toThrow();
+    expect(() => iface.new({a:[[{y:'foo'}]]})).toThrow();
+    expect(iface.new({a:[[{x:'foo'}]]}).a[0][0].constructor).toBe(Axial.Instance.constructor);
+    expect(iface.new({a:[[{x:'foo'}]]}).a[0][0][PROXY].iface).toBe(subIFace);
+  });
+
+  it('7.2 should be able to bind array mutations to instance values', () => {
     const IFace = Axial.define({
       a: Axial.Array(Axial.Number)
     });
@@ -514,14 +591,36 @@ describe('7. Arrays', () => {
     const proxy = instance[PROXY];
     let dispatch = 0;
 
+    // get indexes
+    proxy.bind('a', e => {
+      expect(e.method).toBe('get');
+      expect(e.arrayMethod).toBe('index');
+      expect(e.index).toBe(2);
+      expect(e.value).toEqual(3);
+      dispatch++;
+    });
+    expect(array[2]).toBe(3);
+    proxy.unbind('a');
+
+    // get indexes
+    proxy.bind('a', e => {
+      expect(e.method).toBe('set');
+      expect(e.arrayMethod).toBe('index');
+      expect(e.index).toBe(2);
+      expect(e.value).toEqual(6);
+      dispatch++;
+    });
+    array[2] = 6;
+    proxy.unbind('a');
+
     // copyWithin
     proxy.bind('a', e => {
       expect(e.arrayMethod).toBe('copyWithin');
       expect(array.length).toBe(3);
-      expect(array.array).toEqual([1,1,2]);
+      expect(array.array).toEqual([2,6,6]);
       dispatch++;
     });
-    array.copyWithin(1, 0);
+    array.copyWithin(0, 1);
     proxy.unbind('a');
 
     // fill
@@ -617,10 +716,10 @@ describe('7. Arrays', () => {
     expect(array.unshift(7,8)).toBe(7);
     proxy.unbind('a');
 
-    expect(dispatch).toBe(10);
+    expect(dispatch).toBe(12);
   });
 
-  it('7.2 should not be able to add illegal type to typed array', () => {
+  it('7.3 should not be able to add illegal type to typed array', () => {
     const Item = Axial.define({text: Axial.String});
     const List = Axial.define({items: Axial.Array(Item)});
     const list = List.new();
@@ -635,6 +734,30 @@ describe('7. Arrays', () => {
     list.items.remove(validItem);
     expect(list.items.isEmpty).toBe(true);
     expect(list.items.contains(validItem)).toBe(false);
+  });
+
+  it('7.4 should convert arrays to AxialInstanceArray', () => {
+    const iface = Axial.define({
+      a: Axial.Array(Axial.Array(Axial.Number))
+    });
+    const inst = iface.new({a:[[123]]});
+    expect(inst.a).toBeA(Axial.InstanceArray);
+    expect(inst.a[0].constructor).toBeA(Axial.InstanceArray.constructor);
+    expect(inst.a[0][0].constructor).toBeA(Axial.InstanceArray.constructor);
+  });
+
+  it('7.5 should convert plain objects to AxialInstances', () => {
+    const iface = Axial.define({
+      a: Axial.String
+    });
+    const aiface = Axial.define({
+      x: Axial.Array(iface)
+    });
+    const inst = aiface.new({x:[{a:'abc'}]});
+    expect(inst.x[0].constructor).toBe(Axial.Instance.constructor);
+    inst.x[0] = {a:'efg'};
+    expect(inst.x[0].constructor).toBe(Axial.Instance.constructor);
+    expect(inst.x[0].a).toBe('efg');
   });
 });
 
