@@ -790,7 +790,7 @@
 	    var Item = Axial.define({ text: Axial.String });
 	    var List = Axial.define({ items: Axial.Array(Item) });
 	    var list = List.new();
-	    var validItem = Item.new();
+	    var validItem = Item.new({ text: 'valid' });
 	    var invalidItem = { foo: 'bar' };
 	    list.items.add(validItem);
 	    expect(function () {
@@ -1117,7 +1117,7 @@
 	  var AxialIllegalProperty = function (_Exception9) {
 	    _inherits(AxialIllegalProperty, _Exception9);
 	
-	    function AxialIllegalProperty(key, iface) {
+	    function AxialIllegalProperty(key, iface, instance) {
 	      _classCallCheck(this, AxialIllegalProperty);
 	
 	      var message = 'Illegal key "' + key + '" not declared in interface "' + iface._name + '"';
@@ -1126,6 +1126,7 @@
 	
 	      _this9.key = key;
 	      _this9.iface = iface;
+	      _this9.instance = instance;
 	      _this9.message = message;
 	      return _this9;
 	    }
@@ -1678,7 +1679,7 @@
 	        if (isPlainObject) {
 	          util.expandDotSyntaxKeys(defaultValues, function (path, key, object) {
 	            if (!_this21._properties.has(key)) {
-	              throw new AxialIllegalProperty(key, _this21);
+	              throw new AxialIllegalProperty(key, _this21, instance);
 	            }
 	            var prop = _this21._properties.get(key);
 	            var subPath = path.split('.').slice(1).join('.');
@@ -1691,7 +1692,7 @@
 	        for (var key in defaultValues) {
 	          if (isPlainObject && defaultValues.hasOwnProperty(key)) {
 	            if (!this._properties.has(key)) {
-	              throw new AxialIllegalProperty(key, this);
+	              throw new AxialIllegalProperty(key, this, instance);
 	            }
 	          }
 	        }
@@ -1739,7 +1740,7 @@
 	        for (var key in value) {
 	          if (value.hasOwnProperty(key)) {
 	            if (key !== Axial.PROXY_KEY && !this._properties.has(key)) {
-	              throw new AxialIllegalProperty(key, this);
+	              throw new AxialIllegalProperty(key, this, instance);
 	            }
 	          }
 	        }
@@ -2167,13 +2168,19 @@
 	      key: 'dispatch',
 	      value: function dispatch(key, eventData) {
 	        // dispatch globally too
-	        Axial.dispatch(eventData);
+	        var returnValue = Axial.dispatch(eventData);
+	        if (returnValue) {
+	          return returnValue;
+	        }
 	        var listeners = this._listeners[key];
 	        if (listeners) {
 	          var l = listeners.length;
 	          for (var i = 0; i < l; i++) {
 	            // dispatch for each event listener to interface keys
-	            listeners[i](eventData);
+	            returnValue = listeners[i](eventData);
+	            if (returnValue) {
+	              return returnValue;
+	            }
 	          }
 	        }
 	      }
@@ -2198,6 +2205,38 @@
 	      value: function value(path, shouldThrowIfNotFound) {
 	        var root = this.root;
 	        return util.getObjectAtPath(root, path, shouldThrowIfNotFound);
+	      }
+	    }, {
+	      key: 'lock',
+	      value: function lock() {
+	        var _this23 = this;
+	
+	        if (this._isWatching) {
+	          return;
+	        }
+	        this._isWatching = true;
+	        var props = this._iface._properties;
+	        this._watchIntervalId = setInterval(function () {
+	          var instance = _this23._instance;
+	          for (var key in instance) {
+	            if (instance.hasOwnProperty(key) && key !== Axial.PROXY_KEY && !props.has(key)) {
+	              clearInterval(_this23._watchIntervalId);
+	              delete instance[key];
+	              throw new AxialIllegalProperty(key, _this23._iface, _this23);
+	            }
+	          }
+	        }, 30);
+	        return true;
+	      }
+	    }, {
+	      key: 'unlock',
+	      value: function unlock() {
+	        if (!this._isWatching) {
+	          return;
+	        }
+	        this._isWatching = false;
+	        clearInterval(this._watchIntervalId);
+	        return true;
 	      }
 	    }, {
 	      key: 'get',
@@ -2296,34 +2335,9 @@
 	        return this._super;
 	      }
 	    }, {
-	      key: 'debug',
+	      key: 'isLocked',
 	      get: function get() {
 	        return this._isWatching;
-	      },
-	      set: function set(bool) {
-	        var _this23 = this;
-	
-	        if (bool && this._isWatching) {
-	          return;
-	        }
-	        if (!bool && this._isWatching) {
-	          clearInterval(this._watchIntervalId);
-	        }
-	        this._isWatching = bool;
-	        if (bool) {
-	          (function () {
-	            var props = _this23._iface._properties;
-	            _this23._watchIntervalId = setInterval(function () {
-	              var instance = _this23._instance;
-	              for (var key in instance) {
-	                if (instance.hasOwnProperty(key) && key !== Axial.PROXY_KEY && !props.has(key)) {
-	                  clearInterval(_this23._watchIntervalId);
-	                  throw new AxialIllegalProperty(key, _this23._iface);
-	                }
-	              }
-	            }, 30);
-	          })();
-	        }
 	      }
 	    }, {
 	      key: 'instance',
@@ -2449,11 +2463,11 @@
 	          })();
 	        }
 	
-	        // set state in obj
+	        // set state
 	        instance[Axial.PROXY_KEY]._state[this._key] = value;
 	
 	        // dispatch event
-	        instance[Axial.PROXY_KEY].dispatch(this._key, {
+	        var returnValue = instance[Axial.PROXY_KEY].dispatch(this._key, {
 	          instance: instance,
 	          property: this,
 	          method: 'set',
@@ -2462,6 +2476,11 @@
 	          newValue: value,
 	          oldValue: oldValue
 	        });
+	
+	        if (returnValue) {
+	          // re-set state from intercepted listener return value
+	          instance[this._key] = returnValue;
+	        }
 	      }
 	
 	      /**
@@ -2655,7 +2674,8 @@
 	      // expand items to instances if interface type
 	      this._array = array;
 	      if (array.length) {
-	        this.setArray(array);
+	        this._array = this.convertArray(array);
+	        this.length = this._array.length;
 	      }
 	
 	      _arrayMembers.forEach(function (member) {
@@ -2670,12 +2690,17 @@
 	
 	            if (member === 'push') {
 	              property.validate(args, self._instance);
+	              args = this.convertArray(args);
 	            } else if (member === 'splice') {
-	              property.validate(args.slice(2), self._instance);
+	              property.validate(args, self._instance);
+	              args = this.convertArray(args);
 	            } else if (member === 'unshift') {
 	              property.validate(args, self._instance);
+	              args = this.convertArray(args);
 	            } else if (member === 'fill') {
-	              property.primaryType.isItem(args[0]);
+	              property.primaryType.isItem(args);
+	              args = [args[0]];
+	              args = this.convertArray(args);
 	            } else {
 	              hasValidated = true;
 	            }
@@ -2712,13 +2737,17 @@
 	    }
 	
 	    _createClass(AxialInstanceArray, [{
-	      key: 'setArray',
-	      value: function setArray(rawArray) {
+	      key: 'convertArray',
+	      value: function convertArray(rawArray) {
 	        // convert plain array to array of wrapped objects ~ AxialInstance or AxialInstanceArray or value
 	        var array = [];
 	        var l = rawArray.length;
 	        for (var i = 0; i < l; i++) {
 	          var item = rawArray[i];
+	          if (item instanceof AxialInstance || item instanceof AxialInstanceArray) {
+	            array[i] = item;
+	            continue;
+	          }
 	          var type = Axial.typeOf(item);
 	          if (type instanceof AxialInterface) {
 	            // create instance of interface with item as default values
@@ -2731,8 +2760,7 @@
 	          // plain value
 	          array[i] = item;
 	        }
-	        this._array = array;
-	        this.length = array.length;
+	        return array;
 	      }
 	    }, {
 	      key: 'bindIndexes',
@@ -3269,7 +3297,10 @@
 	      }
 	      var l = _listeners.length;
 	      for (var i = 0; i < l; i++) {
-	        _listeners[i](eventData);
+	        var returnValue = _listeners[i](eventData);
+	        if (returnValue) {
+	          return returnValue;
+	        }
 	      }
 	    },
 	

@@ -723,7 +723,7 @@ describe('7. Arrays', () => {
     const Item = Axial.define({text: Axial.String});
     const List = Axial.define({items: Axial.Array(Item)});
     const list = List.new();
-    const validItem = Item.new();
+    const validItem = Item.new({text:'valid'});
     const invalidItem = {foo:'bar'};
     list.items.add(validItem);
     expect(() => {
