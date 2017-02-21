@@ -2692,7 +2692,10 @@
 	              property.validate(args, self._instance);
 	              args = this.convertArray(args);
 	            } else if (member === 'splice') {
-	              property.validate(args, self._instance);
+	              if (args.length > 2) {
+	                // inserting
+	                property.validate(args.slice(2), self._instance);
+	              }
 	              args = this.convertArray(args);
 	            } else if (member === 'unshift') {
 	              property.validate(args, self._instance);
