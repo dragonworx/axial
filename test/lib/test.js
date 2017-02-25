@@ -1153,15 +1153,15 @@
 	    return AxialMissingProperty;
 	  }(Exception);
 	
-	  var AxialIllegalProperty = function (_Exception9) {
-	    _inherits(AxialIllegalProperty, _Exception9);
+	  var AxialUnexpectedProperty = function (_Exception9) {
+	    _inherits(AxialUnexpectedProperty, _Exception9);
 	
-	    function AxialIllegalProperty(key, iface, instance) {
-	      _classCallCheck(this, AxialIllegalProperty);
+	    function AxialUnexpectedProperty(key, iface, instance) {
+	      _classCallCheck(this, AxialUnexpectedProperty);
 	
-	      var message = 'Illegal key "' + key + '" not declared in interface "' + iface._name + '"';
+	      var message = 'Unexpected key "' + key + '" found in given object not declared in interface "' + iface._name + '"';
 	
-	      var _this9 = _possibleConstructorReturn(this, (AxialIllegalProperty.__proto__ || Object.getPrototypeOf(AxialIllegalProperty)).call(this, message));
+	      var _this9 = _possibleConstructorReturn(this, (AxialUnexpectedProperty.__proto__ || Object.getPrototypeOf(AxialUnexpectedProperty)).call(this, message));
 	
 	      _this9.key = key;
 	      _this9.iface = iface;
@@ -1170,7 +1170,7 @@
 	      return _this9;
 	    }
 	
-	    return AxialIllegalProperty;
+	    return AxialUnexpectedProperty;
 	  }(Exception);
 	
 	  var Errors = {
@@ -1182,7 +1182,7 @@
 	    TypeAlreadyDefined: AxialTypeAlreadyDefined,
 	    InvalidArgument: AxialInvalidArgument,
 	    MissingProperty: AxialMissingProperty,
-	    IllegalProperty: AxialIllegalProperty
+	    IllegalProperty: AxialUnexpectedProperty
 	  };
 	
 	  // -------------------------------------------------------------------------------------- Types
@@ -1722,7 +1722,7 @@
 	        if (isPlainObject) {
 	          util.expandDotSyntaxKeys(defaultValues, function (path, key, object) {
 	            if (!_this21._properties.has(key)) {
-	              throw new AxialIllegalProperty(key, _this21, instance);
+	              throw new AxialUnexpectedProperty(key, _this21, instance);
 	            }
 	            var prop = _this21._properties.get(key);
 	            var subPath = path.split('.').slice(1).join('.');
@@ -1735,7 +1735,7 @@
 	        for (var key in defaultValues) {
 	          if (isPlainObject && defaultValues.hasOwnProperty(key)) {
 	            if (!this._properties.has(key)) {
-	              throw new AxialIllegalProperty(key, this, instance);
+	              throw new AxialUnexpectedProperty(key, this, instance);
 	            }
 	          }
 	        }
@@ -1783,7 +1783,7 @@
 	        for (var key in value) {
 	          if (value.hasOwnProperty(key)) {
 	            if (key !== Axial.PROXY_KEY && !this._properties.has(key)) {
-	              throw new AxialIllegalProperty(key, this, instance);
+	              throw new AxialUnexpectedProperty(key, this, instance);
 	            }
 	          }
 	        }
@@ -1799,10 +1799,10 @@
 	                k = _step$value[0],
 	                _property = _step$value[1];
 	
-	            if (!value.hasOwnProperty(k) && _property.isRequired && !_property.primaryType instanceof AxialFunction) {
+	            if (!value.hasOwnProperty(k) && _property.isRequired) {
 	              throw new AxialMissingProperty(k, this, value);
 	            }
-	            if (value.hasOwnProperty(k)) {
+	            if (value.hasOwnProperty(k) || _property.isRequired) {
 	              _property.validate(value[k], instance);
 	            }
 	          }
@@ -1853,14 +1853,15 @@
 	                k = _step2$value[0],
 	                property = _step2$value[1];
 	
-	            if (property.primaryType instanceof AxialFunction) {
-	              continue;
-	            }
-	            if (!value.hasOwnProperty(k)) {
+	            if (!value.hasOwnProperty(k) && property.isRequired) {
+	              // missing property
 	              return false;
 	            }
 	            try {
-	              property.validate(value[k]);
+	              // value must validate
+	              if (value.hasOwnProperty(k) || property.isRequired) {
+	                property.validate(value[k]);
+	              }
 	            } catch (e) {
 	              return false;
 	            }
@@ -2329,7 +2330,7 @@
 	            if (instance.hasOwnProperty(key) && key !== Axial.PROXY_KEY && !props.has(key)) {
 	              clearInterval(_this23._watchIntervalId);
 	              delete instance[key];
-	              throw new AxialIllegalProperty(key, _this23._iface, _this23);
+	              throw new AxialUnexpectedProperty(key, _this23._iface, _this23);
 	            }
 	          }
 	        }, 30);
@@ -2669,6 +2670,18 @@
 	        return this._types[0];
 	      }
 	    }, {
+	      key: 'deepPrimaryArrayType',
+	      get: function get() {
+	        var type = this._types[0];
+	        if (!(type instanceof AxialArray)) {
+	          return null;
+	        }
+	        while (type instanceof AxialArray && type._type && !(type instanceof AxialInstanceArray)) {
+	          type = type._type;
+	        }
+	        return type;
+	      }
+	    }, {
 	      key: 'primaryInterface',
 	      get: function get() {
 	        return this._types.find(function (type) {
@@ -2866,6 +2879,12 @@
 	          var item = rawArray[i];
 	          if (item instanceof AxialInstance || item instanceof AxialInstanceArray) {
 	            array[i] = item;
+	            continue;
+	          }
+	          var deepPrimaryArrayType = this.property.deepPrimaryArrayType;
+	          if (deepPrimaryArrayType && deepPrimaryArrayType instanceof AxialInterface && deepPrimaryArrayType.is(item)) {
+	            // find primary type form array
+	            array[i] = deepPrimaryArrayType.create(item, this._instance);
 	            continue;
 	          }
 	          var type = Axial.typeOf(item);
