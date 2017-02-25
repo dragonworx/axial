@@ -157,25 +157,64 @@
 	  });
 	
 	  it('2.5 should be able to define multiple interface with same name (as stack)', function () {
-	    var a = Axial.define('iface21a', {
+	    var a = Axial.define('iface25', {
 	      a: Axial.String
 	    });
-	    expect(Axial.getInterface('iface21a').has('a')).toBe(true);
-	    var b = Axial.define('iface21a', {
+	    expect(Axial.getInterface('iface25').has('a')).toBe(true);
+	    var b = Axial.define('iface25', {
 	      b: Axial.String
 	    });
-	    expect(Axial.getInterface('iface21a').has('a')).toBe(false);
-	    expect(Axial.getInterface('iface21a').has('b')).toBe(true);
-	    var c = Axial.define('iface21a', {
+	    expect(Axial.getInterface('iface25').has('a')).toBe(false);
+	    expect(Axial.getInterface('iface25').has('b')).toBe(true);
+	    var c = Axial.define('iface25', {
 	      c: Axial.String
 	    });
-	    expect(Axial.getInterface('iface21a').has('a')).toBe(false);
-	    expect(Axial.getInterface('iface21a').has('b')).toBe(false);
-	    expect(Axial.getInterface('iface21a').has('c')).toBe(true);
-	    expect(Axial.interfaces()['iface21a'].length).toBe(3);
-	    expect(Axial.interfaces()['iface21a'][0].has('a')).toBe(true);
-	    expect(Axial.interfaces()['iface21a'][1].has('b')).toBe(true);
-	    expect(Axial.interfaces()['iface21a'][2].has('c')).toBe(true);
+	    expect(Axial.getInterface('iface25').has('a')).toBe(false);
+	    expect(Axial.getInterface('iface25').has('b')).toBe(false);
+	    expect(Axial.getInterface('iface25').has('c')).toBe(true);
+	    expect(Axial.interfaces()['iface25'].length).toBe(3);
+	    expect(Axial.interfaces()['iface25'][0].has('a')).toBe(true);
+	    expect(Axial.interfaces()['iface25'][1].has('b')).toBe(true);
+	    expect(Axial.interfaces()['iface25'][2].has('c')).toBe(true);
+	  });
+	
+	  it('2.6 should be able to test equality of interfaces to objects', function () {
+	    var iface26A = Axial.define('iface26A', {
+	      a: Axial.String,
+	      b: Axial.Number
+	    });
+	    var iface26B = Axial.define('iface26B', {
+	      a: Axial.Boolean,
+	      b: iface26A
+	    });
+	    var instA = iface26B.new({
+	      a: true,
+	      b: {
+	        a: 'abc',
+	        b: 5
+	      }
+	    });
+	    expect(instA[PROXY].equals({
+	      a: true,
+	      b: {
+	        a: 'abc',
+	        b: 5
+	      }
+	    })).toBe(true);
+	    expect(instA[PROXY].equals({
+	      a: false,
+	      b: {
+	        a: 'abc',
+	        b: 5
+	      }
+	    })).toBe(false);
+	    expect(instA[PROXY].equals({
+	      a: true,
+	      b: {
+	        a: 'abc',
+	        b: 6
+	      }
+	    })).toBe(false);
 	  });
 	});
 	
@@ -1196,10 +1235,14 @@
 	      key: 'extend',
 	      value: function extend(options) {
 	        var copy = this.clone();
-	        for (var key in options) {
-	          if (options.hasOwnProperty(key)) {
-	            copy['_' + key] = options[key];
+	        if (util.isPlainObject(options)) {
+	          for (var key in options) {
+	            if (options.hasOwnProperty(key)) {
+	              copy['_' + key] = options[key];
+	            }
 	          }
+	        } else if (typeof options !== 'undefined') {
+	          copy._defaultValue = options;
 	        }
 	        return copy;
 	      }
@@ -1756,7 +1799,7 @@
 	                k = _step$value[0],
 	                _property = _step$value[1];
 	
-	            if (!value.hasOwnProperty(k) && _property.isRequired) {
+	            if (!value.hasOwnProperty(k) && _property.isRequired && !_property.primaryType instanceof AxialFunction) {
 	              throw new AxialMissingProperty(k, this, value);
 	            }
 	            if (value.hasOwnProperty(k)) {
@@ -1810,6 +1853,9 @@
 	                k = _step2$value[0],
 	                property = _step2$value[1];
 	
+	            if (property.primaryType instanceof AxialFunction) {
+	              continue;
+	            }
 	            if (!value.hasOwnProperty(k)) {
 	              return false;
 	            }
@@ -2079,29 +2125,48 @@
 	        });
 	      }
 	    }, {
-	      key: 'bind',
-	      value: function bind(key, fn) {
-	        this._listeners[key] = this._listeners[key] ? this._listeners[key] : [];
-	        this._listeners[key].push(fn);
-	      }
-	    }, {
-	      key: 'prop',
-	      value: function prop(path) {
-	        return this._iface.prop(path);
-	      }
-	    }, {
-	      key: 'forEach',
-	      value: function forEach(fn) {
-	        var iface = this._iface;
+	      key: 'equals',
+	      value: function equals(instance) {
+	        if (this === instance) {
+	          return true;
+	        }
+	        if (util.isPlainObject(instance)) {
+	          try {
+	            instance = this._iface.create(instance);
+	          } catch (e) {
+	            return false;
+	          }
+	        }
+	        if (!(instance instanceof AxialInstance)) {
+	          return false;
+	        }
 	        var _iteratorNormalCompletion7 = true;
 	        var _didIteratorError7 = false;
 	        var _iteratorError7 = undefined;
 	
 	        try {
-	          for (var _iterator7 = iface._properties.keys()[Symbol.iterator](), _step7; !(_iteratorNormalCompletion7 = (_step7 = _iterator7.next()).done); _iteratorNormalCompletion7 = true) {
-	            var key = _step7.value;
+	          for (var _iterator7 = this._iface._properties.entries()[Symbol.iterator](), _step7; !(_iteratorNormalCompletion7 = (_step7 = _iterator7.next()).done); _iteratorNormalCompletion7 = true) {
+	            var _step7$value = _slicedToArray(_step7.value, 2),
+	                key = _step7$value[0],
+	                property = _step7$value[1];
 	
-	            fn(key, this._state[key]);
+	            var sourceValue = this._state[key];
+	            var targetValue = instance[key];
+	            if (sourceValue instanceof AxialInstance) {
+	              if (targetValue instanceof AxialInstance) {
+	                return sourceValue[PROXY_KEY].equals(targetValue);
+	              } else {
+	                return false;
+	              }
+	            } else if (sourceValue instanceof AxialInstanceArray) {
+	              if (targetValue instanceof AxialInstanceArray) {
+	                return sourceValue.equals(targetValue);
+	              } else {
+	                return false;
+	              }
+	            } else if (sourceValue !== targetValue) {
+	              return false;
+	            }
 	          }
 	        } catch (err) {
 	          _didIteratorError7 = true;
@@ -2118,12 +2183,22 @@
 	          }
 	        }
 	
-	        return this;
+	        return true;
 	      }
 	    }, {
-	      key: 'map',
-	      value: function map(fn) {
-	        var array = [];
+	      key: 'bind',
+	      value: function bind(key, fn) {
+	        this._listeners[key] = this._listeners[key] ? this._listeners[key] : [];
+	        this._listeners[key].push(fn);
+	      }
+	    }, {
+	      key: 'prop',
+	      value: function prop(path) {
+	        return this._iface.prop(path);
+	      }
+	    }, {
+	      key: 'forEach',
+	      value: function forEach(fn) {
 	        var iface = this._iface;
 	        var _iteratorNormalCompletion8 = true;
 	        var _didIteratorError8 = false;
@@ -2133,7 +2208,7 @@
 	          for (var _iterator8 = iface._properties.keys()[Symbol.iterator](), _step8; !(_iteratorNormalCompletion8 = (_step8 = _iterator8.next()).done); _iteratorNormalCompletion8 = true) {
 	            var key = _step8.value;
 	
-	            array.push(fn(key, this._state[key]));
+	            fn(key, this._state[key]);
 	          }
 	        } catch (err) {
 	          _didIteratorError8 = true;
@@ -2146,6 +2221,38 @@
 	          } finally {
 	            if (_didIteratorError8) {
 	              throw _iteratorError8;
+	            }
+	          }
+	        }
+	
+	        return this;
+	      }
+	    }, {
+	      key: 'map',
+	      value: function map(fn) {
+	        var array = [];
+	        var iface = this._iface;
+	        var _iteratorNormalCompletion9 = true;
+	        var _didIteratorError9 = false;
+	        var _iteratorError9 = undefined;
+	
+	        try {
+	          for (var _iterator9 = iface._properties.keys()[Symbol.iterator](), _step9; !(_iteratorNormalCompletion9 = (_step9 = _iterator9.next()).done); _iteratorNormalCompletion9 = true) {
+	            var key = _step9.value;
+	
+	            array.push(fn(key, this._state[key]));
+	          }
+	        } catch (err) {
+	          _didIteratorError9 = true;
+	          _iteratorError9 = err;
+	        } finally {
+	          try {
+	            if (!_iteratorNormalCompletion9 && _iterator9.return) {
+	              _iterator9.return();
+	            }
+	          } finally {
+	            if (_didIteratorError9) {
+	              throw _iteratorError9;
 	            }
 	          }
 	        }
@@ -2253,13 +2360,13 @@
 	      key: 'toPlainObject',
 	      value: function toPlainObject() {
 	        var json = {};
-	        var _iteratorNormalCompletion9 = true;
-	        var _didIteratorError9 = false;
-	        var _iteratorError9 = undefined;
+	        var _iteratorNormalCompletion10 = true;
+	        var _didIteratorError10 = false;
+	        var _iteratorError10 = undefined;
 	
 	        try {
-	          for (var _iterator9 = this._iface._properties.keys()[Symbol.iterator](), _step9; !(_iteratorNormalCompletion9 = (_step9 = _iterator9.next()).done); _iteratorNormalCompletion9 = true) {
-	            var key = _step9.value;
+	          for (var _iterator10 = this._iface._properties.keys()[Symbol.iterator](), _step10; !(_iteratorNormalCompletion10 = (_step10 = _iterator10.next()).done); _iteratorNormalCompletion10 = true) {
+	            var key = _step10.value;
 	
 	            var value = this._state[key];
 	            var type = typeof value === 'undefined' ? 'undefined' : _typeof(value);
@@ -2272,16 +2379,16 @@
 	            }
 	          }
 	        } catch (err) {
-	          _didIteratorError9 = true;
-	          _iteratorError9 = err;
+	          _didIteratorError10 = true;
+	          _iteratorError10 = err;
 	        } finally {
 	          try {
-	            if (!_iteratorNormalCompletion9 && _iterator9.return) {
-	              _iterator9.return();
+	            if (!_iteratorNormalCompletion10 && _iterator10.return) {
+	              _iterator10.return();
 	            }
 	          } finally {
-	            if (_didIteratorError9) {
-	              throw _iteratorError9;
+	            if (_didIteratorError10) {
+	              throw _iteratorError10;
 	            }
 	          }
 	        }
@@ -2315,8 +2422,8 @@
 	    }, {
 	      key: 'toString',
 	      value: function toString() {
-	        //      return '*' + this._iface.name + '#' + this._instanceId;
-	        return util.stringify(this._instance);
+	        return '(AxialInstance)' + this._iface.name + '#' + this._instanceId;
+	        //      return util.stringify(this._instance);
 	      }
 	    }, {
 	      key: 'root',
@@ -2517,6 +2624,11 @@
 	        throw new Error('Type not found');
 	      }
 	    }, {
+	      key: 'toString',
+	      value: function toString() {
+	        return this._iface.name + '#' + this._instanceId;
+	      }
+	    }, {
 	      key: 'path',
 	      get: function get() {
 	        return this._path;
@@ -2625,6 +2737,11 @@
 	      key: 'get',
 	      value: function get() {
 	        return this._instance[Axial.PROXY_KEY]._state[this._key];
+	      }
+	    }, {
+	      key: 'toString',
+	      value: function toString() {
+	        return this._instance[PROXY_KEY].toString() + ':' + this._key;
 	      }
 	    }, {
 	      key: 'instance',
@@ -2764,6 +2881,40 @@
 	          array[i] = item;
 	        }
 	        return array;
+	      }
+	    }, {
+	      key: 'equals',
+	      value: function equals(array) {
+	        if (this === array) {
+	          return true;
+	        }
+	        var targetArray = array instanceof AxialInstanceArray ? array._array : array;
+	        if (array.length !== this.length || !Array.isArray(targetArray)) {
+	          return false;
+	        }
+	        // iterate through and check equal items
+	        var l = targetArray.length;
+	        var sourceArray = this._array;
+	        for (var i = 0; i < l; i++) {
+	          var sourceItem = sourceArray[i];
+	          var targetItem = targetArray[i];
+	          if (sourceItem instanceof AxialInstance) {
+	            if (targetItem instanceof AxialInstance) {
+	              return sourceItem[PROXY_KEY].equals(targetItem);
+	            } else {
+	              return false;
+	            }
+	          } else if (sourceItem instanceof AxialInstanceArray) {
+	            if (targetItem instanceof AxialInstanceArray) {
+	              return sourceItem[PROXY_KEY].equals(targetItem);
+	            } else {
+	              return false;
+	            }
+	          } else if (sourceItem !== targetItem) {
+	            return false;
+	          }
+	        }
+	        return true;
 	      }
 	    }, {
 	      key: 'bindIndexes',
@@ -3385,6 +3536,10 @@
 	  // extend misc types public interface
 	  AxialInterface.prototype.new = AxialInterface.prototype.create;
 	  AxialType.prototype.set = AxialType.prototype.defaultValue;
+	
+	  if (typeof window !== 'undefined') {
+	    window.Axial = Axial;
+	  }
 	
 	  return Axial;
 	}();

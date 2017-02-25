@@ -109,25 +109,64 @@ describe('2. Defining Interfaces', () => {
   });
 
   it('2.5 should be able to define multiple interface with same name (as stack)', () => {
-    const a = Axial.define('iface21a', {
+    const a = Axial.define('iface25', {
       a: Axial.String
     });
-    expect(Axial.getInterface('iface21a').has('a')).toBe(true);
-    const b = Axial.define('iface21a', {
+    expect(Axial.getInterface('iface25').has('a')).toBe(true);
+    const b = Axial.define('iface25', {
       b: Axial.String
     });
-    expect(Axial.getInterface('iface21a').has('a')).toBe(false);
-    expect(Axial.getInterface('iface21a').has('b')).toBe(true);
-    const c = Axial.define('iface21a', {
+    expect(Axial.getInterface('iface25').has('a')).toBe(false);
+    expect(Axial.getInterface('iface25').has('b')).toBe(true);
+    const c = Axial.define('iface25', {
       c: Axial.String
     });
-    expect(Axial.getInterface('iface21a').has('a')).toBe(false);
-    expect(Axial.getInterface('iface21a').has('b')).toBe(false);
-    expect(Axial.getInterface('iface21a').has('c')).toBe(true);
-    expect(Axial.interfaces()['iface21a'].length).toBe(3);
-    expect(Axial.interfaces()['iface21a'][0].has('a')).toBe(true);
-    expect(Axial.interfaces()['iface21a'][1].has('b')).toBe(true);
-    expect(Axial.interfaces()['iface21a'][2].has('c')).toBe(true);
+    expect(Axial.getInterface('iface25').has('a')).toBe(false);
+    expect(Axial.getInterface('iface25').has('b')).toBe(false);
+    expect(Axial.getInterface('iface25').has('c')).toBe(true);
+    expect(Axial.interfaces()['iface25'].length).toBe(3);
+    expect(Axial.interfaces()['iface25'][0].has('a')).toBe(true);
+    expect(Axial.interfaces()['iface25'][1].has('b')).toBe(true);
+    expect(Axial.interfaces()['iface25'][2].has('c')).toBe(true);
+  });
+
+  it('2.6 should be able to test equality of interfaces to objects', () => {
+    const iface26A = Axial.define('iface26A', {
+      a: Axial.String,
+      b: Axial.Number
+    });
+    const iface26B = Axial.define('iface26B', {
+      a: Axial.Boolean,
+      b: iface26A
+    });
+    const instA = iface26B.new({
+      a: true,
+      b: {
+        a: 'abc',
+        b: 5
+      }
+    });
+    expect(instA[PROXY].equals({
+      a: true,
+      b: {
+        a: 'abc',
+        b: 5
+      }
+    })).toBe(true);
+    expect(instA[PROXY].equals({
+      a: false,
+      b: {
+        a: 'abc',
+        b: 5
+      }
+    })).toBe(false);
+    expect(instA[PROXY].equals({
+      a: true,
+      b: {
+        a: 'abc',
+        b: 6
+      }
+    })).toBe(false);
   });
 });
 
