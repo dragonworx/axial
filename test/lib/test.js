@@ -3109,6 +3109,47 @@
 	        return false;
 	      }
 	    }, {
+	      key: 'move',
+	      value: function move(fromIndex, toIndex) {
+	        var item = this.splice(fromIndex, 1)[0];
+	        this.splice(toIndex, 0, item);
+	        return item;
+	      }
+	    }, {
+	      key: 'moveUp',
+	      value: function moveUp(item) {
+	        var fromIndex = this.indexOf(item);
+	        if (fromIndex > 0) {
+	          this.move(fromIndex, fromIndex - 1);
+	          return true;
+	        }
+	        return false;
+	      }
+	    }, {
+	      key: 'moveDown',
+	      value: function moveDown(item) {
+	        var fromIndex = this.indexOf(item);
+	        if (fromIndex > -1 && fromIndex < this._array.length - 1) {
+	          this.move(fromIndex, fromIndex + 1);
+	          return true;
+	        }
+	        return false;
+	      }
+	    }, {
+	      key: 'shiftLeft',
+	      value: function shiftLeft() {
+	        var item = this.shift();
+	        this.push(item);
+	        return item;
+	      }
+	    }, {
+	      key: 'shiftRight',
+	      value: function shiftRight() {
+	        var item = this.pop();
+	        this.unshift(item);
+	        return item;
+	      }
+	    }, {
 	      key: 'toPlainObject',
 	      value: function toPlainObject() {
 	        var array = [];
@@ -3129,6 +3170,16 @@
 	      key: 'stringify',
 	      value: function stringify(prettyPrint) {
 	        return JSON.stringify.call(null, this.toPlainObject(), null, prettyPrint === true ? 4 : undefined);
+	      }
+	    }, {
+	      key: 'first',
+	      get: function get() {
+	        return this._array[0];
+	      }
+	    }, {
+	      key: 'last',
+	      get: function get() {
+	        return this._array[this._array.length - 1];
 	      }
 	    }, {
 	      key: 'isEmpty',
