@@ -2087,9 +2087,20 @@
 	  // -------------------------------------------------------------------------------------- Instances
 	
 	
-	  var AxialInstance = function AxialInstance() {
-	    _classCallCheck(this, AxialInstance);
-	  };
+	  var AxialInstance = function () {
+	    function AxialInstance() {
+	      _classCallCheck(this, AxialInstance);
+	    }
+	
+	    _createClass(AxialInstance, [{
+	      key: 'toString',
+	      value: function toString() {
+	        return this[PROXY_KEY].id;
+	      }
+	    }]);
+	
+	    return AxialInstance;
+	  }();
 	
 	  var AxialInstanceProxy = function () {
 	    function AxialInstanceProxy(instance, iface, parentInstance) {
