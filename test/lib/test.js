@@ -82,22 +82,22 @@
 	    expect(util.typeOf([123])).toBe(Axial.Array(Axial.Number));
 	    expect(util.typeOf({})).toBe(Axial.Object);
 	    // check name of type
-	    expect(util.typeOf(null).name).toBe('null');
-	    expect(util.typeOf(undefined).name).toBe('undefined');
-	    expect(util.typeOf('abc').name).toBe('string');
-	    expect(util.typeOf(123).name).toBe('number');
-	    expect(util.typeOf(true).name).toBe('boolean');
-	    expect(util.typeOf(false).name).toBe('boolean');
-	    expect(util.typeOf(new Date()).name).toBe('date');
-	    expect(util.typeOf(/abc/).name).toBe('regex');
-	    expect(util.typeOf(function () {}).name).toBe('function');
-	    expect(util.typeOf([]).name).toBe('array[*]');
+	    expect(util.typeOf(null).id).toBe('null');
+	    expect(util.typeOf(undefined).id).toBe('undefined');
+	    expect(util.typeOf('abc').id).toBe('string');
+	    expect(util.typeOf(123).id).toBe('number');
+	    expect(util.typeOf(true).id).toBe('boolean');
+	    expect(util.typeOf(false).id).toBe('boolean');
+	    expect(util.typeOf(new Date()).id).toBe('date');
+	    expect(util.typeOf(/abc/).id).toBe('regex');
+	    expect(util.typeOf(function () {}).id).toBe('function');
+	    expect(util.typeOf([]).id).toBe('array[*]');
 	    expect(util.typeOf([]).type).toBe(undefined);
-	    expect(util.typeOf(['abc']).name).toBe('array[string]');
-	    expect(util.typeOf(['abc']).type.name).toBe('string');
-	    expect(util.typeOf([1, 2, 3]).name).toBe('array[number]');
-	    expect(util.typeOf([1, 2, 3]).type.name).toBe('number');
-	    expect(util.typeOf({}).name).toBe('object');
+	    expect(util.typeOf(['abc']).id).toBe('array[string]');
+	    expect(util.typeOf(['abc']).type.id).toBe('string');
+	    expect(util.typeOf([1, 2, 3]).id).toBe('array[number]');
+	    expect(util.typeOf([1, 2, 3]).type.id).toBe('number');
+	    expect(util.typeOf({}).id).toBe('object');
 	  });
 	});
 	
@@ -124,7 +124,7 @@
 	      v: Axial.Array(),
 	      w: Axial.Array(Axial.String)
 	    });
-	    expect(iface.prop('iface.x.y.z').iface.name).toBe('iface.x.y');
+	    expect(iface.prop('iface.x.y.z').iface.id).toBe('iface.x.y');
 	  });
 	
 	  it('2.3 should be able to access interface properties by path', function () {
@@ -911,10 +911,10 @@
 	    expect(ifaceB.has('b')).toBe(true);
 	    expect(ifaceB.has('foo')).toBe(true);
 	    expect(ifaceB.has('who')).toBe(true);
-	    expect(ifaceB.prop('a').iface.name).toBe('ifaceA');
-	    expect(ifaceB.prop('b').iface.name).toBe('ifaceB');
-	    expect(ifaceB.prop('foo').iface.name).toBe('ifaceB');
-	    expect(ifaceB.prop('who').iface.name).toBe('ifaceB');
+	    expect(ifaceB.prop('a').iface.id).toBe('ifaceA');
+	    expect(ifaceB.prop('b').iface.id).toBe('ifaceB');
+	    expect(ifaceB.prop('foo').iface.id).toBe('ifaceB');
+	    expect(ifaceB.prop('who').iface.id).toBe('ifaceB');
 	    expect(inst.who(123)).toBe('ifaceB-123');
 	    expect(inst[PROXY].super.ifaceA.who(123)).toBe('ifaceA-123');
 	  });
@@ -932,11 +932,11 @@
 	    expect(ifaceC.has('c')).toBe(true);
 	    expect(ifaceC.has('foo')).toBe(true);
 	    expect(ifaceC.has('who')).toBe(true);
-	    expect(ifaceC.prop('a').iface.name).toBe('ifaceA');
-	    expect(ifaceC.prop('b').iface.name).toBe('ifaceB');
-	    expect(ifaceC.prop('c').iface.name).toBe('ifaceC');
-	    expect(ifaceC.prop('foo').iface.name).toBe('ifaceC');
-	    expect(ifaceC.prop('who').iface.name).toBe('ifaceC');
+	    expect(ifaceC.prop('a').iface.id).toBe('ifaceA');
+	    expect(ifaceC.prop('b').iface.id).toBe('ifaceB');
+	    expect(ifaceC.prop('c').iface.id).toBe('ifaceC');
+	    expect(ifaceC.prop('foo').iface.id).toBe('ifaceC');
+	    expect(ifaceC.prop('who').iface.id).toBe('ifaceC');
 	    expect(inst.who(123)).toBe('ifaceC-123');
 	    expect(inst[PROXY].super.ifaceA.who(123)).toBe('ifaceA-123');
 	    expect(inst[PROXY].super.ifaceB.who(123)).toBe('ifaceB-123');
@@ -1097,16 +1097,16 @@
 	  var AxialTypeAlreadyDefined = function (_Exception6) {
 	    _inherits(AxialTypeAlreadyDefined, _Exception6);
 	
-	    function AxialTypeAlreadyDefined(typeName, key, schema) {
+	    function AxialTypeAlreadyDefined(typeName, key, iface) {
 	      _classCallCheck(this, AxialTypeAlreadyDefined);
 	
-	      var message = 'Type "' + typeName + '" is already defined for property "' + key + '" in schema "' + schema.name + '"';
+	      var message = 'Type "' + typeName + '" is already defined for property "' + key + '" in schema "' + iface.id + '"';
 	
 	      var _this6 = _possibleConstructorReturn(this, (AxialTypeAlreadyDefined.__proto__ || Object.getPrototypeOf(AxialTypeAlreadyDefined)).call(this, message));
 	
 	      _this6.typeName = typeName;
 	      _this6.key = key;
-	      _this6.schema = schema;
+	      _this6.iface = iface;
 	      _this6.message = message;
 	      return _this6;
 	    }
@@ -1159,7 +1159,7 @@
 	    function AxialUnexpectedProperty(key, iface, instance) {
 	      _classCallCheck(this, AxialUnexpectedProperty);
 	
-	      var message = 'Unexpected key "' + key + '" found in given object not declared in interface "' + iface._name + '"';
+	      var message = 'Unexpected key "' + key + '" found in given object not declared in interface "' + iface._id + '"';
 	
 	      var _this9 = _possibleConstructorReturn(this, (AxialUnexpectedProperty.__proto__ || Object.getPrototypeOf(AxialUnexpectedProperty)).call(this, message));
 	
@@ -1206,18 +1206,18 @@
 	        }
 	        if (!this.is(value)) {
 	          //given, expected, key, instance
-	          throw new AxialInvalidType(this.name, util.typeOf(value).name, instance, property);
+	          throw new AxialInvalidType(this.id, util.typeOf(value).id, instance, property);
 	        }
 	      }
 	    }, {
 	      key: 'is',
 	      value: function is(value) {
-	        return (typeof value === 'undefined' ? 'undefined' : _typeof(value)) === this.name;
+	        return (typeof value === 'undefined' ? 'undefined' : _typeof(value)) === this.id;
 	      }
 	    }, {
 	      key: 'toString',
 	      value: function toString() {
-	        return this.name;
+	        return this.id;
 	      }
 	    }, {
 	      key: 'clone',
@@ -1261,9 +1261,9 @@
 	        return copy;
 	      }
 	    }, {
-	      key: 'name',
+	      key: 'id',
 	      get: function get() {
-	        return this._name || this.constructor.name;
+	        return this._id || this.constructor.id;
 	      }
 	    }, {
 	      key: 'baseType',
@@ -1271,7 +1271,7 @@
 	        return this._baseType ? this._baseType : this;
 	      }
 	    }], [{
-	      key: 'name',
+	      key: 'id',
 	      get: function get() {
 	        return '?';
 	      }
@@ -1300,7 +1300,7 @@
 	        return value === null;
 	      }
 	    }], [{
-	      key: 'name',
+	      key: 'id',
 	      get: function get() {
 	        return 'null';
 	      }
@@ -1327,7 +1327,7 @@
 	        return typeof value === 'undefined';
 	      }
 	    }], [{
-	      key: 'name',
+	      key: 'id',
 	      get: function get() {
 	        return 'undefined';
 	      }
@@ -1358,7 +1358,7 @@
 	        }
 	        if (!this.is(value)) {
 	          if (typeof value !== 'string') {
-	            throw new AxialInvalidType(util.typeOf(value).name, 'string', instance, property);
+	            throw new AxialInvalidType(util.typeOf(value).id, 'string', instance, property);
 	          }
 	          throw new AxialInvalidStringPattern(value, this._pattern);
 	        }
@@ -1369,7 +1369,7 @@
 	        return AxialTypePrototype.is.call(this, value) && (this._pattern ? !!value.match(this._pattern) : true);
 	      }
 	    }], [{
-	      key: 'name',
+	      key: 'id',
 	      get: function get() {
 	        return 'string';
 	      }
@@ -1401,7 +1401,7 @@
 	        }
 	        if (!this.is(value)) {
 	          if (typeof value !== 'number') {
-	            throw new AxialInvalidType('number', util.typeOf(value).name, instance, property);
+	            throw new AxialInvalidType('number', util.typeOf(value).id, instance, property);
 	          }
 	          throw new AxialInvalidNumericRange(value, this._min, this._max);
 	        }
@@ -1412,7 +1412,7 @@
 	        return AxialTypePrototype.is.call(this, value) && value >= this._min && value <= this._max;
 	      }
 	    }], [{
-	      key: 'name',
+	      key: 'id',
 	      get: function get() {
 	        return 'number';
 	      }
@@ -1434,7 +1434,7 @@
 	    }
 	
 	    _createClass(AxialBoolean, null, [{
-	      key: 'name',
+	      key: 'id',
 	      get: function get() {
 	        return 'boolean';
 	      }
@@ -1461,7 +1461,7 @@
 	        return value instanceof Date;
 	      }
 	    }], [{
-	      key: 'name',
+	      key: 'id',
 	      get: function get() {
 	        return 'date';
 	      }
@@ -1488,7 +1488,7 @@
 	        return value instanceof RegExp;
 	      }
 	    }], [{
-	      key: 'name',
+	      key: 'id',
 	      get: function get() {
 	        return 'regex';
 	      }
@@ -1515,7 +1515,7 @@
 	        return typeof value === 'function';
 	      }
 	    }], [{
-	      key: 'name',
+	      key: 'id',
 	      get: function get() {
 	        return 'function';
 	      }
@@ -1559,7 +1559,7 @@
 	      key: 'isItem',
 	      value: function isItem(item) {
 	        if (this._type) {
-	          return util.typeOf(item).name === this._type.name;
+	          return util.typeOf(item).id === this._type.id;
 	        }
 	        return true;
 	      }
@@ -1567,7 +1567,7 @@
 	      key: 'validate',
 	      value: function validate(value, instance, property) {
 	        if (!Array.isArray(value)) {
-	          throw new AxialInvalidType(this.name, util.typeOf(value).name, instance, property);
+	          throw new AxialInvalidType(this.id, util.typeOf(value).id, instance, property);
 	        }
 	        if (this._type) {
 	          var l = value.length;
@@ -1583,7 +1583,7 @@
 	        return this._type;
 	      }
 	    }], [{
-	      key: 'name',
+	      key: 'id',
 	      get: function get() {
 	        return 'array';
 	      }
@@ -1610,7 +1610,7 @@
 	        return util.isPlainObject(value) || (typeof value === 'undefined' ? 'undefined' : _typeof(value)) === 'object' && value !== null && !Array.isArray(value);
 	      }
 	    }], [{
-	      key: 'name',
+	      key: 'id',
 	      get: function get() {
 	        return 'object';
 	      }
@@ -1623,7 +1623,7 @@
 	    _inherits(AxialInterface, _AxialObject);
 	
 	    function AxialInterface() {
-	      var interfaceName = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : BLANK_INTERFACE_NAME;
+	      var interfaceId = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : BLANK_INTERFACE_NAME;
 	      var prototype = arguments[1];
 	      var rootInterface = arguments[2];
 	
@@ -1631,17 +1631,17 @@
 	
 	      var _this20 = _possibleConstructorReturn(this, (AxialInterface.__proto__ || Object.getPrototypeOf(AxialInterface)).call(this));
 	
-	      if (util.isPlainObject(interfaceName) && typeof prototype === 'undefined') {
+	      if (util.isPlainObject(interfaceId) && typeof prototype === 'undefined') {
 	        // handle case where just single object prototype argument given
-	        prototype = interfaceName;
-	        interfaceName = BLANK_INTERFACE_NAME;
+	        prototype = interfaceId;
+	        interfaceId = BLANK_INTERFACE_NAME;
 	      }
 	
-	      if (interfaceName === BLANK_INTERFACE_NAME) {
-	        interfaceName += ++_interfaceId;
+	      if (interfaceId === BLANK_INTERFACE_NAME) {
+	        interfaceId += ++_interfaceId;
 	      }
 	
-	      _this20._name = interfaceName;
+	      _this20._id = interfaceId;
 	      _this20._properties = new Map();
 	      _this20._allProps = new Map();
 	      _this20._rootInterface = rootInterface;
@@ -1649,13 +1649,13 @@
 	
 	      _this20.define(prototype);
 	
-	      if (interfaceName) {
-	        Axial.Interface[_this20._name] = _this20;
+	      if (interfaceId) {
+	        Axial.Interface[_this20._id] = _this20;
 	      }
 	
-	      var _name = _this20._name;
-	      _interfaces[_name] = _interfaces[_name] ? _interfaces[_name] : [];
-	      _interfaces[_name].push(_this20);
+	      var _id = _this20._id;
+	      _interfaces[_id] = _interfaces[_id] ? _interfaces[_id] : [];
+	      _interfaces[_id].push(_this20);
 	      return _this20;
 	    }
 	
@@ -1680,7 +1680,7 @@
 	            var typeArray = Array.isArray(typeDef) ? typeDef : [typeDef];
 	            typeArray = util.expandArray(typeArray);
 	
-	            var path = this._name ? this._name + '.' + key : BLANK_INTERFACE_NAME + '.' + key;
+	            var path = this._id ? this._id + '.' + key : BLANK_INTERFACE_NAME + '.' + key;
 	
 	            if (isTypePlainObject) {
 	              typeArray = [new AxialInterface(path, typeDef, this.root)];
@@ -1691,9 +1691,9 @@
 	                if (!util.isType(t)) {
 	                  throw new AxialUnsupportedType(t);
 	                }
-	                var typeName = t.name;
+	                var typeName = t.id;
 	                if (definedTypes[typeName]) {
-	                  throw new AxialTypeAlreadyDefined(t.name, key, this);
+	                  throw new AxialTypeAlreadyDefined(t.id, key, this);
 	                } else {
 	                  definedTypes[typeName] = true;
 	                }
@@ -1787,7 +1787,7 @@
 	      value: function validate(value, instance, property) {
 	        // check value is object
 	        if (!AxialObject.prototype.is.call(this, value)) {
-	          throw new AxialInvalidType(util.typeOf(value).name, this.name, instance, property);
+	          throw new AxialInvalidType(util.typeOf(value).id, this.id, instance, property);
 	        }
 	
 	        // check value has no extra props
@@ -1835,7 +1835,7 @@
 	    }, {
 	      key: 'is',
 	      value: function is(value) {
-	        if (this._name === null) {
+	        if (this._id === null) {
 	          // the initial Interface type will never match values
 	          return false;
 	        }
@@ -1903,8 +1903,8 @@
 	      key: 'prop',
 	      value: function prop(name) {
 	        var path = name;
-	        if (this._name && path.indexOf(this._name) !== 0) {
-	          path = this._name + '.' + path;
+	        if (this._id && path.indexOf(this._id) !== 0) {
+	          path = this._id + '.' + path;
 	        }
 	        return this.root._allProps.get(path);
 	      }
@@ -2017,17 +2017,17 @@
 	        return iface;
 	      }
 	    }, {
-	      key: 'name',
+	      key: 'id',
 	      get: function get() {
-	        return this._name;
+	        return this._id;
 	      },
-	      set: function set(name) {
-	        if (this._name) {
-	          delete Axial.Interface[this._name];
+	      set: function set(id) {
+	        if (this._id) {
+	          delete Axial.Interface[this._id];
 	          //test-all gone?
 	        }
-	        this._name = name;
-	        Axial.Interface[this._name] = this;
+	        this._id = id;
+	        Axial.Interface[this._id] = this;
 	      }
 	    }, {
 	      key: 'root',
@@ -2075,7 +2075,7 @@
 	        Axial.Interface.validate(value, instance, property);
 	      }
 	    }], [{
-	      key: 'name',
+	      key: 'id',
 	      get: function get() {
 	        return 'reference';
 	      }
@@ -2115,7 +2115,6 @@
 	      this._isWatching = false;
 	      this._super = {};
 	      this._instanceId = ++_instanceId;
-	      this._history = [];
 	
 	      if (iface) {
 	        // track instance
@@ -2125,7 +2124,7 @@
 	        var ifaceToIndex = iface;
 	        while (ifaceToIndex) {
 	          var methods = {};
-	          this._super[ifaceToIndex.name] = methods;
+	          this._super[ifaceToIndex.id] = methods;
 	          var _iteratorNormalCompletion6 = true;
 	          var _didIteratorError6 = false;
 	          var _iteratorError6 = undefined;
@@ -2457,28 +2456,9 @@
 	        return JSON.stringify.call(null, this.toPlainObject(), null, prettyPrint === true ? 4 : undefined);
 	      }
 	    }, {
-	      key: 'push',
-	      value: function push(name) {
-	        if (!name) {
-	          name = '' + ++_pushId;
-	        }
-	        try {
-	          var history = {
-	            name: name,
-	            time: Date.now(),
-	            state: this.stringify()
-	          };
-	          this._history.push(history);
-	        } catch (e) {
-	          // TODO: proper error
-	          throw new Error('Cannot serialise state for history - ' + e.message);
-	        }
-	        return name;
-	      }
-	    }, {
 	      key: 'toString',
 	      value: function toString() {
-	        return this._iface.name + '#' + this._instanceId;
+	        return this._iface.id + '#' + this._instanceId;
 	      }
 	    }, {
 	      key: 'root',
@@ -2519,7 +2499,7 @@
 	    }, {
 	      key: 'id',
 	      get: function get() {
-	        return 'axial!' + this._iface.name + '#' + this._instanceId;
+	        return 'axial!' + this._iface.id + '#' + this._instanceId;
 	      }
 	    }]);
 	
@@ -2686,7 +2666,7 @@
 	    }, {
 	      key: 'toString',
 	      value: function toString() {
-	        return this._iface.name + '#' + this._instanceId;
+	        return this._iface.id + '#' + this._instanceId;
 	      }
 	    }, {
 	      key: 'path',
@@ -3399,11 +3379,9 @@
 	        var props = _proxy(value).map(function (k, v) {
 	          return k + ':' + _this32.stringify(v);
 	        });
-	        return '*' + value[PROXY_KEY].iface.name + '#' + value[PROXY_KEY].instanceId + '{' + props.join(', ') + '}';
+	        return '*' + value[PROXY_KEY].iface.id + '#' + value[PROXY_KEY].instanceId + '{' + props.join(', ') + '}';
 	      }
 	      if (value instanceof AxialInstanceArray) {
-	        // TODO: why this bug? Max stack call exceeded?
-	        //        const items = value.map(item => '<' + Axial.typeOf(item).name + '>:' + this.stringify(item));
 	        return '*array#' + value.instanceId + '[' + value.length + ']';
 	      }
 	      try {
@@ -3438,14 +3416,14 @@
 	    Regex: new AxialRegex(),
 	    Function: new AxialFunction(),
 	    Array: function Array(type) {
-	      var typeId = type ? type.name : '*';
+	      var typeId = type ? type.id : '*';
 	      var t = _arrayTypes[typeId];
 	      if (t) {
 	        return t;
 	      } else {
 	        t = _arrayTypes[typeId] = new AxialArray(type);
 	        t._baseType = this.Array();
-	        t._name = 'array[' + typeId + ']';
+	        t._id = 'array[' + typeId + ']';
 	      }
 	      return t;
 	    },
@@ -3473,28 +3451,28 @@
 	
 	  // -------------------------------------------------------------------------------------- Axial
 	  var Axial = {
-	    define: function define(name, prototype) {
-	      return new AxialInterface(name, prototype);
+	    define: function define(id, prototype) {
+	      return new AxialInterface(id, prototype);
 	    },
 	    getInterface: function getInterface() {
-	      var name = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : 'null';
+	      var id = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : 'null';
 	
 	      // return first one defined (allows easy mocking/testing)
-	      var ifaceArray = _interfaces[name];
+	      var ifaceArray = _interfaces[id];
 	      if (ifaceArray) {
 	        return ifaceArray[ifaceArray.length - 1];
 	      }
 	    },
-	    interfaceNames: function interfaceNames() {
-	      return Object.keys(_interfaces).filter(function (name) {
-	        var ifaceArray = _interfaces[name];
+	    interfaceIds: function interfaceIds() {
+	      return Object.keys(_interfaces).filter(function (id) {
+	        var ifaceArray = _interfaces[id];
 	        return ifaceArray[0].isRootInterface;
 	      });
 	    },
 	    interfaces: function interfaces() {
 	      var o = {};
-	      this.interfaceNames().forEach(function (name) {
-	        return o[name] = _interfaces[name];
+	      this.interfaceIds().forEach(function (id) {
+	        return o[id] = _interfaces[id];
 	      });
 	      return o;
 	    },
@@ -3586,7 +3564,7 @@
 	          try {
 	            arg = JSON.stringify(e.arguments[i]);
 	          } catch (e) {
-	            arg = util.typeOf(e.arguments[i]).name;
+	            arg = util.typeOf(e.arguments[i]).id;
 	          }
 	          args.push(arg + ':' + _typeof(e.arguments[i]));
 	        }
@@ -3596,12 +3574,12 @@
 	    typeOf: function typeOf(value) {
 	      var type = util.typeOf(value);
 	      if (type.constructor === AxialObject) {
-	        var ifaceNames = this.interfaceNames();
+	        var ifaceNames = this.interfaceIds();
 	        var l = ifaceNames.length;
 	        for (var i = 0; i < l; i++) {
-	          var name = ifaceNames[i];
-	          var iface = this.getInterface(name);
-	          // gets latest version with same name
+	          var id = ifaceNames[i];
+	          var iface = this.getInterface(id);
+	          // gets latest version with same id
 	          if (iface.is(value)) {
 	            return iface;
 	          }

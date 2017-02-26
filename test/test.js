@@ -34,22 +34,22 @@ describe('1. Types', () => {
     expect(util.typeOf([123])).toBe(Axial.Array(Axial.Number));
     expect(util.typeOf({})).toBe(Axial.Object);
     // check name of type
-    expect(util.typeOf(null).name).toBe('null');
-    expect(util.typeOf(undefined).name).toBe('undefined');
-    expect(util.typeOf('abc').name).toBe('string');
-    expect(util.typeOf(123).name).toBe('number');
-    expect(util.typeOf(true).name).toBe('boolean');
-    expect(util.typeOf(false).name).toBe('boolean');
-    expect(util.typeOf(new Date).name).toBe('date');
-    expect(util.typeOf(/abc/).name).toBe('regex');
-    expect(util.typeOf(function () {}).name).toBe('function');
-    expect(util.typeOf([]).name).toBe('array[*]');
+    expect(util.typeOf(null).id).toBe('null');
+    expect(util.typeOf(undefined).id).toBe('undefined');
+    expect(util.typeOf('abc').id).toBe('string');
+    expect(util.typeOf(123).id).toBe('number');
+    expect(util.typeOf(true).id).toBe('boolean');
+    expect(util.typeOf(false).id).toBe('boolean');
+    expect(util.typeOf(new Date).id).toBe('date');
+    expect(util.typeOf(/abc/).id).toBe('regex');
+    expect(util.typeOf(function () {}).id).toBe('function');
+    expect(util.typeOf([]).id).toBe('array[*]');
     expect(util.typeOf([]).type).toBe(undefined);
-    expect(util.typeOf(['abc']).name).toBe('array[string]');
-    expect(util.typeOf(['abc']).type.name).toBe('string');
-    expect(util.typeOf([1,2,3]).name).toBe('array[number]');
-    expect(util.typeOf([1,2,3]).type.name).toBe('number');
-    expect(util.typeOf({}).name).toBe('object');
+    expect(util.typeOf(['abc']).id).toBe('array[string]');
+    expect(util.typeOf(['abc']).type.id).toBe('string');
+    expect(util.typeOf([1,2,3]).id).toBe('array[number]');
+    expect(util.typeOf([1,2,3]).type.id).toBe('number');
+    expect(util.typeOf({}).id).toBe('object');
   });
 });
 
@@ -76,7 +76,7 @@ describe('2. Defining Interfaces', () => {
       v: Axial.Array(),
       w: Axial.Array(Axial.String)
     });
-    expect(iface.prop('iface.x.y.z').iface.name).toBe('iface.x.y');
+    expect(iface.prop('iface.x.y.z').iface.id).toBe('iface.x.y');
   });
 
   it('2.3 should be able to access interface properties by path', () => {
@@ -842,10 +842,10 @@ describe('8. Interface Inheritance', () => {
     expect(ifaceB.has('b')).toBe(true);
     expect(ifaceB.has('foo')).toBe(true);
     expect(ifaceB.has('who')).toBe(true);
-    expect(ifaceB.prop('a').iface.name).toBe('ifaceA');
-    expect(ifaceB.prop('b').iface.name).toBe('ifaceB');
-    expect(ifaceB.prop('foo').iface.name).toBe('ifaceB');
-    expect(ifaceB.prop('who').iface.name).toBe('ifaceB');
+    expect(ifaceB.prop('a').iface.id).toBe('ifaceA');
+    expect(ifaceB.prop('b').iface.id).toBe('ifaceB');
+    expect(ifaceB.prop('foo').iface.id).toBe('ifaceB');
+    expect(ifaceB.prop('who').iface.id).toBe('ifaceB');
     expect(inst.who(123)).toBe('ifaceB-123');
     expect(inst[PROXY].super.ifaceA.who(123)).toBe('ifaceA-123');
   });
@@ -863,11 +863,11 @@ describe('8. Interface Inheritance', () => {
     expect(ifaceC.has('c')).toBe(true);
     expect(ifaceC.has('foo')).toBe(true);
     expect(ifaceC.has('who')).toBe(true);
-    expect(ifaceC.prop('a').iface.name).toBe('ifaceA');
-    expect(ifaceC.prop('b').iface.name).toBe('ifaceB');
-    expect(ifaceC.prop('c').iface.name).toBe('ifaceC');
-    expect(ifaceC.prop('foo').iface.name).toBe('ifaceC');
-    expect(ifaceC.prop('who').iface.name).toBe('ifaceC');
+    expect(ifaceC.prop('a').iface.id).toBe('ifaceA');
+    expect(ifaceC.prop('b').iface.id).toBe('ifaceB');
+    expect(ifaceC.prop('c').iface.id).toBe('ifaceC');
+    expect(ifaceC.prop('foo').iface.id).toBe('ifaceC');
+    expect(ifaceC.prop('who').iface.id).toBe('ifaceC');
     expect(inst.who(123)).toBe('ifaceC-123');
     expect(inst[PROXY].super.ifaceA.who(123)).toBe('ifaceA-123');
     expect(inst[PROXY].super.ifaceB.who(123)).toBe('ifaceB-123');
