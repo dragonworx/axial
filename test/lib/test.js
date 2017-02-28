@@ -975,7 +975,6 @@
 	  var _logListeners = {};
 	
 	  var _logListenerCount = 0;
-	  var _pushId = 0;
 	  var util = void 0,
 	      T = void 0;
 	  var _instanceId = 0,
@@ -984,6 +983,10 @@
 	
 	  function _proxy(instance) {
 	    return instance[PROXY_KEY];
+	  }
+	
+	  function _isValidKey(key) {
+	    return CONST.VALID_KEYS.indexOf(key) > -1;
 	  }
 	
 	  // -------------------------------------------------------------------------------------- Errors
@@ -1021,7 +1024,7 @@
 	      _classCallCheck(this, AxialInvalidType);
 	
 	      var instString = instance ? _proxy(instance).toString() : '?';
-	      var message = 'Invalid type for property "' + property.path + ('" ~ "' + given + '" given, "' + expected + '" expected');
+	      var message = 'Invalid type for property "' + property.path + ('" ~ "' + given + '" given, "' + expected + '" expected.');
 	
 	      var _this2 = _possibleConstructorReturn(this, (AxialInvalidType.__proto__ || Object.getPrototypeOf(AxialInvalidType)).call(this, message));
 	
@@ -1042,7 +1045,7 @@
 	    function AxialInvalidNumericRange(given, min, max) {
 	      _classCallCheck(this, AxialInvalidNumericRange);
 	
-	      var message = 'Invalid numeric range - expected [' + min + ' .. ' + max + '], given ' + given;
+	      var message = 'Invalid numeric range - expected [' + min + ' .. ' + max + '], given ' + given + '.';
 	
 	      var _this3 = _possibleConstructorReturn(this, (AxialInvalidNumericRange.__proto__ || Object.getPrototypeOf(AxialInvalidNumericRange)).call(this, message));
 	
@@ -1062,7 +1065,7 @@
 	    function AxialInvalidStringPattern(given, pattern) {
 	      _classCallCheck(this, AxialInvalidStringPattern);
 	
-	      var message = 'Invalid string pattern - expected "' + pattern + '", given "' + given + '"';
+	      var message = 'Invalid string pattern - expected "' + pattern + '", given "' + given + '".';
 	
 	      var _this4 = _possibleConstructorReturn(this, (AxialInvalidStringPattern.__proto__ || Object.getPrototypeOf(AxialInvalidStringPattern)).call(this, message));
 	
@@ -1081,7 +1084,7 @@
 	    function AxialUndefinedValue(source, path) {
 	      _classCallCheck(this, AxialUndefinedValue);
 	
-	      var message = 'Undefined value for object path "' + path + '"';
+	      var message = 'Undefined value for object path "' + path + '".';
 	
 	      var _this5 = _possibleConstructorReturn(this, (AxialUndefinedValue.__proto__ || Object.getPrototypeOf(AxialUndefinedValue)).call(this, message));
 	
@@ -1100,7 +1103,7 @@
 	    function AxialTypeAlreadyDefined(typeName, key, iface) {
 	      _classCallCheck(this, AxialTypeAlreadyDefined);
 	
-	      var message = 'Type "' + typeName + '" is already defined for property "' + key + '" in schema "' + iface.id + '"';
+	      var message = 'Type "' + typeName + '" is already defined for property "' + key + '" in schema "' + iface.id + '".';
 	
 	      var _this6 = _possibleConstructorReturn(this, (AxialTypeAlreadyDefined.__proto__ || Object.getPrototypeOf(AxialTypeAlreadyDefined)).call(this, message));
 	
@@ -1120,7 +1123,7 @@
 	    function AxialInvalidArgument(index, expected, given) {
 	      _classCallCheck(this, AxialInvalidArgument);
 	
-	      var message = 'Invalid argument #' + index + ' - Expected "' + expected + '", given "' + given + '"';
+	      var message = 'Invalid argument #' + index + ' - Expected "' + expected + '", given "' + given + '".';
 	
 	      var _this7 = _possibleConstructorReturn(this, (AxialInvalidArgument.__proto__ || Object.getPrototypeOf(AxialInvalidArgument)).call(this, message));
 	
@@ -1139,7 +1142,7 @@
 	    function AxialMissingProperty(key, iface, object) {
 	      _classCallCheck(this, AxialMissingProperty);
 	
-	      var message = 'Missing interface property "' + key + '" from given object';
+	      var message = 'Missing interface property "' + key + '" from given object.';
 	
 	      var _this8 = _possibleConstructorReturn(this, (AxialMissingProperty.__proto__ || Object.getPrototypeOf(AxialMissingProperty)).call(this, message));
 	
@@ -1159,7 +1162,7 @@
 	    function AxialUnexpectedProperty(key, iface, instance) {
 	      _classCallCheck(this, AxialUnexpectedProperty);
 	
-	      var message = 'Unexpected key "' + key + '" found in given object not declared in interface "' + iface._id + '"';
+	      var message = 'Unexpected key "' + key + '" found in given object not declared in interface "' + iface.id + '".';
 	
 	      var _this9 = _possibleConstructorReturn(this, (AxialUnexpectedProperty.__proto__ || Object.getPrototypeOf(AxialUnexpectedProperty)).call(this, message));
 	
@@ -1173,6 +1176,23 @@
 	    return AxialUnexpectedProperty;
 	  }(Exception);
 	
+	  var AxialDockRejection = function (_Exception10) {
+	    _inherits(AxialDockRejection, _Exception10);
+	
+	    function AxialDockRejection(message) {
+	      _classCallCheck(this, AxialDockRejection);
+	
+	      message = 'Dock Rejected: ' + message;
+	
+	      var _this10 = _possibleConstructorReturn(this, (AxialDockRejection.__proto__ || Object.getPrototypeOf(AxialDockRejection)).call(this, message));
+	
+	      _this10.message = message;
+	      return _this10;
+	    }
+	
+	    return AxialDockRejection;
+	  }(Exception);
+	
 	  var Errors = {
 	    UnsupportedType: AxialUnsupportedType,
 	    InvalidType: AxialInvalidType,
@@ -1182,7 +1202,8 @@
 	    TypeAlreadyDefined: AxialTypeAlreadyDefined,
 	    InvalidArgument: AxialInvalidArgument,
 	    MissingProperty: AxialMissingProperty,
-	    IllegalProperty: AxialUnexpectedProperty
+	    IllegalProperty: AxialUnexpectedProperty,
+	    DockRejection: AxialDockRejection
 	  };
 	
 	  // -------------------------------------------------------------------------------------- Types
@@ -1254,6 +1275,11 @@
 	        return copy;
 	      }
 	    }, {
+	      key: 'value',
+	      value: function value(_value) {
+	        return this.defaultValue(_value);
+	      }
+	    }, {
 	      key: 'required',
 	      value: function required() {
 	        var copy = this.clone();
@@ -1288,10 +1314,10 @@
 	    function AxialNull() {
 	      _classCallCheck(this, AxialNull);
 	
-	      var _this10 = _possibleConstructorReturn(this, (AxialNull.__proto__ || Object.getPrototypeOf(AxialNull)).call(this));
+	      var _this11 = _possibleConstructorReturn(this, (AxialNull.__proto__ || Object.getPrototypeOf(AxialNull)).call(this));
 	
-	      _this10._defaultValue = null;
-	      return _this10;
+	      _this11._defaultValue = null;
+	      return _this11;
 	    }
 	
 	    _createClass(AxialNull, [{
@@ -1315,10 +1341,10 @@
 	    function AxialUndefined() {
 	      _classCallCheck(this, AxialUndefined);
 	
-	      var _this11 = _possibleConstructorReturn(this, (AxialUndefined.__proto__ || Object.getPrototypeOf(AxialUndefined)).call(this));
+	      var _this12 = _possibleConstructorReturn(this, (AxialUndefined.__proto__ || Object.getPrototypeOf(AxialUndefined)).call(this));
 	
-	      _this11._defaultValue = undefined;
-	      return _this11;
+	      _this12._defaultValue = undefined;
+	      return _this12;
 	    }
 	
 	    _createClass(AxialUndefined, [{
@@ -1342,11 +1368,11 @@
 	    function AxialString() {
 	      _classCallCheck(this, AxialString);
 	
-	      var _this12 = _possibleConstructorReturn(this, (AxialString.__proto__ || Object.getPrototypeOf(AxialString)).call(this));
+	      var _this13 = _possibleConstructorReturn(this, (AxialString.__proto__ || Object.getPrototypeOf(AxialString)).call(this));
 	
-	      _this12._pattern = null;
-	      _this12._defaultValue = '';
-	      return _this12;
+	      _this13._pattern = null;
+	      _this13._defaultValue = '';
+	      return _this13;
 	    }
 	
 	    _createClass(AxialString, [{
@@ -1384,12 +1410,12 @@
 	    function AxialNumber() {
 	      _classCallCheck(this, AxialNumber);
 	
-	      var _this13 = _possibleConstructorReturn(this, (AxialNumber.__proto__ || Object.getPrototypeOf(AxialNumber)).call(this));
+	      var _this14 = _possibleConstructorReturn(this, (AxialNumber.__proto__ || Object.getPrototypeOf(AxialNumber)).call(this));
 	
-	      _this13._min = Number.MIN_SAFE_INTEGER;
-	      _this13._max = Number.MAX_SAFE_INTEGER;
-	      _this13._defaultValue = 0;
-	      return _this13;
+	      _this14._min = Number.MIN_SAFE_INTEGER;
+	      _this14._max = Number.MAX_SAFE_INTEGER;
+	      _this14._defaultValue = 0;
+	      return _this14;
 	    }
 	
 	    _createClass(AxialNumber, [{
@@ -1427,10 +1453,10 @@
 	    function AxialBoolean() {
 	      _classCallCheck(this, AxialBoolean);
 	
-	      var _this14 = _possibleConstructorReturn(this, (AxialBoolean.__proto__ || Object.getPrototypeOf(AxialBoolean)).call(this));
+	      var _this15 = _possibleConstructorReturn(this, (AxialBoolean.__proto__ || Object.getPrototypeOf(AxialBoolean)).call(this));
 	
-	      _this14._defaultValue = false;
-	      return _this14;
+	      _this15._defaultValue = false;
+	      return _this15;
 	    }
 	
 	    _createClass(AxialBoolean, null, [{
@@ -1449,10 +1475,10 @@
 	    function AxialDate() {
 	      _classCallCheck(this, AxialDate);
 	
-	      var _this15 = _possibleConstructorReturn(this, (AxialDate.__proto__ || Object.getPrototypeOf(AxialDate)).call(this));
+	      var _this16 = _possibleConstructorReturn(this, (AxialDate.__proto__ || Object.getPrototypeOf(AxialDate)).call(this));
 	
-	      _this15._defaultValue = new Date();
-	      return _this15;
+	      _this16._defaultValue = new Date();
+	      return _this16;
 	    }
 	
 	    _createClass(AxialDate, [{
@@ -1476,10 +1502,10 @@
 	    function AxialRegex() {
 	      _classCallCheck(this, AxialRegex);
 	
-	      var _this16 = _possibleConstructorReturn(this, (AxialRegex.__proto__ || Object.getPrototypeOf(AxialRegex)).call(this));
+	      var _this17 = _possibleConstructorReturn(this, (AxialRegex.__proto__ || Object.getPrototypeOf(AxialRegex)).call(this));
 	
-	      _this16._defaultValue = new RegExp('.*', 'i');
-	      return _this16;
+	      _this17._defaultValue = new RegExp('.*', 'i');
+	      return _this17;
 	    }
 	
 	    _createClass(AxialRegex, [{
@@ -1503,10 +1529,10 @@
 	    function AxialFunction() {
 	      _classCallCheck(this, AxialFunction);
 	
-	      var _this17 = _possibleConstructorReturn(this, (AxialFunction.__proto__ || Object.getPrototypeOf(AxialFunction)).call(this));
+	      var _this18 = _possibleConstructorReturn(this, (AxialFunction.__proto__ || Object.getPrototypeOf(AxialFunction)).call(this));
 	
-	      _this17._defaultValue = new Function();
-	      return _this17;
+	      _this18._defaultValue = new Function();
+	      return _this18;
 	    }
 	
 	    _createClass(AxialFunction, [{
@@ -1530,11 +1556,11 @@
 	    function AxialArray(type) {
 	      _classCallCheck(this, AxialArray);
 	
-	      var _this18 = _possibleConstructorReturn(this, (AxialArray.__proto__ || Object.getPrototypeOf(AxialArray)).call(this));
+	      var _this19 = _possibleConstructorReturn(this, (AxialArray.__proto__ || Object.getPrototypeOf(AxialArray)).call(this));
 	
-	      _this18._type = type;
-	      _this18._defaultValue = [];
-	      return _this18;
+	      _this19._type = type;
+	      _this19._defaultValue = [];
+	      return _this19;
 	    }
 	
 	    _createClass(AxialArray, [{
@@ -1598,10 +1624,10 @@
 	    function AxialObject() {
 	      _classCallCheck(this, AxialObject);
 	
-	      var _this19 = _possibleConstructorReturn(this, (AxialObject.__proto__ || Object.getPrototypeOf(AxialObject)).call(this));
+	      var _this20 = _possibleConstructorReturn(this, (AxialObject.__proto__ || Object.getPrototypeOf(AxialObject)).call(this));
 	
-	      _this19._defaultValue = {};
-	      return _this19;
+	      _this20._defaultValue = {};
+	      return _this20;
 	    }
 	
 	    _createClass(AxialObject, [{
@@ -1619,6 +1645,44 @@
 	    return AxialObject;
 	  }(AxialType);
 	
+	  var AxialReference = function (_AxialType11) {
+	    _inherits(AxialReference, _AxialType11);
+	
+	    function AxialReference() {
+	      _classCallCheck(this, AxialReference);
+	
+	      var _this21 = _possibleConstructorReturn(this, (AxialReference.__proto__ || Object.getPrototypeOf(AxialReference)).call(this));
+	
+	      _this21._defaultValue = null;
+	      return _this21;
+	    }
+	
+	    _createClass(AxialReference, [{
+	      key: 'is',
+	      value: function is(value) {
+	        return value instanceof AxialInstance;
+	      }
+	    }, {
+	      key: 'validate',
+	      value: function validate(value, instance, property) {
+	        if (value === null) {
+	          return true;
+	        }
+	
+	        if (!(value instanceof AxialInstance)) {
+	          throw new AxialInvalidType(util.typeOf(value).id, 'AxialInstance', instance, property);
+	        }
+	      }
+	    }], [{
+	      key: 'id',
+	      get: function get() {
+	        return 'reference';
+	      }
+	    }]);
+	
+	    return AxialReference;
+	  }(AxialType);
+	
 	  var AxialInterface = function (_AxialObject) {
 	    _inherits(AxialInterface, _AxialObject);
 	
@@ -1629,7 +1693,7 @@
 	
 	      _classCallCheck(this, AxialInterface);
 	
-	      var _this20 = _possibleConstructorReturn(this, (AxialInterface.__proto__ || Object.getPrototypeOf(AxialInterface)).call(this));
+	      var _this22 = _possibleConstructorReturn(this, (AxialInterface.__proto__ || Object.getPrototypeOf(AxialInterface)).call(this));
 	
 	      if (util.isPlainObject(interfaceId) && typeof prototype === 'undefined') {
 	        // handle case where just single object prototype argument given
@@ -1641,22 +1705,22 @@
 	        interfaceId += ++_interfaceId;
 	      }
 	
-	      _this20._id = interfaceId;
-	      _this20._properties = new Map();
-	      _this20._allProps = new Map();
-	      _this20._rootInterface = rootInterface;
-	      _this20._methods = new Map();
+	      _this22._id = interfaceId;
+	      _this22._properties = new Map();
+	      _this22._allProps = new Map();
+	      _this22._rootInterface = rootInterface;
+	      _this22._methods = new Map();
 	
-	      _this20.define(prototype);
+	      _this22.define(prototype);
 	
 	      if (interfaceId) {
-	        Axial.Interface[_this20._id] = _this20;
+	        Axial.Interface[_this22._id] = _this22;
 	      }
 	
-	      var _id = _this20._id;
+	      var _id = _this22._id;
 	      _interfaces[_id] = _interfaces[_id] ? _interfaces[_id] : [];
-	      _interfaces[_id].push(_this20);
-	      return _this20;
+	      _interfaces[_id].push(_this22);
+	      return _this22;
 	    }
 	
 	    _createClass(AxialInterface, [{
@@ -1713,7 +1777,7 @@
 	    }, {
 	      key: 'create',
 	      value: function create() {
-	        var _this21 = this;
+	        var _this23 = this;
 	
 	        var defaultValues = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : {};
 	        var parentInstance = arguments[1];
@@ -1727,10 +1791,10 @@
 	
 	        if (isPlainObject) {
 	          util.expandDotSyntaxKeys(defaultValues, function (path, key, object) {
-	            if (!_this21._properties.has(key)) {
-	              throw new AxialUnexpectedProperty(key, _this21, instance);
+	            if (!_this23._properties.has(key)) {
+	              throw new AxialUnexpectedProperty(key, _this23, instance);
 	            }
-	            var prop = _this21._properties.get(key);
+	            var prop = _this23._properties.get(key);
 	            var subPath = path.split('.').slice(1).join('.');
 	            var obj = {};
 	            util.setObjectAtPath(obj, subPath, object);
@@ -1763,7 +1827,7 @@
 	            value = property.primaryInterface.create(value, instance);
 	          } else if (!defaultValues.hasOwnProperty(key)) {
 	            if (property.isRequired) {
-	              throw new AxialMissingProperty(key, _this21, defaultValues);
+	              throw new AxialMissingProperty(key, _this23, defaultValues);
 	            } else {
 	              value = property.defaultValue;
 	            }
@@ -1793,7 +1857,7 @@
 	        // check value has no extra props
 	        for (var key in value) {
 	          if (value.hasOwnProperty(key)) {
-	            if (key !== Axial.PROXY_KEY && !this._properties.has(key)) {
+	            if (!_isValidKey(key) && !this._properties.has(key)) {
 	              throw new AxialUnexpectedProperty(key, this, instance);
 	            }
 	          }
@@ -2049,64 +2113,17 @@
 	    return AxialInterface;
 	  }(AxialObject);
 	
-	  var AxialReference = function (_AxialType11) {
-	    _inherits(AxialReference, _AxialType11);
-	
-	    function AxialReference() {
-	      _classCallCheck(this, AxialReference);
-	
-	      var _this22 = _possibleConstructorReturn(this, (AxialReference.__proto__ || Object.getPrototypeOf(AxialReference)).call(this));
-	
-	      _this22._defaultValue = null;
-	      return _this22;
-	    }
-	
-	    _createClass(AxialReference, [{
-	      key: 'is',
-	      value: function is(value) {
-	        return value instanceof AxialInstance;
-	      }
-	    }, {
-	      key: 'validate',
-	      value: function validate(value, instance, property) {
-	        if (value === null) {
-	          return;
-	        }
-	        Axial.Interface.validate(value, instance, property);
-	      }
-	    }], [{
-	      key: 'id',
-	      get: function get() {
-	        return 'reference';
-	      }
-	    }]);
-	
-	    return AxialReference;
-	  }(AxialType);
-	
 	  // -------------------------------------------------------------------------------------- Instances
 	
-	
-	  var AxialInstance = function () {
-	    function AxialInstance() {
-	      _classCallCheck(this, AxialInstance);
-	    }
-	
-	    _createClass(AxialInstance, [{
-	      key: 'toString',
-	      value: function toString() {
-	        return this[PROXY_KEY].id;
-	      }
-	    }]);
-	
-	    return AxialInstance;
-	  }();
 	
 	  var AxialInstanceProxy = function () {
 	    function AxialInstanceProxy(instance, iface, parentInstance) {
 	      _classCallCheck(this, AxialInstanceProxy);
 	
-	      instance[Axial.PROXY_KEY] = this;
+	      instance[PROXY_KEY] = this;
+	      instance['_type'] = iface.id;
+	      instance['_typeOf'] = this.typeOf.bind(this);
+	      this._instanceOf = iface.id;
 	      this._instance = instance;
 	      this._state = {};
 	      this._iface = iface;
@@ -2158,6 +2175,59 @@
 	    }
 	
 	    _createClass(AxialInstanceProxy, [{
+	      key: 'typeOf',
+	      value: function typeOf(iface) {
+	        if (typeof iface === 'string') {
+	          return this._iface.id === iface.id;
+	        }
+	        return this._iface === iface;
+	      }
+	    }, {
+	      key: 'dock',
+	      value: function dock(parentInstance, property) {
+	        if (typeof parentInstance.onChildDocking === 'function') {
+	          var dockError = parentInstance.onChildDocking(this._instance, property);
+	          if (dockError && dockError.constructor == AxialDockRejection) {
+	            dockError.parentInstance = parentInstance;
+	            dockError.childInstance = this;
+	            parentInstance[PROXY_KEY].dispatch('!reject', {
+	              instance: parentInstance,
+	              property: property,
+	              method: 'dock',
+	              key: property.key,
+	              target: parentInstance[PROXY_KEY],
+	              value: this,
+	              newValue: parentInstance,
+	              oldValue: this._parentInstance,
+	              parentInstance: parentInstance,
+	              childInstance: this,
+	              error: dockError
+	            });
+	            throw dockError;
+	          }
+	        }
+	
+	        var oldParentInstance = this._parentInstance;
+	        this._parentInstance = parentInstance;
+	
+	        var event = {
+	          instance: this._instance,
+	          property: property,
+	          method: 'dock',
+	          key: property.key,
+	          target: parentInstance[PROXY_KEY],
+	          value: parentInstance,
+	          newValue: parentInstance,
+	          oldValue: oldParentInstance
+	        };
+	
+	        if (typeof this._instance.onDock === 'function') {
+	          event.dockValue = this._instance.onDock(event);
+	        }
+	
+	        this.dispatch(property.key, event);
+	      }
+	    }, {
 	      key: 'defineAccessors',
 	      value: function defineAccessors(property) {
 	        var key = property.key;
@@ -2332,13 +2402,15 @@
 	        // dispatch globally too
 	        var returnValue = Axial.dispatch(eventData);
 	        if (returnValue) {
+	          // global handlers override local handlers
 	          return returnValue;
 	        }
+	
+	        // dispatch for each event listener attached to key
 	        var listeners = this._listeners[key];
 	        if (listeners) {
 	          var l = listeners.length;
 	          for (var i = 0; i < l; i++) {
-	            // dispatch for each event listener to interface keys
 	            returnValue = listeners[i](eventData);
 	            if (returnValue) {
 	              return returnValue;
@@ -2349,15 +2421,15 @@
 	    }, {
 	      key: 'dispose',
 	      value: function dispose() {
-	        var _this23 = this;
+	        var _this24 = this;
 	
 	        this._iface.forEach(function (property, key) {
-	          var item = _this23._state[key];
+	          var item = _this24._state[key];
 	          if (typeof item.dispose === 'function') {
 	            item.dispose();
 	          }
-	          delete _this23._state[key];
-	          delete _this23._instance[key];
+	          delete _this24._state[key];
+	          delete _this24._instance[key];
 	        });
 	        delete this._instance[Axial.PROXY_KEY];
 	        delete _instances[this.id];
@@ -2371,7 +2443,7 @@
 	    }, {
 	      key: 'lock',
 	      value: function lock() {
-	        var _this24 = this;
+	        var _this25 = this;
 	
 	        if (this._isWatching) {
 	          return;
@@ -2379,12 +2451,12 @@
 	        this._isWatching = true;
 	        var props = this._iface._properties;
 	        this._watchIntervalId = setInterval(function () {
-	          var instance = _this24._instance;
+	          var instance = _this25._instance;
 	          for (var key in instance) {
-	            if (instance.hasOwnProperty(key) && key !== Axial.PROXY_KEY && !props.has(key)) {
-	              clearInterval(_this24._watchIntervalId);
+	            if (instance.hasOwnProperty(key) && !_isValidKey(key) && !props.has(key)) {
+	              clearInterval(_this25._watchIntervalId);
 	              delete instance[key];
-	              throw new AxialUnexpectedProperty(key, _this24._iface, _this24);
+	              throw new AxialUnexpectedProperty(key, _this25._iface, _this25);
 	            }
 	          }
 	        }, 30);
@@ -2506,6 +2578,21 @@
 	    return AxialInstanceProxy;
 	  }();
 	
+	  var AxialInstance = function () {
+	    function AxialInstance() {
+	      _classCallCheck(this, AxialInstance);
+	    }
+	
+	    _createClass(AxialInstance, [{
+	      key: 'toString',
+	      value: function toString() {
+	        return this[PROXY_KEY].id;
+	      }
+	    }]);
+	
+	    return AxialInstance;
+	  }();
+	
 	  var AxialInterfaceProperty = function () {
 	    function AxialInterfaceProperty(iface, key, types, path) {
 	      _classCallCheck(this, AxialInterfaceProperty);
@@ -2569,17 +2656,37 @@
 	    }, {
 	      key: 'set',
 	      value: function set(instance, value) {
-	        var _this25 = this;
+	        var _this26 = this;
 	
 	        var oldValue = instance[Axial.PROXY_KEY]._state[this._key];
 	        var rawValue = value;
 	
-	        this.validate(value, instance);
+	        try {
+	          this.validate(value, instance);
+	        } catch (e) {
+	          instance[Axial.PROXY_KEY].dispatch(CONST.EVENT_KEY + 'reject', {
+	            instance: instance,
+	            target: instance[PROXY_KEY],
+	            property: this,
+	            method: 'validation',
+	            key: this._key,
+	            value: value,
+	            newValue: rawValue,
+	            oldValue: oldValue,
+	            error: e
+	          });
+	          throw e;
+	        }
 	
 	        // convert to AxialInstance if Interface and object given
 	        if (this.is(Axial.Interface) && util.isPlainObject(value)) {
 	          var iface = this.primaryInterface;
 	          value = iface.create(value, instance);
+	        }
+	
+	        // trigger dock events, give parentInstance a chance to reject the child docking
+	        if (value instanceof AxialInstance) {
+	          value[PROXY_KEY].dock(instance, this);
 	        }
 	
 	        // convert to AxialInstanceArray if array
@@ -2595,6 +2702,7 @@
 	              // dispatch call, execute function
 	              instance[Axial.PROXY_KEY].dispatch(this._key, {
 	                instance: instance,
+	                target: instance[PROXY_KEY],
 	                property: this,
 	                method: 'call',
 	                key: this._key,
@@ -2605,7 +2713,7 @@
 	              });
 	
 	              return fn.apply(instance, arguments);
-	            }.bind(_this25);
+	            }.bind(_this26);
 	            value._isAxialBound = true;
 	          })();
 	        }
@@ -2616,6 +2724,7 @@
 	        // dispatch event
 	        var returnValue = instance[Axial.PROXY_KEY].dispatch(this._key, {
 	          instance: instance,
+	          target: instance[PROXY_KEY],
 	          property: this,
 	          method: 'set',
 	          key: this._key,
@@ -2644,6 +2753,7 @@
 	        // dispatch event
 	        instance[Axial.PROXY_KEY].dispatch(this._key, {
 	          instance: instance,
+	          target: instance[PROXY_KEY],
 	          property: this,
 	          method: 'get',
 	          key: this._key,
@@ -2827,7 +2937,7 @@
 	
 	  var AxialInstanceArray = function () {
 	    function AxialInstanceArray(instance, property) {
-	      var _this26 = this;
+	      var _this27 = this;
 	
 	      var array = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : [];
 	
@@ -2844,14 +2954,15 @@
 	      this._array = array;
 	      if (array.length) {
 	        this._array = this.convertArray(array);
-	        this.length = this._array.length;
 	      }
+	      this.length = this._array.length;
 	
 	      _arrayMembers.forEach(function (member) {
 	        // stub each member of Array.prototype
 	        // validate arguments if mutator...
-	        Object.defineProperty(_this26, member, {
+	        Object.defineProperty(_this27, member, {
 	          enumerable: false,
+	
 	          value: function value() {
 	            var args = Array.prototype.slice.call(arguments);
 	            var isMutator = _arrayMutators.indexOf(member) > -1;
@@ -2977,7 +3088,7 @@
 	    }, {
 	      key: 'bindIndexes',
 	      value: function bindIndexes() {
-	        var _this27 = this;
+	        var _this28 = this;
 	
 	        var array = this._array;
 	        var instance = this._instance;
@@ -2993,10 +3104,10 @@
 	        var l = array.length + 1;
 	
 	        var _loop = function _loop(_i) {
-	          _this27._indexLength++;
+	          _this28._indexLength++;
 	          var key = '' + _i;
-	          if (!_this27.hasOwnProperty(key)) {
-	            Object.defineProperty(_this27, key, {
+	          if (!_this28.hasOwnProperty(key)) {
+	            Object.defineProperty(_this28, key, {
 	              get: function get() {
 	                // dispatch event
 	                instance[Axial.PROXY_KEY].dispatch(property.key, {
@@ -3011,7 +3122,7 @@
 	                return array[_i];
 	              },
 	              set: function set(value) {
-	                var _this28 = this;
+	                var _this29 = this;
 	
 	                var oldValue = array[_i];
 	                var rawValue = value;
@@ -3047,7 +3158,7 @@
 	                      });
 	
 	                      return fn.apply(instance, arguments);
-	                    }.bind(_this28);
+	                    }.bind(_this29);
 	                    value._isAxialBound = true;
 	                  })();
 	                }
@@ -3150,6 +3261,21 @@
 	        return item;
 	      }
 	    }, {
+	      key: 'first',
+	      value: function first() {
+	        return this._array[0];
+	      }
+	    }, {
+	      key: 'last',
+	      value: function last() {
+	        return this._array[this._array.length - 1];
+	      }
+	    }, {
+	      key: 'plural',
+	      value: function plural() {
+	        return this.length === 1 ? '' : 's';
+	      }
+	    }, {
 	      key: 'toPlainObject',
 	      value: function toPlainObject() {
 	        var array = [];
@@ -3170,16 +3296,6 @@
 	      key: 'stringify',
 	      value: function stringify(prettyPrint) {
 	        return JSON.stringify.call(null, this.toPlainObject(), null, prettyPrint === true ? 4 : undefined);
-	      }
-	    }, {
-	      key: 'first',
-	      get: function get() {
-	        return this._array[0];
-	      }
-	    }, {
-	      key: 'last',
-	      get: function get() {
-	        return this._array[this._array.length - 1];
 	      }
 	    }, {
 	      key: 'isEmpty',
@@ -3232,15 +3348,15 @@
 	      }();
 	    },
 	    merge: function merge(source, target) {
-	      var _this29 = this;
+	      var _this30 = this;
 	
 	      var copy = function copy(_source, _target) {
 	        for (var _key in _target) {
 	          if (_target.hasOwnProperty(_key)) {
 	            var sourceValue = _source[_key];
 	            var targetValue = _target[_key];
-	            if (_this29.isPlainObject(targetValue)) {
-	              if (_this29.isPlainObject(sourceValue)) {
+	            if (_this30.isPlainObject(targetValue)) {
+	              if (_this30.isPlainObject(sourceValue)) {
 	                copy(sourceValue, targetValue);
 	              } else {
 	                var obj = {};
@@ -3300,7 +3416,7 @@
 	      return true;
 	    },
 	    getObjectPaths: function getObjectPaths(obj, includeBranchPaths) {
-	      var _this30 = this;
+	      var _this31 = this;
 	
 	      var keys = [];
 	      var ref = null;
@@ -3310,7 +3426,7 @@
 	          if (o.hasOwnProperty(k)) {
 	            ref = o[k];
 	            path = p ? p + '.' + k : k;
-	            if (_this30.isPlainObject(ref)) {
+	            if (_this31.isPlainObject(ref)) {
 	              if (includeBranchPaths === true) {
 	                keys.push(path);
 	              }
@@ -3325,7 +3441,7 @@
 	      return keys;
 	    },
 	    getObjectPathValues: function getObjectPathValues(obj, includeBranchPaths) {
-	      var _this31 = this;
+	      var _this32 = this;
 	
 	      var keyValues = [];
 	      var ref = null;
@@ -3335,7 +3451,7 @@
 	          if (o.hasOwnProperty(k)) {
 	            ref = o[k];
 	            path = p ? p + '.' + k : k;
-	            if (_this31.isPlainObject(ref)) {
+	            if (_this32.isPlainObject(ref)) {
 	              if (includeBranchPaths === true) {
 	                keyValues.push({ path: path, value: ref, isBranch: true });
 	              }
@@ -3418,7 +3534,7 @@
 	      return outArray;
 	    },
 	    stringify: function stringify(value) {
-	      var _this32 = this;
+	      var _this33 = this;
 	
 	      if (typeof value === 'function') {
 	        return 'function () {...}';
@@ -3428,7 +3544,7 @@
 	      }
 	      if (value instanceof AxialInstance) {
 	        var props = _proxy(value).map(function (k, v) {
-	          return k + ':' + _this32.stringify(v);
+	          return k + ':' + _this33.stringify(v);
 	        });
 	        return '*' + value[PROXY_KEY].iface.id + '#' + value[PROXY_KEY].instanceId + '{' + props.join(', ') + '}';
 	      }
@@ -3664,8 +3780,10 @@
 	'use strict';
 	
 	module.exports = {
-	  BLANK_INTERFACE_NAME: 'untitled_',
+	  BLANK_INTERFACE_NAME: 'anonymous',
 	  PROXY_KEY: '$',
+	  EVENT_KEY: '!',
+	  VALID_KEYS: ['$', '_type', '_typeOf', 'onDock', 'onChildDocking'],
 	  ARRAY_MEMBERS: ['concat', 'copyWithin', 'entries', 'every', 'fill', 'filter', 'find', 'findIndex', 'forEach', 'includes', 'indexOf', 'join', 'keys', 'lastIndexOf', 'map', 'pop', 'push', 'reduce', 'reduceRight', 'reverse', 'shift', 'slice', 'some', 'sort', 'splice', 'toLocaleString', 'toSource', 'toString', 'unshift', 'values'],
 	  ARRAY_MUTATORS: ['copyWithin', 'fill', 'pop', 'push', 'reverse', 'shift', 'sort', 'splice', 'unshift'],
 	  ARRAY_MUTATORS_REQUIRE_ARGS_VALIDATED: ['fill', 'push', 'splice', 'unshift']
