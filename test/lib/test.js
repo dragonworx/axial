@@ -1734,12 +1734,14 @@
 	          if (prototype.hasOwnProperty(key)) {
 	            var definedTypes = {};
 	            var typeDef = prototype[key];
+	
 	            if (!(typeDef instanceof AxialType) && !Array.isArray(typeDef)) {
 	              var Type = Axial.typeOf(typeDef);
 	              if (!(Type instanceof AxialObject)) {
 	                typeDef = Type.extend(typeDef);
 	              }
 	            }
+	
 	            var isTypePlainObject = util.isPlainObject(typeDef);
 	            var typeArray = Array.isArray(typeDef) ? typeDef : [typeDef];
 	            typeArray = util.expandArray(typeArray);
@@ -2578,6 +2580,19 @@
 	    return AxialInstanceProxy;
 	  }();
 	
+	  /**
+	   * TODO: Move AxialInstanceProxy into prototype of AxialInstance, remove proxy idea.
+	   * Prototype is non-enumerable, and if instance wants to use prototype key,
+	   * they can get a handler to existing prototype value and call when needed,
+	   * or even use Constructor.prototype.originalKey.call(this)
+	   */
+	
+	  /**
+	   * TODO: Bubble up rejection errors to root instance.
+	   * This way components can be designed to capture errors from docked children.
+	   */
+	
+	
 	  var AxialInstance = function () {
 	    function AxialInstance() {
 	      _classCallCheck(this, AxialInstance);
@@ -2587,6 +2602,11 @@
 	      key: 'toString',
 	      value: function toString() {
 	        return this[PROXY_KEY].id;
+	      }
+	    }, {
+	      key: 'onChildDocking',
+	      value: function onChildDocking(instance) {
+	        console.log(instance._type);
 	      }
 	    }]);
 	
