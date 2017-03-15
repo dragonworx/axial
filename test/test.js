@@ -210,7 +210,7 @@ describe('3. Creating Instances', () => {
       'x.y.z': 6,
       a: {
         b: function () {
-          return this[PROXY].root.x.y.z;
+          return this[PROXY].rootContainer.x.y.z;
         }
       }
     });
@@ -330,14 +330,14 @@ describe('4. Configuring Interface Property Types', () => {
       }),
       a: Axial.String.extend({
         defaultValue: 'baz',
-        validator: value => {
+        validate: value => {
           if (value !== 'baz') {
             throw new Error('Not a baz!');
           }
         }
       }),
       b: Axial.Number.extend({
-        validator: value => {
+        validate: value => {
           if (value % 10 !== 0) {
             throw new Error('Must be multiple of 10');
           }
