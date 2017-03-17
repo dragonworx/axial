@@ -1,7 +1,6 @@
 const Axial = require('../lib/axial');
 const util = Axial.util;
 const expect = require('expect');
-const PROXY = Axial.PROXY_KEY;
 
 if (typeof window !== 'undefined') {
   window.Axial = Axial;
@@ -67,7 +66,7 @@ describe('2. Defining Interfaces', () => {
       'a.b.c': Axial.Boolean
     });
     expect(iface).toBeA(Axial.Interface.constructor);
-    expect(iface.prop('a.b.c').is(Axial.Boolean)).toBe(true);
+    expect(iface.property('a.b.c').is(Axial.Boolean)).toBe(true);
   });
 
   it('2.2 should be able to define an interface with a name', () => {
@@ -76,18 +75,18 @@ describe('2. Defining Interfaces', () => {
       v: Axial.Array(),
       w: Axial.Array(Axial.String)
     });
-    expect(iface.prop('iface.x.y.z').iface.id).toBe('iface.x.y');
+    expect(iface.property('iface.x.y.z').iface.id).toBe('iface.x.y');
   });
 
   it('2.3 should be able to access interface properties by path', () => {
-    expect(iface.prop('iface.x').is(Axial.Interface)).toBe(true);
-    expect(iface.prop('iface.x').is(Axial.String)).toBe(false);
-    expect(iface.prop('iface.x.y.z').is(Axial.Number)).toBe(true);
-    expect(iface.prop('iface.x.y.z').is(Axial.Boolean)).toBe(true);
-    expect(iface.prop('iface.v').is(Axial.Array())).toBe(true);
-    expect(iface.prop('iface.v').is(Axial.Array(Axial.String))).toBe(false);
-    expect(iface.prop('iface.w').is(Axial.Array(Axial.String))).toBe(true);
-    expect(iface.prop('iface.w').is(Axial.Array(Axial.Number))).toBe(false);
+    expect(iface.property('iface.x').is(Axial.Interface)).toBe(true);
+    expect(iface.property('iface.x').is(Axial.String)).toBe(false);
+    expect(iface.property('iface.x.y.z').is(Axial.Number)).toBe(true);
+    expect(iface.property('iface.x.y.z').is(Axial.Boolean)).toBe(true);
+    expect(iface.property('iface.v').is(Axial.Array())).toBe(true);
+    expect(iface.property('iface.v').is(Axial.Array(Axial.String))).toBe(false);
+    expect(iface.property('iface.w').is(Axial.Array(Axial.String))).toBe(true);
+    expect(iface.property('iface.w').is(Axial.Array(Axial.Number))).toBe(false);
   });
 
   it('2.4 should not be able to define the same type more than once', () => {
@@ -146,21 +145,21 @@ describe('2. Defining Interfaces', () => {
         b: 5
       }
     });
-    expect(instA[PROXY].equals({
+    expect(instA.equals({
       a: true,
       b: {
         a: 'abc',
         b: 5
       }
     })).toBe(true);
-    expect(instA[PROXY].equals({
+    expect(instA.equals({
       a: false,
       b: {
         a: 'abc',
         b: 5
       }
     })).toBe(false);
-    expect(instA[PROXY].equals({
+    expect(instA.equals({
       a: true,
       b: {
         a: 'abc',
@@ -191,7 +190,7 @@ describe('3. Creating Instances', () => {
     a = iface.new();
     expect(a).toBeA(Axial.Instance.constructor);
     expect(Axial.typeOf(a)).toBe(iface);
-    expect(Axial.proxy(a).stringify()).toBe('{"x":{"y":{"z":0}},"a":{}}');
+    expect(a.stringify()).toBe('{"x":{"y":{"z":0}},"a":{}}');
   });
 
   it('3.1.b should be able to create instances of interfaces with given values', () => {
@@ -210,7 +209,7 @@ describe('3. Creating Instances', () => {
       'x.y.z': 6,
       a: {
         b: function () {
-          return this[PROXY].rootContainer.x.y.z;
+          return this.rootContainer.x.y.z;
         }
       }
     });
@@ -220,7 +219,7 @@ describe('3. Creating Instances', () => {
     expect(a.a.b()).toBe(6);
     expect(Axial.getInterface('iface')).toBe(iface);
     expect(Axial.typeOf(a)).toBe(iface);
-    expect(Axial.proxy(a).stringify()).toBe('{"x":{"y":{"z":6}},"a":{}}');
+    expect(a.stringify()).toBe('{"x":{"y":{"z":6}},"a":{}}');
   });
 
   it('3.2.a should NOT be allowed to create instance with non-interface properties', () => {
@@ -286,7 +285,7 @@ describe('3. Creating Instances', () => {
     expect(() => a.b = [123]).toThrow(Axial.InvalidType);
     expect(() => a.c = [[]]).toThrow(Axial.InvalidType);
     expect(() => a.c = [[123]]).toThrow(Axial.InvalidType);
-    expect(Axial.proxy(a).stringify()).toBe('{"a":[],"b":["abc"],"c":[{"x":1}],"d":[["abc"],["efg"]]}');
+    expect(a.stringify()).toBe('{"a":[],"b":["abc"],"c":[{"x":1}],"d":[["abc"],["efg"]]}');
   });
 
   it('3.5 should be able to use objects', () => {
@@ -395,9 +394,9 @@ describe('5. Listening to instance changes', () => {
       handlerCount++;
     };
     Axial.bind(fn);
-    a[PROXY].bind('a', fn);
+    a.bind('a', fn);
     a.a = {y:5};
-    a[PROXY].unbind();
+    a.unbind();
     Axial.unbind();
     expect(handlerCount).toBe(2);
   });
@@ -410,9 +409,9 @@ describe('5. Listening to instance changes', () => {
       handlerCount++;
     };
     Axial.bind(fn);
-    a[PROXY].bind('a', fn);
+    a.bind('a', fn);
     const test = a.a;
-    a[PROXY].unbind();
+    a.unbind();
     Axial.unbind();
     expect(handlerCount).toBe(2);
   });
@@ -616,7 +615,7 @@ describe('7. Arrays', () => {
     expect(() => iface.new({a:[[{x:1}]]})).toThrow();
     expect(() => iface.new({a:[[{y:'foo'}]]})).toThrow();
     expect(iface.new({a:[[{x:'foo'}]]}).a[0][0].constructor).toBe(Axial.Instance.constructor);
-    expect(iface.new({a:[[{x:'foo'}]]}).a[0][0][PROXY].iface).toBe(subIFace);
+    expect(iface.new({a:[[{x:'foo'}]]}).a[0][0].iface).toBe(subIFace);
   });
 
   it('7.2 should be able to bind array mutations to instance values', () => {
@@ -627,11 +626,10 @@ describe('7. Arrays', () => {
       a: [1, 2, 3]
     });
     const array = instance.a;
-    const proxy = instance[PROXY];
     let dispatch = 0;
 
     // get indexes
-    proxy.bind('a', e => {
+    instance.bind('a', e => {
       expect(e.method).toBe('get');
       expect(e.arrayMethod).toBe('index');
       expect(e.index).toBe(2);
@@ -639,10 +637,10 @@ describe('7. Arrays', () => {
       dispatch++;
     });
     expect(array[2]).toBe(3);
-    proxy.unbind('a');
+    instance.unbind('a');
 
     // get indexes
-    proxy.bind('a', e => {
+    instance.bind('a', e => {
       expect(e.method).toBe('set');
       expect(e.arrayMethod).toBe('index');
       expect(e.index).toBe(2);
@@ -650,71 +648,71 @@ describe('7. Arrays', () => {
       dispatch++;
     });
     array[2] = 6;
-    proxy.unbind('a');
+    instance.unbind('a');
 
     // copyWithin
-    proxy.bind('a', e => {
+    instance.bind('a', e => {
       expect(e.arrayMethod).toBe('copyWithin');
       expect(array.length).toBe(3);
       expect(array.array).toEqual([2,6,6]);
       dispatch++;
     });
     array.copyWithin(0, 1);
-    proxy.unbind('a');
+    instance.unbind('a');
 
     // fill
-    proxy.bind('a', e => {
+    instance.bind('a', e => {
       expect(e.arrayMethod).toBe('fill');
       expect(array.length).toBe(3);
       expect(array.array).toEqual([4,4,4]);
       dispatch++;
     });
     array.fill(4);
-    proxy.unbind('a');
+    instance.unbind('a');
 
     // pop
-    proxy.bind('a', e => {
+    instance.bind('a', e => {
       expect(e.arrayMethod).toBe('pop');
       expect(array.length).toBe(2);
       expect(array.array).toEqual([4,4]);
       dispatch++;
     });
     array.pop();
-    proxy.unbind('a');
+    instance.unbind('a');
 
     // push
-    proxy.bind('a', e => {
+    instance.bind('a', e => {
       expect(e.arrayMethod).toBe('push');
       expect(array.length).toBe(3);
       expect(array.array).toEqual([4,4,5]);
       dispatch++;
     });
     array.push(5);
-    proxy.unbind('a');
+    instance.unbind('a');
 
     // reverse
-    proxy.bind('a', e => {
+    instance.bind('a', e => {
       expect(e.arrayMethod).toBe('reverse');
       expect(array.length).toBe(3);
       expect(array.array).toEqual([5,4,4]);
       dispatch++;
     });
     array.reverse();
-    proxy.unbind('a');
+    instance.unbind('a');
 
     // shift
-    proxy.bind('a', e => {
+    instance.bind('a', e => {
       expect(e.arrayMethod).toBe('shift');
       expect(array.length).toBe(2);
       expect(array.array).toEqual([4,4]);
       dispatch++;
     });
     expect(array.shift()).toBe(5);
-    proxy.unbind('a');
+    instance.unbind('a');
 
     // sort
     array.push(3);
-    proxy.bind('a', e => {
+    instance.bind('a', e => {
       expect(e.arrayMethod).toBe('sort');
       expect(array.length).toBe(3);
       expect(array.array).toEqual([3,4,4]);
@@ -723,11 +721,11 @@ describe('7. Arrays', () => {
     array.sort((a, b) => {
       return a < b ? -1 : a > b ? 1 : 0;
     });
-    proxy.unbind('a');
+    instance.unbind('a');
 
     // splice
     let round = 1;
-    proxy.bind('a', e => {
+    instance.bind('a', e => {
       expect(e.arrayMethod).toBe('splice');
       if (round === 1) {
         expect(array.length).toBe(2);
@@ -743,17 +741,17 @@ describe('7. Arrays', () => {
     });
     array.splice(1, 1);
     array.splice(0, 0, 1,2,3);
-    proxy.unbind('a');
+    instance.unbind('a');
 
     // unshift
-    proxy.bind('a', e => {
+    instance.bind('a', e => {
       expect(e.arrayMethod).toBe('unshift');
       expect(array.length).toBe(7);
       expect(array.array).toEqual([7,8,1,2,3,3,4]);
       dispatch++;
     });
     expect(array.unshift(7,8)).toBe(7);
-    proxy.unbind('a');
+    instance.unbind('a');
 
     expect(dispatch).toBe(12);
   });
@@ -842,12 +840,12 @@ describe('8. Interface Inheritance', () => {
     expect(ifaceB.has('b')).toBe(true);
     expect(ifaceB.has('foo')).toBe(true);
     expect(ifaceB.has('who')).toBe(true);
-    expect(ifaceB.prop('a').iface.id).toBe('ifaceA');
-    expect(ifaceB.prop('b').iface.id).toBe('ifaceB');
-    expect(ifaceB.prop('foo').iface.id).toBe('ifaceB');
-    expect(ifaceB.prop('who').iface.id).toBe('ifaceB');
+    expect(ifaceB.property('a').iface.id).toBe('ifaceA');
+    expect(ifaceB.property('b').iface.id).toBe('ifaceB');
+    expect(ifaceB.property('foo').iface.id).toBe('ifaceB');
+    expect(ifaceB.property('who').iface.id).toBe('ifaceB');
     expect(inst.who(123)).toBe('ifaceB-123');
-    expect(inst[PROXY].super.ifaceA.who(123)).toBe('ifaceA-123');
+    expect(inst.super.ifaceA.who(123)).toBe('ifaceA-123');
   });
 
   it('8.2.b interface should be able to to inherit from another interface by multiple levels', () => {
@@ -863,13 +861,13 @@ describe('8. Interface Inheritance', () => {
     expect(ifaceC.has('c')).toBe(true);
     expect(ifaceC.has('foo')).toBe(true);
     expect(ifaceC.has('who')).toBe(true);
-    expect(ifaceC.prop('a').iface.id).toBe('ifaceA');
-    expect(ifaceC.prop('b').iface.id).toBe('ifaceB');
-    expect(ifaceC.prop('c').iface.id).toBe('ifaceC');
-    expect(ifaceC.prop('foo').iface.id).toBe('ifaceC');
-    expect(ifaceC.prop('who').iface.id).toBe('ifaceC');
+    expect(ifaceC.property('a').iface.id).toBe('ifaceA');
+    expect(ifaceC.property('b').iface.id).toBe('ifaceB');
+    expect(ifaceC.property('c').iface.id).toBe('ifaceC');
+    expect(ifaceC.property('foo').iface.id).toBe('ifaceC');
+    expect(ifaceC.property('who').iface.id).toBe('ifaceC');
     expect(inst.who(123)).toBe('ifaceC-123');
-    expect(inst[PROXY].super.ifaceA.who(123)).toBe('ifaceA-123');
-    expect(inst[PROXY].super.ifaceB.who(123)).toBe('ifaceB-123');
+    expect(inst.super.ifaceA.who(123)).toBe('ifaceA-123');
+    expect(inst.super.ifaceB.who(123)).toBe('ifaceB-123');
   });
 });
