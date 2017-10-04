@@ -1,6 +1,6 @@
 {
   "name": "axial",
-  "version": "0.7.0",
+  "version": "0.9.1",
   "description": "Centralised application state and behaviour",
   "main": "index.js",
   "scripts": {

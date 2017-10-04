@@ -257,7 +257,7 @@
 	      'x.y.z': 6,
 	      a: {
 	        b: function b() {
-	          return this.rootContainer.x.y.z;
+	          return this.rootOwner.x.y.z;
 	        }
 	      }
 	    });
@@ -976,17 +976,30 @@
 	  var _bindings = [];
 	  var _arrayMembers = CONST.ARRAY_MEMBERS;
 	  var _arrayMutators = CONST.ARRAY_MUTATORS;
+	  var _validKeys = CONST.VALID_KEYS;
 	  var _logListeners = {};
 	
 	  var _logListenerCount = 0;
 	  var util = void 0,
 	      T = void 0;
-	  var _instanceId = 0,
-	      _interfaceId = 0,
-	      _instanceArrayId = 0;
+	  var _interfaceId = 0,
+	      _instanceArrayId = 0,
+	      _instanceIds = {};
 	
 	  function _isValidKey(key) {
-	    return CONST.VALID_KEYS.indexOf(key) > -1;
+	    return _validKeys.indexOf(key) > -1;
+	  }
+	
+	  function getInstanceId(iface) {
+	    if (!iface) {
+	      return '0';
+	    }
+	    var ifaceId = iface.id;
+	    if (!_instanceIds[ifaceId]) {
+	      _instanceIds[ifaceId] = 0;
+	    }
+	    _instanceIds[ifaceId]++;
+	    return iface.id + '#' + _instanceIds[ifaceId];
 	  }
 	
 	  // -------------------------------------------------------------------------------------- Errors
@@ -1007,7 +1020,7 @@
 	
 	      var type = void 0;
 	      if (value instanceof AxialInstance) {
-	        type = value._iface.id + '(AxialInstance)';
+	        type = value.iface.id + '(AxialInstance)';
 	      } else {
 	        try {
 	          type = util.typeOf(value).id;
@@ -1732,7 +1745,7 @@
 	    function AxialInterface() {
 	      var interfaceId = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : BLANK_INTERFACE_NAME;
 	      var prototype = arguments[1];
-	      var rootInterface = arguments[2];
+	      var parentInterface = arguments[2];
 	
 	      _classCallCheck(this, AxialInterface);
 	
@@ -1751,7 +1764,7 @@
 	      _this22._id = interfaceId;
 	      _this22._properties = new Map();
 	      _this22._allProps = new Map();
-	      _this22._rootInterface = rootInterface;
+	      _this22._parentInterface = parentInterface;
 	      _this22._methods = new Map();
 	
 	      _this22.define(prototype);
@@ -1791,7 +1804,7 @@
 	            var typeArray = Array.isArray(typeDef) ? typeDef : [typeDef];
 	
 	            if (util.isPlainObject(typeDef)) {
-	              typeArray = [new AxialInterface(path, typeDef, this.rootInterface)];
+	              typeArray = [new AxialInterface(path, typeDef, this)];
 	            } else {
 	              // ensure type is wrapped in array, expand/flatten any inner arrays
 	              typeArray = util.expandArray(typeArray);
@@ -1833,18 +1846,17 @@
 	        var _this23 = this;
 	
 	        var defaultValues = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : {};
-	        var container = arguments[1];
+	        var owner = arguments[1];
 	
 	        // create instance
-	        var instance = new AxialInstance(this, container);
-	        //      const proxy = new AxialInstanceProxy(instance, this, container);
+	        var instance = new AxialInstance(this, owner);
 	
 	        // check undefined keys are not being passed
 	        var isPlainObject = util.isPlainObject(defaultValues);
 	
 	        if (isPlainObject) {
 	          util.expandDotSyntaxKeys(defaultValues, function (path, key, object) {
-	            if (!_this23._properties.has(key)) {
+	            if (!_this23._properties.has(key) && !_isValidKey(key)) {
 	              throw new AxialUnexpectedProperty(key, _this23, instance);
 	            }
 	            var property = _this23._properties.get(key);
@@ -1857,7 +1869,7 @@
 	
 	        for (var key in defaultValues) {
 	          if (isPlainObject && defaultValues.hasOwnProperty(key)) {
-	            if (!this._properties.has(key)) {
+	            if (!this._properties.has(key) && !_isValidKey(key)) {
 	              throw new AxialUnexpectedProperty(key, this, instance);
 	            }
 	          }
@@ -1893,8 +1905,9 @@
 	        });
 	
 	        // call init if present
-	        if (typeof instance.init === 'function') {
-	          instance.init.call(instance);
+	        var init = instance.init;
+	        if (typeof init === 'function') {
+	          init.call(instance);
 	        }
 	
 	        return instance;
@@ -1910,7 +1923,7 @@
 	        // check value has no extra props
 	        for (var key in value) {
 	          if (value.hasOwnProperty(key)) {
-	            if (!_isValidKey(key) && !this._properties.has(key)) {
+	            if (!this._properties.has(key) && !_isValidKey(key)) {
 	              throw new AxialUnexpectedProperty(key, this, instance);
 	            }
 	          }
@@ -2095,7 +2108,7 @@
 	          // TODO: make proper error
 	          throw new Error('Interface requires name');
 	        }
-	        var iface = new AxialInterface(interfaceName, prototype);
+	        var iface = new AxialInterface(interfaceName, prototype, this._parentInterface);
 	        iface._iparent = this;
 	        var obj = this;
 	        while (obj) {
@@ -2149,7 +2162,11 @@
 	    }, {
 	      key: 'rootInterface',
 	      get: function get() {
-	        return this._rootInterface ? this._rootInterface : this;
+	        var iface = this;
+	        while (iface._parentInterface) {
+	          iface = iface._parentInterface;
+	        }
+	        return iface;
 	      }
 	    }, {
 	      key: 'isRootInterface',
@@ -2197,24 +2214,19 @@
 	
 	
 	  var AxialInstance = function () {
-	    function AxialInstance(iface, container) {
+	    function AxialInstance(iface, owner) {
 	      _classCallCheck(this, AxialInstance);
 	
-	      this.definePrivateProperties({
-	        _typeOf: this.typeOf.bind(this),
-	        _state: {},
-	        _iface: iface,
-	        _listeners: {},
-	        _container: container,
-	        _isWatching: false,
-	        _super: {},
-	        _instanceId: ++_instanceId
-	      });
-	
+	      this._state = {};
+	      this._listeners = {};
+	      this.isWatching = false;
+	      this.id = getInstanceId(iface);
+	      this.super = {};
+	      this.owner = owner;
+	      this.iface = iface;
 	      if (iface) {
 	        // track instance
 	        var id = iface.id;
-	        this.definePrivateProperty('_instanceOf', id);
 	        var arrayAtKey = _instances[id];
 	        _instances[id] = Array.isArray(arrayAtKey) ? arrayAtKey : [];
 	        _instances[id].push(this);
@@ -2223,16 +2235,16 @@
 	        }
 	
 	        // go through each AxialInterface._methods and bind copy to this instance
-	        var ifaceToIndex = iface;
-	        while (ifaceToIndex) {
+	        var interfaceToIndex = iface;
+	        while (interfaceToIndex) {
 	          var methods = {};
-	          this._super[ifaceToIndex.id] = methods;
+	          this.super[interfaceToIndex.id] = methods;
 	          var _iteratorNormalCompletion6 = true;
 	          var _didIteratorError6 = false;
 	          var _iteratorError6 = undefined;
 	
 	          try {
-	            for (var _iterator6 = ifaceToIndex._methods.entries()[Symbol.iterator](), _step6; !(_iteratorNormalCompletion6 = (_step6 = _iterator6.next()).done); _iteratorNormalCompletion6 = true) {
+	            for (var _iterator6 = interfaceToIndex._methods.entries()[Symbol.iterator](), _step6; !(_iteratorNormalCompletion6 = (_step6 = _iterator6.next()).done); _iteratorNormalCompletion6 = true) {
 	              var _step6$value = _slicedToArray(_step6.value, 2),
 	                  key = _step6$value[0],
 	                  fn = _step6$value[1];
@@ -2254,7 +2266,7 @@
 	            }
 	          }
 	
-	          ifaceToIndex = ifaceToIndex._iparent;
+	          interfaceToIndex = interfaceToIndex._iparent;
 	        }
 	      }
 	    }
@@ -2286,61 +2298,66 @@
 	      }
 	    }, {
 	      key: 'typeOf',
-	      value: function typeOf(iface) {
-	        if (typeof iface === 'string') {
-	          return this._iface.id === iface.id;
+	      value: function typeOf(ifaceOrId) {
+	        if (typeof ifaceOrId === 'string') {
+	          return this.iface.id === ifaceOrId.id;
 	        }
-	        return this._iface === iface;
+	        return this.iface === ifaceOrId;
 	      }
 	    }, {
-	      key: 'dock',
-	      value: function dock(container, property) {
-	        var _this25 = this;
-	
-	        if (typeof container.onChildDocking === 'function') {
-	          var dockError = container.onChildDocking(this, property);
-	          if (dockError && dockError.constructor == AxialDockRejection) {
-	            dockError.container = container;
-	            dockError.childInstance = this;
-	            container.dispatch('!reject', {
-	              instance: container,
+	      key: 'shouldAssign',
+	      value: function shouldAssign(instance, property) {
+	        if (typeof this.onAssign === 'function') {
+	          var e = {
+	            instance: instance,
+	            property: property,
+	            role: 'parent',
+	            cancel: function cancel(message) {
+	              this.canceled = true;
+	              this.message = message;
+	            }
+	          };
+	          this.onAssign(e);
+	          if (e.canceled) {
+	            this.dispatch('reject', {
+	              instance: this,
+	              target: instance,
 	              property: property,
-	              method: 'dock',
+	              method: 'assign',
+	              role: 'parent',
 	              key: property.key,
-	              target: container,
-	              value: this,
-	              newValue: container,
-	              oldValue: this._container,
-	              container: container,
-	              childInstance: this,
-	              error: dockError
+	              message: e.message
 	            });
-	            throw dockError;
+	            return false;
 	          }
 	        }
 	
-	        var oldContainer = this._container;
-	        this._container = container;
-	
-	        var event = {
-	          instance: this,
-	          property: property,
-	          method: 'dock',
-	          key: property.key,
-	          target: container,
-	          value: container,
-	          newValue: container,
-	          oldValue: oldContainer,
-	          preserveParent: function preserveParent() {
-	            _this25._container = oldContainer;
+	        if (typeof instance.onAssign === 'function') {
+	          var _e = {
+	            instance: this,
+	            property: property,
+	            role: 'child',
+	            cancel: function cancel(message) {
+	              this.canceled = true;
+	              this.message = message;
+	            }
+	          };
+	          instance.onAssign(_e);
+	          if (_e.canceled) {
+	            instance.dispatch('reject', {
+	              instance: instance,
+	              target: this,
+	              property: property,
+	              method: 'assign',
+	              role: 'child',
+	              key: property.key,
+	              message: _e.message
+	            });
+	            return false;
 	          }
-	        };
-	
-	        if (typeof this.onDock === 'function') {
-	          event.dockValue = this.onDock(event);
 	        }
 	
-	        this.dispatch(property.key, event);
+	        return true;
 	      }
 	    }, {
 	      key: 'defineAccessors',
@@ -2373,7 +2390,7 @@
 	        }
 	        if (util.isPlainObject(instance)) {
 	          try {
-	            instance = this._iface.create(instance);
+	            instance = this.iface.create(instance);
 	          } catch (e) {
 	            return false;
 	          }
@@ -2386,7 +2403,7 @@
 	        var _iteratorError7 = undefined;
 	
 	        try {
-	          for (var _iterator7 = this._iface._properties.entries()[Symbol.iterator](), _step7; !(_iteratorNormalCompletion7 = (_step7 = _iterator7.next()).done); _iteratorNormalCompletion7 = true) {
+	          for (var _iterator7 = this.iface._properties.entries()[Symbol.iterator](), _step7; !(_iteratorNormalCompletion7 = (_step7 = _iterator7.next()).done); _iteratorNormalCompletion7 = true) {
 	            var _step7$value = _slicedToArray(_step7.value, 2),
 	                key = _step7$value[0],
 	                property = _step7$value[1];
@@ -2443,89 +2460,6 @@
 	        this._listeners[key].push(fn);
 	      }
 	    }, {
-	      key: 'onSetter',
-	      value: function onSetter(key, fn) {
-	        return this.bind(key, fn, 'set');
-	      }
-	    }, {
-	      key: 'onGetter',
-	      value: function onGetter(key, fn) {
-	        return this.bind(key, fn, 'get');
-	      }
-	    }, {
-	      key: 'property',
-	      value: function property(path) {
-	        return this._iface.property(path);
-	      }
-	    }, {
-	      key: 'keys',
-	      value: function keys() {
-	        return [].concat(_toConsumableArray(this._iface._properties.keys()));
-	      }
-	    }, {
-	      key: 'forEach',
-	      value: function forEach(fn) {
-	        var iface = this._iface;
-	        var _iteratorNormalCompletion8 = true;
-	        var _didIteratorError8 = false;
-	        var _iteratorError8 = undefined;
-	
-	        try {
-	          for (var _iterator8 = iface._properties.keys()[Symbol.iterator](), _step8; !(_iteratorNormalCompletion8 = (_step8 = _iterator8.next()).done); _iteratorNormalCompletion8 = true) {
-	            var key = _step8.value;
-	
-	            fn(key, this._state[key]);
-	          }
-	        } catch (err) {
-	          _didIteratorError8 = true;
-	          _iteratorError8 = err;
-	        } finally {
-	          try {
-	            if (!_iteratorNormalCompletion8 && _iterator8.return) {
-	              _iterator8.return();
-	            }
-	          } finally {
-	            if (_didIteratorError8) {
-	              throw _iteratorError8;
-	            }
-	          }
-	        }
-	
-	        return this;
-	      }
-	    }, {
-	      key: 'map',
-	      value: function map(fn) {
-	        var array = [];
-	        var iface = this._iface;
-	        var _iteratorNormalCompletion9 = true;
-	        var _didIteratorError9 = false;
-	        var _iteratorError9 = undefined;
-	
-	        try {
-	          for (var _iterator9 = iface._properties.keys()[Symbol.iterator](), _step9; !(_iteratorNormalCompletion9 = (_step9 = _iterator9.next()).done); _iteratorNormalCompletion9 = true) {
-	            var key = _step9.value;
-	
-	            array.push(fn(key, this._state[key]));
-	          }
-	        } catch (err) {
-	          _didIteratorError9 = true;
-	          _iteratorError9 = err;
-	        } finally {
-	          try {
-	            if (!_iteratorNormalCompletion9 && _iterator9.return) {
-	              _iterator9.return();
-	            }
-	          } finally {
-	            if (_didIteratorError9) {
-	              throw _iteratorError9;
-	            }
-	          }
-	        }
-	
-	        return array;
-	      }
-	    }, {
 	      key: 'unbind',
 	      value: function unbind(key, fn) {
 	        if (arguments.length === 0) {
@@ -2560,57 +2494,109 @@
 	        }
 	      }
 	    }, {
-	      key: 'dispose',
-	      value: function dispose() {
-	        var _this26 = this;
-	
-	        this._iface.forEach(function (property, key) {
-	          var item = _this26._state[key];
-	          if (typeof item.dispose === 'function') {
-	            item.dispose();
-	          }
-	          delete _this26._state[key];
-	          delete _this26[key];
-	        });
-	        delete this;
-	        delete _instances[this._iface.id];
+	      key: 'onSetter',
+	      value: function onSetter(key, fn) {
+	        return this.bind(key, fn, 'set');
+	      }
+	    }, {
+	      key: 'onGetter',
+	      value: function onGetter(key, fn) {
+	        return this.bind(key, fn, 'get');
+	      }
+	    }, {
+	      key: 'keys',
+	      value: function keys() {
+	        return [].concat(_toConsumableArray(this.iface._properties.keys()));
+	      }
+	    }, {
+	      key: 'property',
+	      value: function property(path) {
+	        return this.iface.property(path);
 	      }
 	    }, {
 	      key: 'value',
 	      value: function value(path, shouldThrowIfNotFound) {
-	        var root = this.rootContainer;
+	        var root = this.rootOwner;
 	        return util.getObjectAtPath(root, path, shouldThrowIfNotFound);
 	      }
 	    }, {
-	      key: 'lock',
-	      value: function lock() {
-	        var _this27 = this;
+	      key: 'forEach',
+	      value: function forEach(fn) {
+	        var iface = this.iface;
+	        var _iteratorNormalCompletion8 = true;
+	        var _didIteratorError8 = false;
+	        var _iteratorError8 = undefined;
 	
-	        if (this._isWatching) {
-	          return;
-	        }
-	        this._isWatching = true;
-	        var props = this._iface._properties;
-	        this._watchIntervalId = setInterval(function () {
-	          for (var key in _this27) {
-	            if (_this27.hasOwnProperty(key) && !_isValidKey(key) && !props.has(key)) {
-	              clearInterval(_this27._watchIntervalId);
-	              delete _this27[key];
-	              throw new AxialUnexpectedProperty(key, _this27._iface, _this27);
+	        try {
+	          for (var _iterator8 = iface._properties.keys()[Symbol.iterator](), _step8; !(_iteratorNormalCompletion8 = (_step8 = _iterator8.next()).done); _iteratorNormalCompletion8 = true) {
+	            var key = _step8.value;
+	
+	            fn(key, this._state[key]);
+	          }
+	        } catch (err) {
+	          _didIteratorError8 = true;
+	          _iteratorError8 = err;
+	        } finally {
+	          try {
+	            if (!_iteratorNormalCompletion8 && _iterator8.return) {
+	              _iterator8.return();
+	            }
+	          } finally {
+	            if (_didIteratorError8) {
+	              throw _iteratorError8;
 	            }
 	          }
-	        }, 30);
-	        return true;
+	        }
+	
+	        return this;
 	      }
 	    }, {
-	      key: 'unlock',
-	      value: function unlock() {
-	        if (!this._isWatching) {
-	          return;
+	      key: 'map',
+	      value: function map(fn) {
+	        var array = [];
+	        var iface = this.iface;
+	        var _iteratorNormalCompletion9 = true;
+	        var _didIteratorError9 = false;
+	        var _iteratorError9 = undefined;
+	
+	        try {
+	          for (var _iterator9 = iface._properties.keys()[Symbol.iterator](), _step9; !(_iteratorNormalCompletion9 = (_step9 = _iterator9.next()).done); _iteratorNormalCompletion9 = true) {
+	            var key = _step9.value;
+	
+	            array.push(fn(key, this._state[key]));
+	          }
+	        } catch (err) {
+	          _didIteratorError9 = true;
+	          _iteratorError9 = err;
+	        } finally {
+	          try {
+	            if (!_iteratorNormalCompletion9 && _iterator9.return) {
+	              _iterator9.return();
+	            }
+	          } finally {
+	            if (_didIteratorError9) {
+	              throw _iteratorError9;
+	            }
+	          }
 	        }
-	        this._isWatching = false;
-	        clearInterval(this._watchIntervalId);
-	        return true;
+	
+	        return array;
+	      }
+	    }, {
+	      key: 'dispose',
+	      value: function dispose() {
+	        var _this25 = this;
+	
+	        this.iface.forEach(function (property, key) {
+	          var item = _this25._state[key];
+	          if (typeof item.dispose === 'function') {
+	            item.dispose();
+	          }
+	          delete _this25._state[key];
+	          delete _this25[key];
+	        });
+	        delete this;
+	        delete _instances[this.iface.id];
 	      }
 	    }, {
 	      key: 'get',
@@ -2634,10 +2620,10 @@
 	          var _iteratorError10 = undefined;
 	
 	          try {
-	            for (var _iterator10 = this._iface._properties.keys()[Symbol.iterator](), _step10; !(_iteratorNormalCompletion10 = (_step10 = _iterator10.next()).done); _iteratorNormalCompletion10 = true) {
+	            for (var _iterator10 = this.iface._properties.keys()[Symbol.iterator](), _step10; !(_iteratorNormalCompletion10 = (_step10 = _iterator10.next()).done); _iteratorNormalCompletion10 = true) {
 	              var key = _step10.value;
 	
-	              var property = this._iface._properties.get(key);
+	              var property = this.iface._properties.get(key);
 	              if (!property.exports) {
 	                debugger;
 	                // TODO: double check all this serialisation...
@@ -2681,53 +2667,23 @@
 	    }, {
 	      key: 'toString',
 	      value: function toString() {
-	        return this._iface.id + '#' + this._instanceId;
+	        return (this.iface.isRootInterface ? '+-' : '>-') + this.id;
 	      }
 	    }, {
-	      key: 'onChildDocking',
-	      value: function onChildDocking(instance) {
-	        //      console.log(`child: "${instance._type}" is docking to: "${this._type}"`);
+	      key: 'onAssign',
+	      value: function onAssign(instance, property) {
+	        // return false to stop the instance from being assigned to the given property of this
 	      }
 	    }, {
-	      key: 'container',
+	      key: 'rootOwner',
 	      get: function get() {
-	        return this._container;
-	      }
-	    }, {
-	      key: 'rootContainer',
-	      get: function get() {
-	        var obj = this._container;
+	        var obj = this.owner;
 	        var root = this;
 	        while (obj) {
 	          root = obj;
-	          obj = obj._container;
+	          obj = obj.owner;
 	        }
 	        return root;
-	      }
-	    }, {
-	      key: 'super',
-	      get: function get() {
-	        return this._super;
-	      }
-	    }, {
-	      key: 'isLocked',
-	      get: function get() {
-	        return this._isWatching;
-	      }
-	    }, {
-	      key: 'instanceId',
-	      get: function get() {
-	        return this._instanceId;
-	      }
-	    }, {
-	      key: 'iface',
-	      get: function get() {
-	        return this._iface;
-	      }
-	    }, {
-	      key: 'id',
-	      get: function get() {
-	        return 'axial!' + this._iface.id + '#' + this._instanceId;
 	      }
 	    }]);
 	
@@ -2735,7 +2691,7 @@
 	  }();
 	
 	  /**
-	   * TODO: Bubble up rejection errors to root container.
+	   * TODO: Bubble up rejection errors to root owner.
 	   * This way components can be designed to capture errors from docked children.
 	   */
 	
@@ -2743,10 +2699,11 @@
 	    function AxialInterfaceProperty(iface, key, types, path) {
 	      _classCallCheck(this, AxialInterfaceProperty);
 	
-	      this._iface = iface;
+	      this.iface = iface;
 	      this._key = key;
 	      this._types = types;
 	      this._path = path;
+	
 	      iface.rootInterface._allProps.set(path, this);
 	    }
 	
@@ -2806,7 +2763,7 @@
 	    }, {
 	      key: 'set',
 	      value: function set(instance, value) {
-	        var _this28 = this;
+	        var _this26 = this;
 	
 	        var oldValue = instance._state[this._key];
 	        var rawValue = value;
@@ -2815,17 +2772,28 @@
 	
 	        try {
 	          didValidate = this.validate(value, instance);
+	
 	          if (!didValidate) {
 	            // if any built-in or validate() validation method returns false,
 	            // don't set the value
+	            instance.dispatch('reject', {
+	              instance: instance,
+	              target: instance,
+	              property: this,
+	              method: 'set',
+	              key: this._key,
+	              value: value,
+	              newValue: rawValue,
+	              oldValue: oldValue
+	            });
 	            return;
 	          }
 	        } catch (e) {
-	          instance.dispatch(CONST.EVENT_KEY + 'reject', {
+	          instance.dispatch('reject', {
 	            instance: instance,
 	            target: instance,
 	            property: this,
-	            method: 'validation',
+	            method: 'set',
 	            key: this._key,
 	            value: value,
 	            newValue: rawValue,
@@ -2849,9 +2817,12 @@
 	          value = iface.create(value, instance);
 	        }
 	
-	        // trigger dock events, give container a chance to reject the child docking
+	        // trigger assign events, give owner a chance to reject the child being assigned
 	        if (value instanceof AxialInstance) {
-	          value.dock(instance, this);
+	          var shouldAssign = instance.shouldAssign(value, this);
+	          if (shouldAssign === false) {
+	            return false;
+	          }
 	        }
 	
 	        // convert to AxialInstanceArray if array
@@ -2878,7 +2849,7 @@
 	              });
 	
 	              return fn.apply(instance, arguments);
-	            }.bind(_this28);
+	            }.bind(_this26);
 	            value._isAxialBound = true;
 	          })();
 	        }
@@ -2901,6 +2872,33 @@
 	        if (returnValue) {
 	          // re-set state from intercepted listener return value
 	          instance[this._key] = returnValue;
+	        }
+	
+	        if (value instanceof AxialInstance) {
+	          (function () {
+	            // let instance value know it was docked
+	            var oldOwner = value.owner;
+	            value.owner = instance;
+	
+	            var event = {
+	              instance: instance,
+	              property: _this26,
+	              method: 'assign',
+	              role: 'child',
+	              key: _this26.key,
+	              newOwner: instance,
+	              oldOwner: oldOwner,
+	              preserveOwner: function preserveOwner() {
+	                value.owner = oldOwner;
+	              }
+	            };
+	
+	            if (typeof value.onAssigned === 'function') {
+	              value.onAssigned(event);
+	            }
+	
+	            value.dispatch(_this26.key, event);
+	          })();
 	        }
 	      }
 	
@@ -2939,19 +2937,9 @@
 	        throw new Error('Type not found');
 	      }
 	    }, {
-	      key: 'toString',
-	      value: function toString() {
-	        return this._iface.id + '#' + this._instanceId;
-	      }
-	    }, {
 	      key: 'path',
 	      get: function get() {
 	        return this._path;
-	      }
-	    }, {
-	      key: 'iface',
-	      get: function get() {
-	        return this._iface;
 	      }
 	    }, {
 	      key: 'key',
@@ -3112,14 +3100,14 @@
 	
 	  var AxialInstanceArray = function () {
 	    function AxialInstanceArray(instance, property) {
-	      var _this29 = this;
+	      var _this27 = this;
 	
 	      var array = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : [];
 	
 	      _classCallCheck(this, AxialInstanceArray);
 	
 	      this._instance = instance;
-	      this._instanceId = ++_instanceArrayId;
+	      this.id = getInstanceId(AxialInstanceArray);
 	      this._property = property;
 	      this._key = property.key;
 	      this._indexLength = null;
@@ -3135,7 +3123,7 @@
 	      _arrayMembers.forEach(function (member) {
 	        // stub each member of Array.prototype
 	        // validate arguments if mutator...
-	        Object.defineProperty(_this29, member, {
+	        Object.defineProperty(_this27, member, {
 	          enumerable: false,
 	
 	          value: function value() {
@@ -3163,6 +3151,7 @@
 	              hasValidated = true;
 	            }
 	
+	            var oldLength = this._array.length;
 	            var returnValue = Array.prototype[member].apply(this._array, args);
 	            this.length = this._array.length;
 	
@@ -3174,7 +3163,7 @@
 	            // if this is an array mutator method, dispatch event
 	            if (isMutator) {
 	              self.bindIndexes();
-	              instance.dispatch(this._key, {
+	              this.dispatch(this._key, {
 	                instance: instance,
 	                property: this._property,
 	                method: 'set',
@@ -3182,7 +3171,9 @@
 	                key: this._key,
 	                value: this,
 	                newValue: this,
-	                oldValue: null
+	                oldValue: null,
+	                oldLength: oldLength,
+	                newLength: this._array.length
 	              });
 	            }
 	
@@ -3195,6 +3186,113 @@
 	    }
 	
 	    _createClass(AxialInstanceArray, [{
+	      key: 'bindIndexes',
+	      value: function bindIndexes() {
+	        var _this28 = this;
+	
+	        var array = this._array;
+	        var instance = this._instance;
+	        var property = this._property;
+	        // delete previous indexes
+	        if (this._indexLength) {
+	          var _l = this._indexLength;
+	          for (var i = 0; i < _l; i++) {
+	            delete this[i];
+	          }
+	        }
+	        // write each index as an accessor
+	        var l = array.length + 1;
+	
+	        var _loop = function _loop(_i) {
+	          _this28._indexLength++;
+	          var key = '' + _i;
+	          if (!_this28.hasOwnProperty(key)) {
+	            Object.defineProperty(_this28, key, {
+	              get: function get() {
+	                // dispatch event
+	                instance.dispatch(property.key, {
+	                  instance: instance,
+	                  property: property,
+	                  arrayMethod: 'index',
+	                  method: 'get',
+	                  index: _i,
+	                  key: property.key,
+	                  value: array[_i]
+	                });
+	                return array[_i];
+	              },
+	              set: function set(value) {
+	                var _this29 = this;
+	
+	                var oldValue = array[_i];
+	                var rawValue = value;
+	
+	                property.validate([value], instance);
+	
+	                // convert to AxialInstance if Interface and object given
+	                var arrayType = property.primaryArrayType;
+	                if (arrayType && util.isPlainObject(value) && arrayType.is(value)) {
+	                  value = arrayType.create(value, instance);
+	                }
+	
+	                // convert to AxialInstanceArray if array
+	                if (property.is(Axial.Array()) && Array.isArray(value)) {
+	                  value = new AxialInstanceArray(instance, property, value);
+	                }
+	
+	                // convert to bound function (if function)
+	                if (property.is(Axial.Function) && typeof value === 'function' && !value._isAxialBound) {
+	                  (function () {
+	                    var fn = value;
+	                    value = function () {
+	                      // dispatch call, execute function
+	                      instance.dispatch(property._key, {
+	                        instance: instance,
+	                        property: property,
+	                        method: 'call',
+	                        key: property._key,
+	                        value: arguments,
+	                        arguments: arguments,
+	                        newValue: fn,
+	                        oldValue: fn
+	                      });
+	
+	                      return fn.apply(instance, arguments);
+	                    }.bind(_this29);
+	                    value._isAxialBound = true;
+	                  })();
+	                }
+	
+	                array[_i] = value;
+	
+	                instance.dispatch(property.key, {
+	                  instance: instance,
+	                  property: property,
+	                  arrayMethod: 'index',
+	                  method: 'set',
+	                  index: _i,
+	                  key: property.key,
+	                  value: value,
+	                  oldValue: oldValue,
+	                  newValue: rawValue
+	                });
+	              },
+	              enumerable: true,
+	              configurable: true
+	            });
+	          }
+	        };
+	
+	        for (var _i = 0; _i < l; _i++) {
+	          _loop(_i);
+	        }
+	      }
+	    }, {
+	      key: 'dispatch',
+	      value: function dispatch(key, e) {
+	        this._instance.dispatch(key, e);
+	      }
+	    }, {
 	      key: 'convertArray',
 	      value: function convertArray(rawArray) {
 	        // convert plain array to array of wrapped objects ~ AxialInstance or AxialInstanceArray or value
@@ -3259,108 +3357,6 @@
 	          }
 	        }
 	        return true;
-	      }
-	    }, {
-	      key: 'bindIndexes',
-	      value: function bindIndexes() {
-	        var _this30 = this;
-	
-	        var array = this._array;
-	        var instance = this._instance;
-	        var property = this._property;
-	        // delete previous indexes
-	        if (this._indexLength) {
-	          var _l = this._indexLength;
-	          for (var i = 0; i < _l; i++) {
-	            delete this[i];
-	          }
-	        }
-	        // write each index as an accessor
-	        var l = array.length + 1;
-	
-	        var _loop = function _loop(_i) {
-	          _this30._indexLength++;
-	          var key = '' + _i;
-	          if (!_this30.hasOwnProperty(key)) {
-	            Object.defineProperty(_this30, key, {
-	              get: function get() {
-	                // dispatch event
-	                instance.dispatch(property.key, {
-	                  instance: instance,
-	                  property: property,
-	                  arrayMethod: 'index',
-	                  method: 'get',
-	                  index: _i,
-	                  key: property.key,
-	                  value: array[_i]
-	                });
-	                return array[_i];
-	              },
-	              set: function set(value) {
-	                var _this31 = this;
-	
-	                var oldValue = array[_i];
-	                var rawValue = value;
-	
-	                property.validate([value], instance);
-	
-	                // convert to AxialInstance if Interface and object given
-	                var arrayType = property.primaryArrayType;
-	                if (arrayType && util.isPlainObject(value) && arrayType.is(value)) {
-	                  value = arrayType.create(value, instance);
-	                }
-	
-	                // convert to AxialInstanceArray if array
-	                if (property.is(Axial.Array()) && Array.isArray(value)) {
-	                  value = new AxialInstanceArray(instance, property, value);
-	                }
-	
-	                // convert to bound function (if function)
-	                if (property.is(Axial.Function) && typeof value === 'function' && !value._isAxialBound) {
-	                  (function () {
-	                    var fn = value;
-	                    value = function () {
-	                      // dispatch call, execute function
-	                      instance.dispatch(property._key, {
-	                        instance: instance,
-	                        property: property,
-	                        method: 'call',
-	                        key: property._key,
-	                        value: arguments,
-	                        arguments: arguments,
-	                        newValue: fn,
-	                        oldValue: fn
-	                      });
-	
-	                      return fn.apply(instance, arguments);
-	                    }.bind(_this31);
-	                    value._isAxialBound = true;
-	                  })();
-	                }
-	
-	                array[_i] = value;
-	
-	                instance.dispatch(property.key, {
-	                  instance: instance,
-	                  property: property,
-	                  arrayMethod: 'index',
-	                  method: 'set',
-	                  index: _i,
-	                  key: property.key,
-	                  value: value,
-	                  oldValue: oldValue,
-	                  newValue: rawValue
-	                });
-	              },
-	              enumerable: true,
-	              configurable: true
-	            });
-	          }
-	        };
-	
-	        for (var _i = 0; _i < l; _i++) {
-	          _loop(_i);
-	        }
 	      }
 	    }, {
 	      key: 'add',
@@ -3483,11 +3479,6 @@
 	        return this._instance;
 	      }
 	    }, {
-	      key: 'instanceId',
-	      get: function get() {
-	        return this._instanceId;
-	      }
-	    }, {
 	      key: 'property',
 	      get: function get() {
 	        return this._property;
@@ -3501,6 +3492,11 @@
 	      key: 'array',
 	      get: function get() {
 	        return this._array;
+	      }
+	    }], [{
+	      key: 'id',
+	      get: function get() {
+	        return 'AxialInstanceArray';
 	      }
 	    }]);
 	
@@ -3523,15 +3519,15 @@
 	      }();
 	    },
 	    merge: function merge(source, target) {
-	      var _this32 = this;
+	      var _this30 = this;
 	
 	      var copy = function copy(_source, _target) {
 	        for (var _key in _target) {
 	          if (_target.hasOwnProperty(_key)) {
 	            var sourceValue = _source[_key];
 	            var targetValue = _target[_key];
-	            if (_this32.isPlainObject(targetValue)) {
-	              if (_this32.isPlainObject(sourceValue)) {
+	            if (_this30.isPlainObject(targetValue)) {
+	              if (_this30.isPlainObject(sourceValue)) {
 	                copy(sourceValue, targetValue);
 	              } else {
 	                var obj = {};
@@ -3552,7 +3548,7 @@
 	        if (nativeOnly) {
 	          return T.Object;
 	        }
-	        return value._iface;
+	        return value.iface;
 	      }
 	      if (T.Null.is(value)) {
 	        return T.Null;
@@ -3600,7 +3596,7 @@
 	      return true;
 	    },
 	    getObjectPaths: function getObjectPaths(obj, includeBranchPaths) {
-	      var _this33 = this;
+	      var _this31 = this;
 	
 	      var keys = [];
 	      var ref = null;
@@ -3610,7 +3606,7 @@
 	          if (o.hasOwnProperty(k)) {
 	            ref = o[k];
 	            path = p ? p + '.' + k : k;
-	            if (_this33.isPlainObject(ref)) {
+	            if (_this31.isPlainObject(ref)) {
 	              if (includeBranchPaths === true) {
 	                keys.push(path);
 	              }
@@ -3625,7 +3621,7 @@
 	      return keys;
 	    },
 	    getObjectPathValues: function getObjectPathValues(obj, includeBranchPaths) {
-	      var _this34 = this;
+	      var _this32 = this;
 	
 	      var keyValues = [];
 	      var ref = null;
@@ -3635,7 +3631,7 @@
 	          if (o.hasOwnProperty(k)) {
 	            ref = o[k];
 	            path = p ? p + '.' + k : k;
-	            if (_this34.isPlainObject(ref)) {
+	            if (_this32.isPlainObject(ref)) {
 	              if (includeBranchPaths === true) {
 	                keyValues.push({ path: path, value: ref, isBranch: true });
 	              }
@@ -3718,7 +3714,7 @@
 	      return outArray;
 	    },
 	    stringify: function stringify(value) {
-	      var _this35 = this;
+	      var _this33 = this;
 	
 	      var refs = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : [];
 	
@@ -3735,12 +3731,12 @@
 	          refs.push(value);
 	        }
 	        var props = value.map(function (k, v) {
-	          return k + ':' + _this35.stringify(v, refs);
+	          return k + ':' + _this33.stringify(v, refs);
 	        });
-	        return '*' + value.iface.id + '#' + value.instanceId + '{' + props.join(', ') + '}';
+	        return '*' + value.iface.id + '#' + value.id + '{' + props.join(', ') + '}';
 	      }
 	      if (value instanceof AxialInstanceArray) {
-	        return '*array#' + value.instanceId + '[' + value.length + ']';
+	        return '*array#' + value.id + '[' + value.length + ']';
 	      }
 	      try {
 	        return JSON.stringify(value);
@@ -3760,6 +3756,16 @@
 	        }
 	      }
 	      return array;
+	    },
+	    toString: function toString(value) {
+	      if (value instanceof AxialInstance || value instanceof AxialInstanceArray) {
+	        return value.id;
+	      }
+	      try {
+	        return JSON.stringify(value);
+	      } catch (e) {
+	        return '' + value;
+	      }
 	    }
 	  };
 	
@@ -3847,7 +3853,7 @@
 	    },
 	    get bindingInfo() {
 	      return this.bindings.map(function (binding) {
-	        return binding.instance._instanceId + ':' + binding.key;
+	        return binding.instance.id + ':' + binding.key;
 	      });
 	    },
 	    getInstance: function getInstance(id) {
@@ -3916,7 +3922,11 @@
 	    }
 	  }), _defineProperty(_Axial, 'addDefaultLogListeners', function addDefaultLogListeners() {
 	    this.addLogListener('get', function (e) {
-	      console.log('%cGET: ' + e.property.path + (e.hasOwnProperty('index') ? '[' + e.index + ']' : '') + ':<' + e.property.types.join('|') + '> = ' + util.stringify(e.value), 'color:#999');
+	      if (typeof e.value === 'function') {
+	        console.log('%cGET: ' + (e.instance.toString() + '.' + e.key) + (e.hasOwnProperty('index') ? '[' + e.index + ']' : '') + ':<' + e.property.types.join('|') + '>()', 'color:#999');
+	      } else {
+	        console.log('%cGET: ' + (e.instance.toString() + '.' + e.key) + (e.hasOwnProperty('index') ? '[' + e.index + ']' : '') + ':<' + e.property.types.join('|') + '> = ' + util.toString(e.value), 'color:#999');
+	      }
 	    }).addLogListener('set', function (e) {
 	      console.log('%cSET: ' + e.property.path + ':<' + e.property.types.join('|') + '> = ' + util.stringify(e.value), 'color:orange');
 	    }).addLogListener('call', function (e) {
@@ -3951,6 +3961,8 @@
 	      }
 	    }
 	    return type;
+	  }), _defineProperty(_Axial, 'debug', function debug() {
+	    this.addDefaultLogListeners();
 	  }), _Axial);
 	
 	  // merge in types and errors
@@ -3976,9 +3988,7 @@
 	
 	module.exports = {
 	  BLANK_INTERFACE_NAME: 'anonymous',
-	  PROXY_KEY: '$',
-	  EVENT_KEY: '!',
-	  VALID_KEYS: ['$', '_type', '_typeOf', 'onDock', 'onChildDocking'],
+	  VALID_KEYS: ['_state', '_listeners', 'isWatching', 'super', 'id', 'iface', 'owner', '_lockedPaths'],
 	  ARRAY_MEMBERS: ['concat', 'copyWithin', 'entries', 'every', 'fill', 'filter', 'find', 'findIndex', 'forEach', 'includes', 'indexOf', 'join', 'keys', 'lastIndexOf', 'map', 'pop', 'push', 'reduce', 'reduceRight', 'reverse', 'shift', 'slice', 'some', 'sort', 'splice', 'toLocaleString', 'toSource', 'toString', 'unshift', 'values'],
 	  ARRAY_MUTATORS: ['copyWithin', 'fill', 'pop', 'push', 'reverse', 'shift', 'sort', 'splice', 'unshift'],
 	  ARRAY_MUTATORS_REQUIRE_ARGS_VALIDATED: ['fill', 'push', 'splice', 'unshift']

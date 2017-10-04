@@ -209,7 +209,7 @@ describe('3. Creating Instances', () => {
       'x.y.z': 6,
       a: {
         b: function () {
-          return this.rootContainer.x.y.z;
+          return this.rootOwner.x.y.z;
         }
       }
     });
