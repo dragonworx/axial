@@ -1,1 +1,2 @@
-module.exports = require('./lib/axial');
+import Axial from './dist/axial';
+export default Axial;

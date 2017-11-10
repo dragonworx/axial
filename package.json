@@ -1,37 +1,47 @@
 {
   "name": "axial",
-  "version": "0.9.1",
-  "description": "Centralised application state and behaviour",
-  "main": "index.js",
+  "version": "2.0.0",
+  "description": "Models and Controllers for React Views",
+  "main": "./lib/axial.js",
   "scripts": {
-    "test": "./node_modules/.bin/mocha",
-    "start": "./node_modules/.bin/gulp"
+    "build": "webpack",
+    "build-watch": "webpack --watch",
+    "build-parallel": "parallel-webpack",
+    "build-parallel-watch": "parallel-webpack --watch",
+    "test": "jest",
+    "test-watch": "jest --watch"
   },
   "keywords": [
-    "axial",
-    "store",
+    "react",
+    "mvc",
+    "framework",
     "state",
-    "action"
+    "management"
   ],
   "author": "Ali Chamas",
-  "license": "ISC",
+  "license": "MIT",
   "repository": {
     "type": "git",
     "url": "https://github.com/dragonworx/axial.git"
   },
-  "devDependencies": {
-    "babel-core": "^6.18.2",
-    "babel-loader": "^6.2.7",
-    "babel-preset-es2015": "^6.18.0",
-    "babel-preset-react": "^6.16.0",
-    "expect": "^1.20.2",
-    "gulp": "^3.9.1",
-    "gulp-watch": "^4.3.10",
-    "gulp-webpack": "^1.5.0",
-    "webpack": "^1.13.3",
-    "mocha": "^3.2.0"
+  "peerDependencies": {
+    "react": "^16.0.0",
+    "react-dom": "^16.0.0"
   },
-  "dependencies": {
-    "escape-string-regexp": "^1.0.5"
+  "devDependencies": {
+    "babel-core": "^6.26.0",
+    "babel-jest": "^21.2.0",
+    "babel-loader": "^7.1.2",
+    "babel-preset-es2015": "^6.18.0",
+    "babel-preset-react": "^6.24.1",
+    "enzyme": "^3.1.0",
+    "enzyme-adapter-react-16": "^1.0.2",
+    "jest": "^21.2.1",
+    "jest-cli": "^21.2.1",
+    "parallel-webpack": "^2.2.0",
+    "react": "^16.0.0",
+    "react-dom": "^16.0.0",
+    "regenerator-runtime": "^0.11.0",
+    "webpack": "^3.4.1"
   }
 }
