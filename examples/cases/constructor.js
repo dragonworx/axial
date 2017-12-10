@@ -10,16 +10,16 @@ export class ScopedByConstructorAxialComponent extends AxialComponent {
   };
 
 export default class Example extends Axial.Component {
-  static begin() {
+  static begin () {
     // set default scope
     Axial.scope = createExampleScope('scope1');
   }
 
-  render() {
+  render () {
     return (
       <AxialComponent title="constructor" source="Axial.scope" expect="scope1">
-      <ScopedByConstructorAxialComponent source="constructor" expect="scope2">
-        {Axial.scope1.clicks % 2 === 0 ? <AxialComponent source="inherit" expect="scope2"></AxialComponent> : null}
+        <ScopedByConstructorAxialComponent source="constructor" expect="scope2">
+          {Axial.scope1.clicks % 2 === 0 ? <AxialComponent source="inherit" expect="scope2"></AxialComponent> : null}
         </ScopedByConstructorAxialComponent>
       </AxialComponent>
     );

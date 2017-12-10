@@ -70,7 +70,7 @@ return /******/ (function(modules) { // webpackBootstrap
 /******/ 	__webpack_require__.p = "";
 /******/
 /******/ 	// __webpack_hash__
-/******/ 	__webpack_require__.h = "3b94daab790d02af9069";
+/******/ 	__webpack_require__.h = "e5ba4760ecf119cbbd2f";
 /******/
 /******/ 	// __webpack_chunkname__
 /******/ 	__webpack_require__.cn = "main";
@@ -384,11 +384,12 @@ module.exports = invariant;
 Object.defineProperty(exports, "__esModule", {
   value: true
 });
-exports.AxialComponent = exports.Axial = exports.ReactDOM = exports.React = undefined;
+exports.AxialNestedComponent = exports.AxialComponent = exports.Axial = exports.ReactDOM = exports.React = undefined;
 
 var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
 
 exports.createExampleScope = createExampleScope;
+exports.createNestedExampleScope = createNestedExampleScope;
 
 var _react = __webpack_require__(5);
 
@@ -402,7 +403,7 @@ var _axial = __webpack_require__(36);
 
 var _axial2 = _interopRequireDefault(_axial);
 
-var _state = __webpack_require__(18);
+var _state = __webpack_require__(13);
 
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 
@@ -435,9 +436,13 @@ var AxialComponent = exports.AxialComponent = function (_Axial$Component) {
       var name = this.name;
 
       var passed = name === expect;
+      var r = Math.round(Math.random() * 255);
+      var g = Math.round(Math.random() * 255);
+      var b = Math.round(Math.random() * 255);
+
       return _react2.default.createElement(
         'section',
-        { className: 'scope ' + (passed ? 'pass' : 'fail') },
+        { className: 'scope ' + (passed ? 'pass' : 'fail'), style: { backgroundColor: 'rgb(' + r + ',' + g + ',' + b + ')' } },
         title ? _react2.default.createElement(
           'div',
           { className: 'title' },
@@ -449,7 +454,7 @@ var AxialComponent = exports.AxialComponent = function (_Axial$Component) {
           _react2.default.createElement(
             'span',
             { className: 'name' },
-            '"',
+            'name: "',
             name,
             '"'
           ),
@@ -457,7 +462,7 @@ var AxialComponent = exports.AxialComponent = function (_Axial$Component) {
           _react2.default.createElement(
             'span',
             { className: 'source' },
-            '"',
+            'source: "',
             source,
             '"'
           ),
@@ -496,15 +501,133 @@ var AxialComponent = exports.AxialComponent = function (_Axial$Component) {
 
 ;
 
+var AxialNestedComponent = exports.AxialNestedComponent = function (_Axial$Component2) {
+  _inherits(AxialNestedComponent, _Axial$Component2);
+
+  function AxialNestedComponent() {
+    _classCallCheck(this, AxialNestedComponent);
+
+    return _possibleConstructorReturn(this, (AxialNestedComponent.__proto__ || Object.getPrototypeOf(AxialNestedComponent)).apply(this, arguments));
+  }
+
+  _createClass(AxialNestedComponent, [{
+    key: 'render',
+    value: function render() {
+      var _this4 = this;
+
+      var _props2 = this.props,
+          expect = _props2.expect,
+          source = _props2.source,
+          title = _props2.title;
+      var name = this.name,
+          clicks = this.foo.clicks;
+
+      var passed = name === expect;
+      var r = Math.round(Math.random() * 255);
+      var g = Math.round(Math.random() * 255);
+      var b = Math.round(Math.random() * 255);
+      return _react2.default.createElement(
+        'section',
+        { className: 'scope ' + (passed ? 'pass' : 'fail'), style: { backgroundColor: 'rgb(' + r + ',' + g + ',' + b + ')' } },
+        title ? _react2.default.createElement(
+          'div',
+          { className: 'title' },
+          title
+        ) : null,
+        _react2.default.createElement(
+          'label',
+          null,
+          _react2.default.createElement(
+            'span',
+            { className: 'name' },
+            'name: "',
+            name,
+            '"'
+          ),
+          ' ',
+          _react2.default.createElement(
+            'span',
+            { className: 'source' },
+            'source: "',
+            source,
+            '"'
+          ),
+          passed ? null : _react2.default.createElement(
+            'span',
+            null,
+            'expect: "',
+            expect,
+            '"'
+          )
+        ),
+        this.props.children,
+        _react2.default.createElement(
+          'button',
+          { onClick: this.onClick },
+          '"',
+          name,
+          '" clicks: ',
+          this.clicks
+        ),
+        '\xA0',
+        _react2.default.createElement(
+          'button',
+          { onClick: function onClick() {
+              return _this4.foo.clicks++;
+            } },
+          '"',
+          this.foo.clicks,
+          '" nested_clicks: "',
+          this.foo.text(),
+          '"'
+        )
+      );
+    }
+  }, {
+    key: 'onClick',
+    get: function get() {
+      var _this5 = this;
+
+      return function () {
+        return _this5.clicks++;
+      };
+    }
+  }]);
+
+  return AxialNestedComponent;
+}(_axial2.default.Component);
+
 function createExampleScope(name) {
-  var scope = {
+  return _axial2.default[name] = {
     name: name,
     clicks: 0,
     init: function init() {
       console.log(name + ' init');
     }
   };
-  return _axial2.default[name] = (0, _state.asScope)(scope);
+}
+
+function createNestedExampleScope(name) {
+  return _axial2.default[name] = {
+    name: name,
+    clicks: 0,
+    init: function init() {
+      console.log(name + ' init');
+    },
+
+    foo: {
+      clicks: 10,
+      text: function text() {
+        return '' + this.name;
+      },
+
+      array: [{
+        x: {
+          y: 1
+        }
+      }, true]
+    }
+  };
 }
 
 /***/ }),
@@ -861,9 +984,7 @@ exports.getterSetter = getterSetter;
 
 var _scope = __webpack_require__(12);
 
-var _scope2 = _interopRequireDefault(_scope);
-
-function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
+var _state = __webpack_require__(13);
 
 var DATA = exports.DATA = 'data';
 var ACCESSOR = exports.ACCESSOR = 'accessor';
@@ -939,6 +1060,7 @@ function recursiveSetRootContext(root) {
 
   var setRootContext = function setRootContext(obj) {
     var keys = getObjectKeys(obj);
+    (0, _state.scope_ref)(obj);
     for (var i = 0; i < keys.length; i++) {
       var key = keys[i];
       var prop = obj[key];
@@ -960,14 +1082,13 @@ function recursiveSetRootContext(root) {
 }
 
 function getObjectKeys(obj) {
-  if (obj instanceof _scope2.default) {
-    var proto = Object.getPrototypeOf(obj);
-    var keys = Object.getOwnPropertyNames(Object.getPrototypeOf(obj)).filter(function (key) {
-      return key !== 'constructor';
-    });
-    keys.push.apply(keys, Object.keys(obj));
-    return keys;
-  }
+  // if (is_scope(obj)) {
+  //   const proto = Object.getPrototypeOf(obj);
+  //   const keys = Object.getOwnPropertyNames(proto)
+  //     .filter(key => key !== 'constructor');
+  //   keys.push.apply(keys, Object.keys(obj));
+  //   return keys;
+  // }
   return Object.keys(obj);
 }
 
@@ -1002,98 +1123,201 @@ function getterSetter(obj, key, getterFn, setterFn) {
 Object.defineProperty(exports, "__esModule", {
   value: true
 });
-exports.ScopeMeta = undefined;
+exports.Scope = undefined;
+
+var _typeof = typeof Symbol === "function" && typeof Symbol.iterator === "symbol" ? function (obj) { return typeof obj; } : function (obj) { return obj && typeof Symbol === "function" && obj.constructor === Symbol && obj !== Symbol.prototype ? "symbol" : typeof obj; };
 
 var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
 
 var _util = __webpack_require__(11);
 
+var _state = __webpack_require__(13);
+
 function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
 
-var ScopeMeta = exports.ScopeMeta = function () {
-  function ScopeMeta(scope, prototype) {
+var Scope = exports.Scope = function () {
+  function Scope(ref) {
     var _this = this;
 
-    _classCallCheck(this, ScopeMeta);
+    _classCallCheck(this, Scope);
 
-    this.scope = scope;
-    this.prototype = prototype;
+    // take the ref object and convert to scope
+    var keys = (0, _util.getObjectKeys)(ref);
+
+    // ensure any functions within nested objects have a scope of the top level ref object
+    //  - this means that everything in the scope has access to the entire scope, but no higher.
+    (0, _util.recursiveSetRootContext)(ref);
+
+    (0, _util.getter)(ref, _state.META_TOKEN, function () {
+      return _this;
+    });
+    this.ref = ref;
 
     // track listeners
     var listeners = [];
     this.listeners = listeners;
 
-    // track and expose schema array
-    var schema = [];
-    this.schema = schema;
-
-    // create getters/setters for schema, bind to component
-    var keys = (0, _util.getObjectKeys)(prototype);
+    // move values to internal map, create getters/setters for schema, re-bind to component
+    var values = {};
     keys.forEach(function (key) {
-      var type = (0, _util.getTypeOfProperty)(prototype, key);
-      if (type === _util.DATA) {
-        (0, _util.getterSetter)(scope, key, function () {
-          return prototype[key];
-        }, function (value) {
-          var oldValue = prototype[key];
-          prototype[key] = value;
-          _this.updateListeners(key, value, oldValue);
+      var value = ref[key];
+      var type = (0, _util.getTypeOfProperty)(ref, key);
+      var type_of = typeof value === 'undefined' ? 'undefined' : _typeof(value);
+      if (type_of !== 'function' && type === _util.DATA) {
+        // check if array
+        if (Array.isArray(value)) {
+          var l = value.length;
+          for (var i = 0; i < l; i++) {
+            value[i] = (0, _state.scope_ref)(value[i]);
+          }
+        }
+
+        // move value into internal map
+        values[key] = value;
+
+        // create getter and setter which updates listeners
+        (0, _util.getterSetter)(ref, key, function () {
+          return values[key];
+        }, function (newValue) {
+          var oldValue = values[key];
+          values[key] = newValue;
+          _this.update(key, newValue, oldValue);
         });
       }
-      schema.push(key);
     });
+
+    this.keys = keys;
   }
 
-  _createClass(ScopeMeta, [{
-    key: 'addListener',
-    value: function addListener(listener) {
-      this.listeners.push(listener);
-    }
-  }, {
-    key: 'updateListeners',
-    value: function updateListeners(key, value, oldValue) {
-      console.log('update:', this.scope.name, this.listeners);
-      this.listeners.forEach(function (listener) {
-        return listener.update(key, value, oldValue);
+  _createClass(Scope, [{
+    key: 'bind',
+    value: function bind(listener) {
+      var _this2 = this;
+
+      // add listeners to this scope
+      var listeners = this.listeners;
+      listeners.push(listener);
+
+      // go through properties looking for Scopes, bind to them
+      this.keys.forEach(function (k) {
+        var value = _this2.ref[k];
+        if ((0, _state.is_scope)(value)) {
+          value[_state.META_TOKEN].bind(listener);
+        }
       });
+
+      console.log({ 'type': 'bind', 'ref': this.ref.name, 'listener': listener, 'listeners': listeners });
     }
   }, {
-    key: 'hasListener',
-    value: function hasListener(listener) {
+    key: 'update',
+    value: function update(key, value, oldValue) {
+      var _this3 = this;
+
+      // assumes listeners implement .update(key, value, oldValue)
+      var listeners = this.listeners;
+      console.group('update[' + this.listeners.length + '] key:"' + key + ' value:"' + value + '" oldValue:"' + oldValue + '"');
+      listeners.forEach(function (listener) {
+        console.log({ 'listener:': listener });
+        listener.update(key, value, oldValue, _this3.ref);
+      });
+      console.groupEnd();
+    }
+  }, {
+    key: 'hasBinding',
+    value: function hasBinding(listener) {
       return this.listeners.indexOf(listener) > -1;
     }
   }, {
-    key: 'removeListener',
-    value: function removeListener(listener) {
+    key: 'unbind',
+    value: function unbind(listener) {
       var listeners = this.listeners;
       var index = listeners.indexOf(listener);
+      if (index === -1) {
+        // handle case when not-bound
+        return;
+      }
       listeners.splice(index, 1);
+      console.log({ 'type': 'unbind', 'ref': this.ref.name, 'listener': listener, 'listeners': listeners });
     }
   }]);
 
-  return ScopeMeta;
+  return Scope;
 }();
-
-var Scope = function Scope() {
-  var prototype = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : {};
-
-  _classCallCheck(this, Scope);
-
-  this.$ = new ScopeMeta(this, prototype);
-
-  // init
-  var init = this.init;
-  if (init && !init.hasInit) {
-    init.call(this);
-    init.hasInit = true;
-  }
-};
-
-exports.default = Scope;
-;
 
 /***/ }),
 /* 13 */
+/***/ (function(module, exports, __webpack_require__) {
+
+"use strict";
+
+
+Object.defineProperty(exports, "__esModule", {
+  value: true
+});
+exports.META_TOKEN = undefined;
+exports.scopes = scopes;
+exports.peek = peek;
+exports.push = push;
+exports.is_scope = is_scope;
+exports.scope_ref = scope_ref;
+exports.as_scope = as_scope;
+exports.pop = pop;
+
+var _util = __webpack_require__(11);
+
+var _scope = __webpack_require__(12);
+
+var _scopes = [];
+
+var META_TOKEN = exports.META_TOKEN = '__scope__';
+
+function scopes() {
+  return _scopes.slice();
+}
+
+function peek() {
+  return _scopes[_scopes.length - 1];
+}
+
+function push(scope) {
+  scope = scope_ref(scope);
+  _scopes.push(scope);
+  return scope;
+}
+
+function is_scope(ref) {
+  if (ref instanceof _scope.Scope) {
+    return ref;
+  }
+  var prop = ref[META_TOKEN];
+  return prop && prop instanceof _scope.Scope;
+}
+
+function scope_ref(scope) {
+  if (is_scope(scope)) {
+    return scope;
+  }
+
+  if ((0, _util.isObjectLiteral)(scope)) {
+    new _scope.Scope(scope);
+  }
+
+  return scope;
+}
+
+function as_scope(scope) {
+  if (scope[META_TOKEN]) {
+    return scope[META_TOKEN];
+  }
+  return scope_ref(scope)[META_TOKEN];
+}
+
+function pop() {
+  return _scopes.pop();
+}
+
+/***/ }),
+/* 14 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -1174,7 +1398,7 @@ module.exports = EventListener;
 /* WEBPACK VAR INJECTION */}.call(exports, __webpack_require__(0)))
 
 /***/ }),
-/* 14 */
+/* 15 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -1247,7 +1471,7 @@ function shallowEqual(objA, objB) {
 module.exports = shallowEqual;
 
 /***/ }),
-/* 15 */
+/* 16 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -1290,7 +1514,7 @@ function containsNode(outerNode, innerNode) {
 module.exports = containsNode;
 
 /***/ }),
-/* 16 */
+/* 17 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -1320,7 +1544,7 @@ function focusNode(node) {
 module.exports = focusNode;
 
 /***/ }),
-/* 17 */
+/* 18 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -1363,66 +1587,6 @@ function getActiveElement(doc) /*?DOMElement*/{
 module.exports = getActiveElement;
 
 /***/ }),
-/* 18 */
-/***/ (function(module, exports, __webpack_require__) {
-
-"use strict";
-
-
-Object.defineProperty(exports, "__esModule", {
-  value: true
-});
-exports.scopes = scopes;
-exports.peek = peek;
-exports.push = push;
-exports.asScope = asScope;
-exports.pop = pop;
-
-var _util = __webpack_require__(11);
-
-var _scope = __webpack_require__(12);
-
-var _scope2 = _interopRequireDefault(_scope);
-
-function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
-
-var _scopes = [];
-
-function scopes() {
-  return _scopes.slice();
-}
-
-function peek() {
-  return _scopes[_scopes.length - 1];
-}
-
-function push(scope) {
-  _scopes.push(asScope(scope));
-}
-
-function asScope(scope) {
-  if (scope instanceof _scope2.default) {
-    // return instance
-    return scope;
-  } else if ((0, _util.isObjectLiteral)(scope)) {
-    // check if any scope instances exist with those values, if so return them
-    var l = _scopes.length;
-    for (var i = 0; i < l; i++) {
-      var scope_i = _scopes[i];
-      if (scope_i.prototype === scope) {
-        return scope_i;
-      }
-    }
-    // otherwise return a new instance
-    return new _scope2.default(scope);
-  }
-}
-
-function pop() {
-  return _scopes.pop();
-}
-
-/***/ }),
 /* 19 */
 /***/ (function(module, exports, __webpack_require__) {
 
@@ -1455,14 +1619,23 @@ var _global = __webpack_require__(42);
 
 var _global2 = _interopRequireDefault(_global);
 
+var _simple_nested = __webpack_require__(43);
+
+var _simple_nested2 = _interopRequireDefault(_simple_nested);
+
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 
+// 2. register cases
+
+
+// 1. import cases
 var cases = {
   simple: _simple2.default,
   constructor: _constructor2.default,
   getter: _getter2.default,
   props: _props2.default,
-  global: _global2.default
+  global: _global2.default,
+  simple_nested: _simple_nested2.default
 };
 
 // show build hash
@@ -1495,6 +1668,7 @@ document.querySelectorAll('#main header button').forEach(function (el) {
     var caseKey = el.getAttribute('data-case');
     console.group(caseKey);
     var Example = cases[caseKey];
+    console.clear();
     Example.begin();
     _common.ReactDOM.render(_common.React.createElement(Example, null), document.getElementById('example'));
     console.groupEnd();
@@ -3399,13 +3573,13 @@ var _typeof = typeof Symbol === "function" && typeof Symbol.iterator === "symbol
 
 var aa = __webpack_require__(5);__webpack_require__(2);var l = __webpack_require__(10),
     n = __webpack_require__(4),
-    ba = __webpack_require__(13),
+    ba = __webpack_require__(14),
     ca = __webpack_require__(1),
     da = __webpack_require__(6),
-    ea = __webpack_require__(14),
-    fa = __webpack_require__(15),
-    ha = __webpack_require__(16),
-    ia = __webpack_require__(17);
+    ea = __webpack_require__(15),
+    fa = __webpack_require__(16),
+    ha = __webpack_require__(17),
+    ia = __webpack_require__(18);
 function w(a) {
   for (var b = arguments.length - 1, c = "Minified React error #" + a + "; visit http://facebook.github.io/react/docs/error-decoder.html?invariant\x3d" + a, d = 0; d < b; d++) {
     c += "\x26args[]\x3d" + encodeURIComponent(arguments[d + 1]);
@@ -5849,7 +6023,7 @@ module.exports = isNode;
  *
  * This source code is licensed under the MIT license found in the
  * LICENSE file in the root directory of this source tree.
- */var _typeof=typeof Symbol==="function"&&typeof Symbol.iterator==="symbol"?function(obj){return typeof obj;}:function(obj){return obj&&typeof Symbol==="function"&&obj.constructor===Symbol&&obj!==Symbol.prototype?"symbol":typeof obj;};if(process.env.NODE_ENV!=="production"){(function(){'use strict';var react=__webpack_require__(5);var invariant=__webpack_require__(2);var ExecutionEnvironment=__webpack_require__(10);var _assign=__webpack_require__(4);var EventListener=__webpack_require__(13);var require$$0=__webpack_require__(7);var hyphenateStyleName=__webpack_require__(27);var emptyFunction=__webpack_require__(1);var camelizeStyleName=__webpack_require__(29);var performanceNow=__webpack_require__(31);var propTypes=__webpack_require__(33);var emptyObject=__webpack_require__(6);var checkPropTypes=__webpack_require__(8);var shallowEqual=__webpack_require__(14);var containsNode=__webpack_require__(15);var focusNode=__webpack_require__(16);var getActiveElement=__webpack_require__(17);/**
+ */var _typeof=typeof Symbol==="function"&&typeof Symbol.iterator==="symbol"?function(obj){return typeof obj;}:function(obj){return obj&&typeof Symbol==="function"&&obj.constructor===Symbol&&obj!==Symbol.prototype?"symbol":typeof obj;};if(process.env.NODE_ENV!=="production"){(function(){'use strict';var react=__webpack_require__(5);var invariant=__webpack_require__(2);var ExecutionEnvironment=__webpack_require__(10);var _assign=__webpack_require__(4);var EventListener=__webpack_require__(14);var require$$0=__webpack_require__(7);var hyphenateStyleName=__webpack_require__(27);var emptyFunction=__webpack_require__(1);var camelizeStyleName=__webpack_require__(29);var performanceNow=__webpack_require__(31);var propTypes=__webpack_require__(33);var emptyObject=__webpack_require__(6);var checkPropTypes=__webpack_require__(8);var shallowEqual=__webpack_require__(15);var containsNode=__webpack_require__(16);var focusNode=__webpack_require__(17);var getActiveElement=__webpack_require__(18);/**
  * Copyright (c) 2013-present, Facebook, Inc.
  *
  * This source code is licensed under the MIT license found in the
@@ -10098,7 +10272,7 @@ var _scope = __webpack_require__(12);
 
 var _scope2 = _interopRequireDefault(_scope);
 
-var _state = __webpack_require__(18);
+var _state = __webpack_require__(13);
 
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 
@@ -10109,7 +10283,9 @@ var Axial = {
     return (0, _state.peek)();
   },
   set scope(scope) {
+    scope = (0, _state.scope_ref)(scope);
     (0, _state.push)(scope);
+    return scope;
   }
 };
 
@@ -10131,7 +10307,7 @@ var _createClass = function () { function defineProperties(target, props) { for 
 
 var _util = __webpack_require__(11);
 
-var _state = __webpack_require__(18);
+var _state = __webpack_require__(13);
 
 var _react = __webpack_require__(5);
 
@@ -10155,46 +10331,39 @@ var AxialComponent = function (_React$Component) {
   function AxialComponent(props) {
     _classCallCheck(this, AxialComponent);
 
-    // default scope if global scope
+    // default scope 1/3 from global scope
     var _this = _possibleConstructorReturn(this, (AxialComponent.__proto__ || Object.getPrototypeOf(AxialComponent)).call(this, props));
 
     var peekScope = (0, _state.peek)();
     var scope = peekScope;
 
-    // override with prop if given
-    var defaultScope = _this.scope;
+    // get scope 2/3 from instance prototype getter
+    var scopeByAccessor = _this.scope;
+    scope = scopeByAccessor && (0, _state.scope_ref)(scopeByAccessor) || scope;
+
+    // get scope 3/3 from prop
     var hasScopeProp = props.hasOwnProperty('scope');
-    if (defaultScope) {
-      scope = (0, _state.asScope)(defaultScope);
-    } else if (hasScopeProp) {
-      scope = (0, _state.asScope)(props.scope);
-    }
+    scope = hasScopeProp ? (0, _state.scope_ref)(props.scope) : scope;
 
     // define scope getter/setter
     (0, _util.getterSetter)(_this, 'scope', function () {
       return scope;
     }, function (newScope) {
-      newScope = (0, _state.asScope)(newScope);
+      (0, _state.as_scope)(scope).unbind(_this);
+
+      newScope = (0, _state.scope_ref)(newScope);
 
       // push if different from peek scope
       if (newScope !== peekScope) {
         (0, _state.push)(newScope);
       }
 
-      // clear old schema
-      if (scope) {
-        var _schema = scope.$.schema;
-        _schema.forEach(function (key) {
-          delete _this[key];
-        });
-      }
-
       // set current scope
       scope = newScope;
 
       // copy schema values into this component instance
-      var schema = scope.$.schema;
-      schema.forEach(function (key) {
+      var keys = scope[_state.META_TOKEN].keys;
+      keys.forEach(function (key) {
         (0, _util.getterSetter)(_this, key, function () {
           return scope[key];
         }, function (value) {
@@ -10204,9 +10373,13 @@ var AxialComponent = function (_React$Component) {
 
       // set default state from scope values
       _this.state = {
-        id: STATE_ID++
+        id: -1
       };
     });
+
+    if (!scope) {
+      throw new Error('AxialComponent requires at least global scope. None found.');
+    }
 
     _this.scope = scope;
     return _this;
@@ -10215,11 +10388,6 @@ var AxialComponent = function (_React$Component) {
   _createClass(AxialComponent, [{
     key: 'componentWillMount',
     value: function componentWillMount() {
-      // TODO: wrap these in constructor to save subclasses calling super
-    }
-  }, {
-    key: 'componentDidMount',
-    value: function componentDidMount() {
       var _this2 = this;
 
       // auto-bind event handlers to this
@@ -10229,7 +10397,12 @@ var AxialComponent = function (_React$Component) {
         }
       });
 
-      this.scope.$.addListener(this);
+      (0, _state.as_scope)(this.scope).bind(this);
+    }
+  }, {
+    key: 'componentDidMount',
+    value: function componentDidMount() {
+      // TODO: wrap these in constructor to save subclasses calling super
     }
   }, {
     key: 'componentWillUnmount',
@@ -10237,7 +10410,7 @@ var AxialComponent = function (_React$Component) {
       if (this.props.hasOwnProperty('scope')) {
         (0, _state.pop)();
       }
-      this.scope.$.removeListener(this);
+      (0, _state.as_scope)(this.scope).unbind(this);
     }
   }, {
     key: 'update',
@@ -10247,15 +10420,6 @@ var AxialComponent = function (_React$Component) {
           id: STATE_ID++
         });
       }
-    }
-  }, {
-    key: 'ref',
-    value: function ref(key) {
-      var _this3 = this;
-
-      return function (el) {
-        return _this3[key] = el;
-      };
     }
   }]);
 
@@ -10450,7 +10614,7 @@ var Example = function (_Axial$Component) {
         _common.React.createElement(
           ScopedByGetterAxialComponent,
           { source: 'getter', expect: 'scope2' },
-          _common.React.createElement(_common.AxialComponent, { source: 'inherit', expect: 'scope2' })
+          _common.Axial.scope1.clicks % 2 === 0 ? _common.React.createElement(_common.AxialComponent, { source: 'inherit', expect: 'scope2' }) : null
         )
       );
     }
@@ -10507,7 +10671,7 @@ var Example = function (_Axial$Component) {
         _common.React.createElement(
           _common.AxialComponent,
           { scope: (0, _common.createExampleScope)('scope2'), source: 'getter', expect: 'scope2' },
-          _common.React.createElement(_common.AxialComponent, { source: 'inherit', expect: 'scope2' })
+          _common.Axial.scope1.clicks % 2 === 0 ? _common.React.createElement(_common.AxialComponent, { source: 'inherit', expect: 'scope2' }) : null
         )
       );
     }
@@ -10564,7 +10728,7 @@ var Example = function (_Axial$Component) {
         _common.React.createElement(
           _common.AxialComponent,
           { source: 'inherit', expect: 'scope1' },
-          _common.React.createElement(_common.AxialComponent, { source: 'inherit', expect: 'scope1' })
+          _common.Axial.scope1.clicks % 2 === 0 ? _common.React.createElement(_common.AxialComponent, { source: 'inherit', expect: 'scope1' }) : null
         )
       );
     }
@@ -10573,6 +10737,54 @@ var Example = function (_Axial$Component) {
     value: function begin() {
       // set default scope
       _common.Axial.scope = (0, _common.createExampleScope)('scope1');
+    }
+  }]);
+
+  return Example;
+}(_common.Axial.Component);
+
+exports.default = Example;
+;
+
+/***/ }),
+/* 43 */
+/***/ (function(module, exports, __webpack_require__) {
+
+"use strict";
+
+
+Object.defineProperty(exports, "__esModule", {
+  value: true
+});
+
+var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
+
+var _common = __webpack_require__(3);
+
+function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
+
+function _possibleConstructorReturn(self, call) { if (!self) { throw new ReferenceError("this hasn't been initialised - super() hasn't been called"); } return call && (typeof call === "object" || typeof call === "function") ? call : self; }
+
+function _inherits(subClass, superClass) { if (typeof superClass !== "function" && superClass !== null) { throw new TypeError("Super expression must either be null or a function, not " + typeof superClass); } subClass.prototype = Object.create(superClass && superClass.prototype, { constructor: { value: subClass, enumerable: false, writable: true, configurable: true } }); if (superClass) Object.setPrototypeOf ? Object.setPrototypeOf(subClass, superClass) : subClass.__proto__ = superClass; }
+
+var Example = function (_Axial$Component) {
+  _inherits(Example, _Axial$Component);
+
+  function Example() {
+    _classCallCheck(this, Example);
+
+    return _possibleConstructorReturn(this, (Example.__proto__ || Object.getPrototypeOf(Example)).apply(this, arguments));
+  }
+
+  _createClass(Example, [{
+    key: 'render',
+    value: function render() {
+      return _common.React.createElement(_common.AxialNestedComponent, { title: 'simple_nested', source: 'Axial.scope', expect: 'scope1' });
+    }
+  }], [{
+    key: 'begin',
+    value: function begin() {
+      _common.Axial.scope = window.test = (0, _common.createNestedExampleScope)('scope1');
     }
   }]);
 

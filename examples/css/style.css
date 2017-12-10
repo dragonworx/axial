@@ -129,10 +129,10 @@ html * {
   cursor: pointer;
 }
 
-.pass {
+.scope.pass label span.name {
   background-color: rgba(0,255,0,0.5);
 }
 
-.fail {
+.scope.fail label span.name {
   background-color: rgba(255,0,0,0.5);
 }

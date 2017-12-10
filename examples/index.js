@@ -1,17 +1,21 @@
 import { React, ReactDOM, Axial } from './cases/common';
 
+// 1. import cases
 import simple from './cases/simple';
 import constructor from './cases/constructor';
 import getter from './cases/getter';
 import props from './cases/props';
 import global from './cases/global';
+import simple_nested from './cases/simple_nested';
 
+// 2. register cases
 const cases = {
   simple,
   constructor,
   getter,
   props,
-  global
+  global,
+  simple_nested
 };
 
 // show build hash
@@ -42,6 +46,7 @@ document.querySelectorAll('#main header button').forEach(el => {
     const caseKey = el.getAttribute('data-case');
     console.group(caseKey);
     const Example = cases[caseKey];
+    console.clear();
     Example.begin();
     ReactDOM.render(<Example />, document.getElementById('example'));
     console.groupEnd();

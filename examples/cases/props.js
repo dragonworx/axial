@@ -10,7 +10,7 @@ export default class Example extends Axial.Component {
     return (
       <AxialComponent title="props" source="Axial.scope" expect="scope1">
         <AxialComponent scope={createExampleScope('scope2')} source="getter" expect="scope2">
-          <AxialComponent source="inherit" expect="scope2"></AxialComponent>
+          {Axial.scope1.clicks % 2 === 0 ? <AxialComponent source="inherit" expect="scope2"></AxialComponent> : null}
         </AxialComponent>
       </AxialComponent>
     );

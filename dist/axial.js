@@ -99,9 +99,7 @@ exports.getterSetter = getterSetter;
 
 var _scope = __webpack_require__(1);
 
-var _scope2 = _interopRequireDefault(_scope);
-
-function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
+var _state = __webpack_require__(2);
 
 var DATA = exports.DATA = 'data';
 var ACCESSOR = exports.ACCESSOR = 'accessor';
@@ -177,6 +175,7 @@ function recursiveSetRootContext(root) {
 
   var setRootContext = function setRootContext(obj) {
     var keys = getObjectKeys(obj);
+    (0, _state.scope_ref)(obj);
     for (var i = 0; i < keys.length; i++) {
       var key = keys[i];
       var prop = obj[key];
@@ -198,14 +197,13 @@ function recursiveSetRootContext(root) {
 }
 
 function getObjectKeys(obj) {
-  if (obj instanceof _scope2.default) {
-    var proto = Object.getPrototypeOf(obj);
-    var keys = Object.getOwnPropertyNames(Object.getPrototypeOf(obj)).filter(function (key) {
-      return key !== 'constructor';
-    });
-    keys.push.apply(keys, Object.keys(obj));
-    return keys;
-  }
+  // if (is_scope(obj)) {
+  //   const proto = Object.getPrototypeOf(obj);
+  //   const keys = Object.getOwnPropertyNames(proto)
+  //     .filter(key => key !== 'constructor');
+  //   keys.push.apply(keys, Object.keys(obj));
+  //   return keys;
+  // }
   return Object.keys(obj);
 }
 
@@ -240,95 +238,126 @@ function getterSetter(obj, key, getterFn, setterFn) {
 Object.defineProperty(exports, "__esModule", {
   value: true
 });
-exports.ScopeMeta = undefined;
+exports.Scope = undefined;
+
+var _typeof = typeof Symbol === "function" && typeof Symbol.iterator === "symbol" ? function (obj) { return typeof obj; } : function (obj) { return obj && typeof Symbol === "function" && obj.constructor === Symbol && obj !== Symbol.prototype ? "symbol" : typeof obj; };
 
 var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
 
 var _util = __webpack_require__(0);
 
+var _state = __webpack_require__(2);
+
 function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
 
-var ScopeMeta = exports.ScopeMeta = function () {
-  function ScopeMeta(scope, prototype) {
+var Scope = exports.Scope = function () {
+  function Scope(ref) {
     var _this = this;
 
-    _classCallCheck(this, ScopeMeta);
+    _classCallCheck(this, Scope);
 
-    this.scope = scope;
-    this.prototype = prototype;
+    // take the ref object and convert to scope
+    var keys = (0, _util.getObjectKeys)(ref);
+
+    // ensure any functions within nested objects have a scope of the top level ref object
+    //  - this means that everything in the scope has access to the entire scope, but no higher.
+    (0, _util.recursiveSetRootContext)(ref);
+
+    (0, _util.getter)(ref, _state.META_TOKEN, function () {
+      return _this;
+    });
+    this.ref = ref;
 
     // track listeners
     var listeners = [];
     this.listeners = listeners;
 
-    // track and expose schema array
-    var schema = [];
-    this.schema = schema;
-
-    // create getters/setters for schema, bind to component
-    var keys = (0, _util.getObjectKeys)(prototype);
+    // move values to internal map, create getters/setters for schema, re-bind to component
+    var values = {};
     keys.forEach(function (key) {
-      var type = (0, _util.getTypeOfProperty)(prototype, key);
-      if (type === _util.DATA) {
-        (0, _util.getterSetter)(scope, key, function () {
-          return prototype[key];
-        }, function (value) {
-          var oldValue = prototype[key];
-          prototype[key] = value;
-          _this.updateListeners(key, value, oldValue);
+      var value = ref[key];
+      var type = (0, _util.getTypeOfProperty)(ref, key);
+      var type_of = typeof value === 'undefined' ? 'undefined' : _typeof(value);
+      if (type_of !== 'function' && type === _util.DATA) {
+        // check if array
+        if (Array.isArray(value)) {
+          var l = value.length;
+          for (var i = 0; i < l; i++) {
+            value[i] = (0, _state.scope_ref)(value[i]);
+          }
+        }
+
+        // move value into internal map
+        values[key] = value;
+
+        // create getter and setter which updates listeners
+        (0, _util.getterSetter)(ref, key, function () {
+          return values[key];
+        }, function (newValue) {
+          var oldValue = values[key];
+          values[key] = newValue;
+          _this.update(key, newValue, oldValue);
         });
       }
-      schema.push(key);
     });
+
+    this.keys = keys;
   }
 
-  _createClass(ScopeMeta, [{
-    key: 'addListener',
-    value: function addListener(listener) {
-      this.listeners.push(listener);
-    }
-  }, {
-    key: 'updateListeners',
-    value: function updateListeners(key, value, oldValue) {
-      console.log('update:', this.scope.name, this.listeners);
-      this.listeners.forEach(function (listener) {
-        return listener.update(key, value, oldValue);
+  _createClass(Scope, [{
+    key: 'bind',
+    value: function bind(listener) {
+      var _this2 = this;
+
+      // add listeners to this scope
+      var listeners = this.listeners;
+      listeners.push(listener);
+
+      // go through properties looking for Scopes, bind to them
+      this.keys.forEach(function (k) {
+        var value = _this2.ref[k];
+        if ((0, _state.is_scope)(value)) {
+          value[_state.META_TOKEN].bind(listener);
+        }
       });
+
+      console.log({ 'type': 'bind', 'ref': this.ref.name, 'listener': listener, 'listeners': listeners });
     }
   }, {
-    key: 'hasListener',
-    value: function hasListener(listener) {
+    key: 'update',
+    value: function update(key, value, oldValue) {
+      var _this3 = this;
+
+      // assumes listeners implement .update(key, value, oldValue)
+      var listeners = this.listeners;
+      console.group('update[' + this.listeners.length + '] key:"' + key + ' value:"' + value + '" oldValue:"' + oldValue + '"');
+      listeners.forEach(function (listener) {
+        console.log({ 'listener:': listener });
+        listener.update(key, value, oldValue, _this3.ref);
+      });
+      console.groupEnd();
+    }
+  }, {
+    key: 'hasBinding',
+    value: function hasBinding(listener) {
       return this.listeners.indexOf(listener) > -1;
     }
   }, {
-    key: 'removeListener',
-    value: function removeListener(listener) {
+    key: 'unbind',
+    value: function unbind(listener) {
       var listeners = this.listeners;
       var index = listeners.indexOf(listener);
+      if (index === -1) {
+        // handle case when not-bound
+        return;
+      }
       listeners.splice(index, 1);
+      console.log({ 'type': 'unbind', 'ref': this.ref.name, 'listener': listener, 'listeners': listeners });
     }
   }]);
 
-  return ScopeMeta;
+  return Scope;
 }();
-
-var Scope = function Scope() {
-  var prototype = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : {};
-
-  _classCallCheck(this, Scope);
-
-  this.$ = new ScopeMeta(this, prototype);
-
-  // init
-  var init = this.init;
-  if (init && !init.hasInit) {
-    init.call(this);
-    init.hasInit = true;
-  }
-};
-
-exports.default = Scope;
-;
 
 /***/ }),
 /* 2 */
@@ -340,21 +369,22 @@ exports.default = Scope;
 Object.defineProperty(exports, "__esModule", {
   value: true
 });
+exports.META_TOKEN = undefined;
 exports.scopes = scopes;
 exports.peek = peek;
 exports.push = push;
-exports.asScope = asScope;
+exports.is_scope = is_scope;
+exports.scope_ref = scope_ref;
+exports.as_scope = as_scope;
 exports.pop = pop;
 
 var _util = __webpack_require__(0);
 
 var _scope = __webpack_require__(1);
 
-var _scope2 = _interopRequireDefault(_scope);
-
-function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
-
 var _scopes = [];
+
+var META_TOKEN = exports.META_TOKEN = '__scope__';
 
 function scopes() {
   return _scopes.slice();
@@ -365,25 +395,36 @@ function peek() {
 }
 
 function push(scope) {
-  _scopes.push(asScope(scope));
+  scope = scope_ref(scope);
+  _scopes.push(scope);
+  return scope;
 }
 
-function asScope(scope) {
-  if (scope instanceof _scope2.default) {
-    // return instance
-    return scope;
-  } else if ((0, _util.isObjectLiteral)(scope)) {
-    // check if any scope instances exist with those values, if so return them
-    var l = _scopes.length;
-    for (var i = 0; i < l; i++) {
-      var scope_i = _scopes[i];
-      if (scope_i.prototype === scope) {
-        return scope_i;
-      }
-    }
-    // otherwise return a new instance
-    return new _scope2.default(scope);
+function is_scope(ref) {
+  if (ref instanceof _scope.Scope) {
+    return ref;
   }
+  var prop = ref[META_TOKEN];
+  return prop && prop instanceof _scope.Scope;
+}
+
+function scope_ref(scope) {
+  if (is_scope(scope)) {
+    return scope;
+  }
+
+  if ((0, _util.isObjectLiteral)(scope)) {
+    new _scope.Scope(scope);
+  }
+
+  return scope;
+}
+
+function as_scope(scope) {
+  if (scope[META_TOKEN]) {
+    return scope[META_TOKEN];
+  }
+  return scope_ref(scope)[META_TOKEN];
 }
 
 function pop() {
@@ -420,7 +461,9 @@ var Axial = {
     return (0, _state.peek)();
   },
   set scope(scope) {
+    scope = (0, _state.scope_ref)(scope);
     (0, _state.push)(scope);
+    return scope;
   }
 };
 
@@ -466,46 +509,39 @@ var AxialComponent = function (_React$Component) {
   function AxialComponent(props) {
     _classCallCheck(this, AxialComponent);
 
-    // default scope if global scope
+    // default scope 1/3 from global scope
     var _this = _possibleConstructorReturn(this, (AxialComponent.__proto__ || Object.getPrototypeOf(AxialComponent)).call(this, props));
 
     var peekScope = (0, _state.peek)();
     var scope = peekScope;
 
-    // override with prop if given
-    var defaultScope = _this.scope;
+    // get scope 2/3 from instance prototype getter
+    var scopeByAccessor = _this.scope;
+    scope = scopeByAccessor && (0, _state.scope_ref)(scopeByAccessor) || scope;
+
+    // get scope 3/3 from prop
     var hasScopeProp = props.hasOwnProperty('scope');
-    if (defaultScope) {
-      scope = (0, _state.asScope)(defaultScope);
-    } else if (hasScopeProp) {
-      scope = (0, _state.asScope)(props.scope);
-    }
+    scope = hasScopeProp ? (0, _state.scope_ref)(props.scope) : scope;
 
     // define scope getter/setter
     (0, _util.getterSetter)(_this, 'scope', function () {
       return scope;
     }, function (newScope) {
-      newScope = (0, _state.asScope)(newScope);
+      (0, _state.as_scope)(scope).unbind(_this);
+
+      newScope = (0, _state.scope_ref)(newScope);
 
       // push if different from peek scope
       if (newScope !== peekScope) {
         (0, _state.push)(newScope);
       }
 
-      // clear old schema
-      if (scope) {
-        var _schema = scope.$.schema;
-        _schema.forEach(function (key) {
-          delete _this[key];
-        });
-      }
-
       // set current scope
       scope = newScope;
 
       // copy schema values into this component instance
-      var schema = scope.$.schema;
-      schema.forEach(function (key) {
+      var keys = scope[_state.META_TOKEN].keys;
+      keys.forEach(function (key) {
         (0, _util.getterSetter)(_this, key, function () {
           return scope[key];
         }, function (value) {
@@ -515,9 +551,13 @@ var AxialComponent = function (_React$Component) {
 
       // set default state from scope values
       _this.state = {
-        id: STATE_ID++
+        id: -1
       };
     });
+
+    if (!scope) {
+      throw new Error('AxialComponent requires at least global scope. None found.');
+    }
 
     _this.scope = scope;
     return _this;
@@ -526,11 +566,6 @@ var AxialComponent = function (_React$Component) {
   _createClass(AxialComponent, [{
     key: 'componentWillMount',
     value: function componentWillMount() {
-      // TODO: wrap these in constructor to save subclasses calling super
-    }
-  }, {
-    key: 'componentDidMount',
-    value: function componentDidMount() {
       var _this2 = this;
 
       // auto-bind event handlers to this
@@ -540,7 +575,12 @@ var AxialComponent = function (_React$Component) {
         }
       });
 
-      this.scope.$.addListener(this);
+      (0, _state.as_scope)(this.scope).bind(this);
+    }
+  }, {
+    key: 'componentDidMount',
+    value: function componentDidMount() {
+      // TODO: wrap these in constructor to save subclasses calling super
     }
   }, {
     key: 'componentWillUnmount',
@@ -548,7 +588,7 @@ var AxialComponent = function (_React$Component) {
       if (this.props.hasOwnProperty('scope')) {
         (0, _state.pop)();
       }
-      this.scope.$.removeListener(this);
+      (0, _state.as_scope)(this.scope).unbind(this);
     }
   }, {
     key: 'update',
@@ -558,15 +598,6 @@ var AxialComponent = function (_React$Component) {
           id: STATE_ID++
         });
       }
-    }
-  }, {
-    key: 'ref',
-    value: function ref(key) {
-      var _this3 = this;
-
-      return function (el) {
-        return _this3[key] = el;
-      };
     }
   }]);
 
