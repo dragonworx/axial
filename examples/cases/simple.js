@@ -1,25 +1,13 @@
-import { React, ReactDOM, Axial } from './common';
+import { React, ReactDOM, Axial, AxialComponent, createExampleScope } from './common';
 
-Axial.axis = {
-  $: {
-    name: 'Simple',
-    clicks: 0
-  },
-  init () {
-    console.log('simple init');
+export default class Example extends Axial.Component {  
+  static begin () {
+    Axial.scope = createExampleScope('scope1');
   }
-};
 
-class Simple extends Axial.Component {
-  render($) {
+  render () {
     return (
-      <p>
-        <button onClick={() => this.set($ => $.clicks++)}>
-          {$.name} - {$.clicks} clicks
-        </button>
-      </p>
+      <AxialComponent title="simple" source="Axial.scope" expect="scope1"></AxialComponent>
     );
   }
 };
-
-ReactDOM.render(<Simple />, document.getElementById('main'));

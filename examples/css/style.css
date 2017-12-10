@@ -1,0 +1,138 @@
+body {
+  background-color: rgb(112, 112, 112);
+  font-family: monospace;
+}
+
+html * {
+  box-sizing: content-box;
+}
+
+#info {
+  position: fixed;
+  top: 5px;
+  right: 5px;
+  color: #fff;
+  font-size: 10pt;
+}
+
+#main {
+  display: flex;
+  flex-direction: column;
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  bottom: 0;
+}
+#main header {
+  height: 30px;
+  padding: 10px;
+}
+
+#main header ul {
+    padding: 0;
+    margin: 0;
+}
+
+#main header ul li {
+  display: inline-block;
+}
+
+#main header ul li button {
+  border-radius: 3px;
+  border: 1px solid #333;
+  background-color: #aaa;
+  color: #333;
+  padding: 5px;
+  height: 100%;
+  margin-right: 10px;
+  cursor: default;
+}
+
+#info.build-ready {
+  color: #65ff65;
+}
+
+#example {
+  background-color: #666;
+  padding: 10px;
+  cursor: default;
+}
+
+#example > p {
+  margin: 0;
+  padding: 0;
+}
+
+.scope {
+  border: 1px dashed #aaa;
+  padding: 5px;
+  padding-left: 20px;
+  position: relative;
+}
+
+.scope label {
+  background-color: rgb(95, 202, 235);
+  padding: 3px;
+  color: #fff;
+  display: block;
+  border-radius: 3px;
+}
+
+.scope label span {
+  margin-left: 10px;
+  background-color: rgb(52, 224, 66);
+  padding: 3px;
+  color: #fff;
+  display: inline-block;
+  border-radius: 3px;
+}
+
+.scope label .name {
+  background-color: rgba(0,0,0,0.25);
+  color: #fff;
+  font-size: 10pt;
+  padding: 5px;
+  margin-left: 0;
+}
+
+.scope label .source {
+  background-color: rgba(255,255,255,0.25);
+  color: #fff;
+  font-size: 10pt;
+  padding: 5px;
+  position: absolute;
+  right: 10px;
+}
+
+.scope .title {
+  background-color: blue;
+  color: #fff;
+  font-size: 14pt;
+  padding: 5px;
+  margin-bottom: 5px;
+  border-radius: 5px;
+  text-align: center;
+  width: 100%;
+  position: relative;
+  left: -10px;
+}
+
+.scope button {
+  border: none;
+  background-color: #c8f0ff;
+  color: #333;
+  padding: 5px;
+  border-radius: 2px;
+  margin-top: 5px;
+  border: 2px solid #40ffe5;
+  cursor: pointer;
+}
+
+.pass {
+  background-color: rgba(0,255,0,0.5);
+}
+
+.fail {
+  background-color: rgba(255,0,0,0.5);
+}

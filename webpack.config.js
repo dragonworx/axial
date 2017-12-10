@@ -5,7 +5,7 @@ function config (opts) {
     entry: opts.entry,
     output: {
       filename: opts.filename,
-      path: __dirname + '/dist',
+      path: opts.path || __dirname + '/dist',
       libraryTarget: 'umd',
       libraryExport: 'default',
       library: 'Axial'
@@ -48,7 +48,9 @@ const configs = {
   },
   'examples': {
     filename: 'examples.js',
-    entry: './examples/index.js'
+    entry: './examples/index.js',
+    plugins: [ new webpack.ExtendedAPIPlugin() ],
+    path: __dirname + '/examples/js'
   }
 };
 

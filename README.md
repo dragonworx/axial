@@ -44,6 +44,8 @@ global scope is first scope set. if components weren't passed one as a prop then
 if they were passed a scope via props then when componentWillMount() push() that scope onto the stack.
   then when componentDidUnmount() pop() the scope from the stack.
 
-A component gets its scope from either:
+A component gets its scope from either (in order of preference):
+* assigning "scope" properyt after calling super() in constructor
+* use a component instance method getter "scope"
+* passed as a "scope" prop - when you are composing components you can mark an area of your view composition to use a particular scope
 * peek() scope - by default, there should be at least one scope set before a component is rendered in order to get immediate data
-* passed as a prop - when you are composing components you can mark an area of your view composition to use a particular scope
