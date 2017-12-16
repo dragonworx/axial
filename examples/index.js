@@ -7,6 +7,7 @@ import getter from './cases/getter';
 import props from './cases/props';
 import global from './cases/global';
 import simple_nested from './cases/simple_nested';
+import nested from './cases/nested';
 
 // 2. register cases
 const cases = {
@@ -15,7 +16,8 @@ const cases = {
   getter,
   props,
   global,
-  simple_nested
+  simple_nested,
+  nested
 };
 
 // show build hash

@@ -88,7 +88,7 @@ html * {
   border-radius: 3px;
 }
 
-.scope label .name {
+.scope label .id {
   background-color: rgba(0,0,0,0.25);
   color: #fff;
   font-size: 10pt;
@@ -129,10 +129,46 @@ html * {
   cursor: pointer;
 }
 
-.scope.pass label span.name {
+.scope.pass label span.id {
   background-color: rgba(0,255,0,0.5);
 }
 
-.scope.fail label span.name {
+.scope.fail label span.id {
   background-color: rgba(255,0,0,0.5);
+}
+
+#trace {
+  width: 300px;
+  height: 400px;
+  position: absolute;
+  right: 5px;
+  top: 35px;
+  border: 1px solid white;
+}
+
+.trace {
+  overflow: hidden;
+}
+
+.trace canvas {
+  position: absolute;
+  top: 0;
+  left: 0;
+}
+
+.virtual {
+  user-select: none;
+  position: absolute;
+  left: 0;
+  top: 0;
+  background-color: transparent;
+}
+
+.virtual-container {
+  overflow: auto;
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
 }
