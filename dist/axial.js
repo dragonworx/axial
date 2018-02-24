@@ -472,9 +472,20 @@ var colorsByTracerId = exports.colorsByTracerId = {};
 var events = exports.events = [];
 var ids = exports.ids = {};
 var regions = exports.regions = {};
+var headerNodesByTitle = {};
+
+var COLORS = {
+  BACKGROUND: '#666',
+  HEADER: {
+    LINE: '#ccc'
+  },
+  BODY: {
+    BACKGROUND: '#666',
+    LINE: '#aaa'
+  }
+};
 
 var eventY = 0;
-var scrollTop = 0;
 var HEADER_ROW_HEIGHT = 40;
 var BODY_ROW_HEIGHT = 30;
 var virtualElements = new Map();
@@ -506,6 +517,8 @@ function getScrollbarWidth() {
 
   return widthNoScroll - widthWithScroll;
 }
+
+window.getScrollbarWidth = getScrollbarWidth;
 
 function nextId(id) {
   if (!ids.hasOwnProperty(id)) {
@@ -629,10 +642,13 @@ function getVirtualElement(element, totalWidth, hasOverflow) {
       if (!canvas) {
         canvas = element.querySelector('canvas');
       }
-      var st = Math.min(renderContext.maxScrollTop, container.scrollTop);
-      var sl = Math.min(renderContext.totalWidth, container.scrollLeft);
-      canvas.style.left = -sl + 'px';
-      scrollTop = st;
+
+      var scrollTop = Math.min(renderContext.maxScrollTop, container.scrollTop);
+      var scrollLeft = Math.min(renderContext.totalWidth, container.scrollLeft);
+      renderContext.scrollTop = scrollTop;
+      renderContext.scrollLeft = scrollLeft;
+
+      canvas.style.left = -scrollLeft + 'px';
 
       renderContent(renderContext);
     });
@@ -645,6 +661,10 @@ function getVirtualElement(element, totalWidth, hasOverflow) {
 
 function render(selectorOrElement, totalWidth) {
   var element = typeof selectorOrElement === 'string' ? document.querySelector(selectorOrElement) : selectorOrElement;
+  if (element.renderContext) {
+    return renderContent(element.renderContext);
+  }
+
   totalWidth = typeof totalWidth === 'number' ? totalWidth : element.clientWidth;
   var hasOverflow = element.clientWidth !== totalWidth;
   var totalHeight = element.clientHeight;
@@ -653,6 +673,7 @@ function render(selectorOrElement, totalWidth) {
   canvas.width = totalWidth;
   canvas.height = totalHeight;
 
+  // new render context
   var renderContext = {
     element: element,
     canvas: canvas,
@@ -663,8 +684,20 @@ function render(selectorOrElement, totalWidth) {
     headerHeight: 0,
     bodyHeight: 0,
     tracerCoords: {},
-    rendered: [],
-    maxScrollTop: 0
+    rendered: {
+      header: new Map(),
+      body: new Map()
+    },
+    maxScrollTop: 0,
+    mouse: {
+      x: 0,
+      y: 0
+    },
+    scrollTop: 0,
+    scrollLeft: 0,
+    focus: null,
+    selected: null,
+    hover: null
   };
 
   element.renderContext = renderContext;
@@ -681,20 +714,124 @@ function render(selectorOrElement, totalWidth) {
 
   renderContext.maxScrollTop = renderContext.bodyHeight - renderContext.headerHeight - BODY_ROW_HEIGHT * 2;
 
-  element.addEventListener('click', function (e) {
+  var mouseCoordsHandler = function mouseCoordsHandler(e) {
     var elementOffsetX = element.getBoundingClientRect().left;
     var elementOffsetY = element.getBoundingClientRect().top;
     var x = e.pageX - elementOffsetX + element.scrollLeft;
     var y = e.pageY - elementOffsetY + element.scrollTop;
-    console.log(x, y);
+    renderContext.mouse.x = x;
+    renderContext.mouse.y = y;
+    var object = getObjectAt(e, renderContext);
+    renderContent(renderContext);
+    renderContext.hover = object;
+    if (focus) {
+      focus(renderContext, object);
+    }
+  };
+
+  element.addEventListener('mouseover', mouseCoordsHandler);
+  element.addEventListener('mouseout', mouseCoordsHandler);
+  element.addEventListener('mousemove', mouseCoordsHandler);
+  element.addEventListener('click', function (e) {
+    var object = getObjectAt(e, renderContext);
+    console.log(object);
   });
 }
 
-function renderContent(renderContext) {
-  renderContext.rendered = [];
+function focus(renderContext, object) {
+  if (!object) {
+    return;
+  }
+  var isHeaderObject = object.type === 'header';
 
-  renderBody(renderContext);
-  renderHeader(renderContext);
+  if (!isHeaderObject) {
+    var color = colorsByTracerId[object.id];
+  }
+}
+
+function getPoint(e, renderContext) {
+  var mouse = renderContext.mouse;
+
+  return {
+    x: mouse.x + renderContext.scrollLeft,
+    y: mouse.y + renderContext.scrollTop,
+    absX: mouse.x,
+    absY: mouse.y
+  };
+}
+
+function getObjectAt(e, renderContext) {
+  var headerHeight = renderContext.headerHeight,
+      _renderContext$render = renderContext.rendered,
+      bodyRenders = _renderContext$render.body,
+      headerRenders = _renderContext$render.header;
+
+  var mouse = getPoint(e, renderContext);
+  var inHeader = mouse.absY < headerHeight;
+  var objects = inHeader ? headerRenders : bodyRenders;
+  var mouseY = mouse.y;
+  if (inHeader) {
+    mouse.y = mouse.absY;
+  }
+  var _iteratorNormalCompletion = true;
+  var _didIteratorError = false;
+  var _iteratorError = undefined;
+
+  try {
+    for (var _iterator = objects.keys()[Symbol.iterator](), _step; !(_iteratorNormalCompletion = (_step = _iterator.next()).done); _iteratorNormalCompletion = true) {
+      var _rect = _step.value;
+
+      // if rect of object
+      if (mouse.x >= _rect.x && mouse.x <= _rect.x + _rect.width && mouse.y >= _rect.y && mouse.y <= _rect.y + _rect.height) {
+        return objects.get(_rect);
+      }
+    }
+  } catch (err) {
+    _didIteratorError = true;
+    _iteratorError = err;
+  } finally {
+    try {
+      if (!_iteratorNormalCompletion && _iterator.return) {
+        _iterator.return();
+      }
+    } finally {
+      if (_didIteratorError) {
+        throw _iteratorError;
+      }
+    }
+  }
+
+  if (inHeader) {
+    // try body
+    mouse.y = mouseY;
+    var _iteratorNormalCompletion2 = true;
+    var _didIteratorError2 = false;
+    var _iteratorError2 = undefined;
+
+    try {
+      for (var _iterator2 = bodyRenders.keys()[Symbol.iterator](), _step2; !(_iteratorNormalCompletion2 = (_step2 = _iterator2.next()).done); _iteratorNormalCompletion2 = true) {
+        var rect = _step2.value;
+
+        if (mouse.x >= rect.x && mouse.x <= rect.x + rect.width && mouse.y >= rect.y && mouse.y <= rect.y + rect.height) {
+          return bodyRenders.get(rect);
+        }
+      }
+    } catch (err) {
+      _didIteratorError2 = true;
+      _iteratorError2 = err;
+    } finally {
+      try {
+        if (!_iteratorNormalCompletion2 && _iterator2.return) {
+          _iterator2.return();
+        }
+      } finally {
+        if (_didIteratorError2) {
+          throw _iteratorError2;
+        }
+      }
+    }
+  }
+  return null;
 }
 
 function renderShadow(ctx, x, y, w, h) {
@@ -713,21 +850,27 @@ function calcHeader(renderContext) {
       totalWidth = renderContext.totalWidth,
       tracerCoords = renderContext.tracerCoords;
 
-  calcHeaderNode(renderContext, tracers, renderContext.totalWidth);
+  calcHeaderNode(null, renderContext, tracers, renderContext.totalWidth);
 }
 
-function calcHeaderNode(renderContext, node, availableWidth) {
-  var title = arguments.length > 3 && arguments[3] !== undefined ? arguments[3] : null;
-  var x = arguments.length > 4 && arguments[4] !== undefined ? arguments[4] : 0;
-  var y = arguments.length > 5 && arguments[5] !== undefined ? arguments[5] : 0;
+function calcHeaderNode(parentNode, renderContext, node, availableWidth) {
+  var level = arguments.length > 4 && arguments[4] !== undefined ? arguments[4] : 0;
+  var title = arguments.length > 5 && arguments[5] !== undefined ? arguments[5] : null;
+  var x = arguments.length > 6 && arguments[6] !== undefined ? arguments[6] : 0;
+  var y = arguments.length > 7 && arguments[7] !== undefined ? arguments[7] : 0;
 
   var headerNode = {
+    type: 'header',
+    parent: parentNode,
     title: title,
     availableWidth: availableWidth,
     x: x,
     y: y,
-    color: null
+    color: null,
+    level: level
   };
+
+  headerNodesByTitle[title] = headerNode;
 
   renderContext.headerNodes.push(headerNode);
 
@@ -744,11 +887,19 @@ function calcHeaderNode(renderContext, node, availableWidth) {
   // collect children
   var children = [];
   for (var key in node) {
-    children.push({ key: key, value: node[key] });
+    children.push({
+      parent: headerNode,
+      key: key,
+      value: node[key]
+    });
   }
 
   if (children.length === 0) {
-    headerNode.terminates = true;
+    headerNode.doesTerminate = true;
+  }
+
+  if (title === null) {
+    headerNode.isRoot = true;
   }
 
   // find x, y for each child
@@ -780,118 +931,204 @@ function calcHeaderNode(renderContext, node, availableWidth) {
   }
 
   // calc children
+  var childHeaderNodes = [];
+
   for (var _i2 = 0; _i2 < children.length; _i2++) {
     var _child = children[_i2];
-    calcHeaderNode(renderContext, _child.value, subWidth, title ? title + '.' + _child.key : _child.key, _child.x, title ? sy : 0);
+    var childHeaderNode = calcHeaderNode(headerNode, renderContext, _child.value, subWidth, level + 1, title ? title + '.' + _child.key : _child.key, _child.x, title ? sy : 0);
+    childHeaderNodes.push(childHeaderNode);
   }
+
+  headerNode.children = childHeaderNodes;
+
+  return headerNode;
+}
+
+function getHeaderNodeDepth(headerNode) {
+  var level = headerNode.level;
+
+  var maxLevel = 0;
+  var walk = function walk(node) {
+    maxLevel = Math.max(maxLevel, node.level);
+    node.children && node.children.forEach(function (child) {
+      return walk(child);
+    });
+  };
+  walk(headerNode);
+  return level / maxLevel;
+}
+
+function getColor(title) {
+  var headerNode = headerNodesByTitle[title];
+  var color = colorsByTracerId[title];
+  if (!headerNode.isRoot) {
+    var rootTitle = title.split('.')[0];
+    color = colorsByTracerId[rootTitle].darken(getHeaderNodeDepth(headerNode) * 0.5);
+  }
+  return color;
+}
+
+function renderContent(renderContext) {
+  var ctx = renderContext.ctx,
+      totalWidth = renderContext.totalWidth,
+      totalHeight = renderContext.totalHeight;
+
+  renderContext.rendered.header.clear();
+  renderContext.rendered.body.clear();
+
+  ctx.fillStyle = COLORS.BACKGROUND;
+  ctx.fillRect(0, 0, totalWidth, totalHeight);
+
+  window.rx = renderContext;
+
+  renderBody(renderContext);
+  renderHeader(renderContext);
 }
 
 function renderHeader(renderContext) {
   var ctx = renderContext.ctx,
       totalWidth = renderContext.totalWidth,
       headerHeight = renderContext.headerHeight,
-      headerNodes = renderContext.headerNodes;
+      headerNodes = renderContext.headerNodes,
+      headerRenders = renderContext.rendered.header,
+      hover = renderContext.hover;
 
 
   for (var i = 0; i < headerNodes.length; i++) {
     var headerNode = headerNodes[i];
-    renderHeaderNode(renderContext, headerNode);
+    var title = headerNode.title,
+        availableWidth = headerNode.availableWidth,
+        nodeTitle = headerNode.nodeTitle,
+        x = headerNode.x,
+        y = headerNode.y;
+
+
+    if (title) {
+      var rect = {
+        x: x,
+        y: y,
+        width: availableWidth,
+        height: HEADER_ROW_HEIGHT
+      };
+      headerNode.rect = rect;
+      headerRenders.set(rect, headerNode);
+
+      // render appearance
+      var color = getColor(headerNode.title);
+      color = hover === headerNode ? color.lighten(0.2) : color;
+      ctx.fillStyle = color;
+      ctx.fillRect(x, y, availableWidth, HEADER_ROW_HEIGHT);
+      ctx.strokeStyle = COLORS.HEADER.LINE;
+      ctx.strokeRect(x, y, availableWidth, HEADER_ROW_HEIGHT);
+
+      // render title
+      ctx.font = "16px courier";
+      ctx.textAlign = "center";
+      ctx.fillStyle = color.mix((0, _color2.default)('black'), 0.5);
+      ctx.fillText(nodeTitle, x + availableWidth / 2 + 1, y + HEADER_ROW_HEIGHT / 2 + 3 + 1, availableWidth);
+      ctx.fillStyle = color.mix((0, _color2.default)('white'), 0.75);
+      ctx.fillText(nodeTitle, x + availableWidth / 2, y + HEADER_ROW_HEIGHT / 2 + 3, availableWidth);
+    }
+
+    if (headerNode.doesTerminate) {
+      renderShadow(ctx, x, y + HEADER_ROW_HEIGHT, availableWidth, BODY_ROW_HEIGHT / 3, 0.3);
+      ctx.fillStyle = 'white';
+      ctx.fillRect(x, y + HEADER_ROW_HEIGHT, availableWidth, 1);
+    }
   }
 }
 
-function renderHeaderNode(renderContext, headerNode) {
-  var ctx = renderContext.ctx;
-  var title = headerNode.title,
-      availableWidth = headerNode.availableWidth,
-      nodeTitle = headerNode.nodeTitle,
-      x = headerNode.x,
-      y = headerNode.y;
+function getVisibleRange(renderContext) {
+  var totalHeight = renderContext.totalHeight,
+      headerHeight = renderContext.headerHeight,
+      bodyHeight = renderContext.bodyHeight,
+      scrollTop = renderContext.scrollTop;
 
-
-  if (title) {
-    // render appearance
-    var color = colorsByTracerId[title];
-    ctx.fillStyle = color;
-    ctx.fillRect(x, y, availableWidth, HEADER_ROW_HEIGHT);
-    ctx.strokeStyle = 'rgba(255,255,255,0.5)';
-    ctx.strokeRect(x, y, availableWidth, HEADER_ROW_HEIGHT);
-
-    // render title
-    ctx.font = "16px courier";
-    ctx.textAlign = "center";
-    ctx.fillStyle = color.mix((0, _color2.default)('black'), 0.5);
-    ctx.fillText(nodeTitle, x + availableWidth / 2, y + HEADER_ROW_HEIGHT / 2 + 3, availableWidth);
-  }
-
-  if (headerNode.terminates) {
-    renderShadow(ctx, x, y + HEADER_ROW_HEIGHT, availableWidth, BODY_ROW_HEIGHT / 3, 0.3);
-    ctx.fillStyle = 'white';
-    ctx.fillRect(x, y + HEADER_ROW_HEIGHT, availableWidth, 1);
-  }
+  var visibleHeight = totalHeight - headerHeight;
+  var headerRows = Math.floor(headerHeight / BODY_ROW_HEIGHT);
+  var scrolledCount = scrollTop / BODY_ROW_HEIGHT;
+  var top = Math.max(0, Math.ceil(scrolledCount) - 1);
+  var range = Math.ceil((totalHeight - headerHeight - getScrollbarWidth()) / BODY_ROW_HEIGHT);
+  var bottom = Math.min(top + range, events.length - 1);
+  var headerTop = Math.max(top - headerRows, 0);
+  return { top: top, bottom: bottom, headerTop: headerTop, headerRows: headerRows };
 }
 
 function renderBody(renderContext) {
   var headerHeight = renderContext.headerHeight,
-      bodyHeight = renderContext.bodyHeight,
-      ctx = renderContext.ctx,
-      totalWidth = renderContext.totalWidth,
-      totalHeight = renderContext.totalHeight,
-      tracerCoords = renderContext.tracerCoords;
+      totalHeight = renderContext.totalHeight;
 
   var availableHeight = totalHeight - headerHeight;
 
-  ctx.fillStyle = '#000';
-  ctx.fillRect(0, 0, totalWidth, headerHeight);
+  var _getVisibleRange = getVisibleRange(renderContext),
+      top = _getVisibleRange.top,
+      bottom = _getVisibleRange.bottom,
+      headerTop = _getVisibleRange.headerTop,
+      headerRows = _getVisibleRange.headerRows;
 
-  for (var i = 0; i < events.length; i++) {
-    var _events$i = events[i],
-        id = _events$i.id,
-        params = _events$i.params,
-        path = _events$i.path,
-        tracerId = _events$i.tracerId,
-        x = _events$i.x,
-        ey = _events$i.y;
-
-    var coords = tracerCoords[path];
-    var y = ey + headerHeight - scrollTop;
-
-    // renderContext.bodyHeight = y - headerHeight + BODY_ROW_HEIGHT;
-
-    if ( /*y <= headerHeight - BODY_ROW_HEIGHT || */y >= totalHeight) {
-      continue;
+  if (top >= 1) {
+    for (var i = headerTop; i < top; i++) {
+      renderBodyRow(renderContext, events[i]);
     }
-
-    // store geom for body item rendered
-    renderContext.rendered.push({
-      event: events[i],
-      bounds: {
-        top: y,
-        x: coords.x,
-        width: coords.width
-      }
-    });
-
-    // render appearance
-    var color = colorsByTracerId[tracersById[tracerId]];
-    ctx.fillStyle = color.darken(0.2);
-    ctx.fillRect(0, y, totalWidth, BODY_ROW_HEIGHT);
-    ctx.fillStyle = color;
-    ctx.fillRect(coords.x, y, coords.width, BODY_ROW_HEIGHT);
-    ctx.strokeStyle = 'white';
-    ctx.strokeRect(0, y + BODY_ROW_HEIGHT, totalWidth, y + BODY_ROW_HEIGHT);
-
-    // render text
-    ctx.font = '12px courier';
-    ctx.textAlign = 'left';
-    ctx.fillStyle = color.mix((0, _color2.default)('black'), 0.5);
-    ctx.fillText(id, coords.x, y + BODY_ROW_HEIGHT / 2 + 3, coords.width);
   }
 
-  ctx.fillStyle = 'rgba(255,255,255,0.2)';
-  ctx.fillRect(0, 0, totalWidth, totalHeight);
+  for (var _i3 = top; _i3 <= bottom; _i3++) {
+    renderBodyRow(renderContext, events[_i3]);
+  }
 
   renderContext.bodyHeight = events.length * BODY_ROW_HEIGHT;
-  renderContext.rendered;
+}
+
+function renderBodyRow(renderContext, event) {
+  var headerHeight = renderContext.headerHeight,
+      ctx = renderContext.ctx,
+      totalWidth = renderContext.totalWidth,
+      tracerCoords = renderContext.tracerCoords,
+      bodyRenders = renderContext.rendered.body,
+      hover = renderContext.hover;
+  var id = event.id,
+      params = event.params,
+      path = event.path,
+      tracerId = event.tracerId,
+      x = event.x,
+      ey = event.y;
+
+  var coords = tracerCoords[path];
+  var y = ey + headerHeight - renderContext.scrollTop;
+
+  // store geom for body item rendered
+  var rect = {
+    x: 0,
+    y: y + renderContext.scrollTop,
+    width: totalWidth,
+    height: BODY_ROW_HEIGHT
+  };
+  event.rect = rect;
+  bodyRenders.set(rect, event);
+
+  // render appearance
+  var color = getColor(tracersById[tracerId]);
+  // ctx.fillStyle = color.darken(0.2);
+  // ctx.fillStyle = 'black';
+  ctx.fillStyle = hover === event ? color.mix((0, _color2.default)('black'), 0.6) : color.mix((0, _color2.default)('black'), 0.7);
+  ctx.fillRect(0, y, totalWidth, BODY_ROW_HEIGHT);
+  ctx.fillStyle = color;
+  ctx.fillRect(coords.x, y, coords.width, BODY_ROW_HEIGHT);
+  ctx.strokeStyle = '#777';
+  ctx.strokeRect(0, y + BODY_ROW_HEIGHT, totalWidth, y + BODY_ROW_HEIGHT);
+
+  // render text
+  ctx.font = '12px courier';
+  ctx.textAlign = 'left';
+  ctx.fillStyle = color.mix((0, _color2.default)('white'), 0.5);
+  // ctx.fillText(id, coords.x, y + (BODY_ROW_HEIGHT / 2) + 3, coords.width);
+  var args = void 0;
+  try {
+    args = JSON.stringify(event.params);
+  } catch (e) {
+    args = '' + args;
+  }
+  ctx.fillText(args, 0, y + BODY_ROW_HEIGHT / 2 + 3);
 }
 
 exports.default = trace;
@@ -2059,10 +2296,10 @@ var AxialComponent = function (_React$Component) {
         }
       });
 
-      (0, _trace2.default)('.bind.foo');
-      (0, _trace2.default)('.bind.bar');
-      (0, _trace2.default)('.bind', { scope: this.scope });
-      for (var i = 0; i < 5; i++) {
+      (0, _trace2.default)('AxialComponent.componentDidMount.bind.foo');
+      (0, _trace2.default)('AxialComponent.componentDidMount.bind.bar');
+      (0, _trace2.default)('AxialComponent.componentDidMount.bind', { scope: this.scope });
+      for (var i = 0; i < 100000; i++) {
         (0, _trace2.default)('.test', i);
       }
 

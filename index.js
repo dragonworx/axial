@@ -1,2 +1,2 @@
-import Axial from './dist/axial';
-export default Axial;
+const Axial = require('./dist/axial');
+module.exports = Axial;
